@@ -1,0 +1,241 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Início - Sistema de Etiquetas{% endblock %}
+{% block nav_index %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-house"></i> Dashboard - Sistema de Etiquetas</h2>
+    <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nova Mistura
+    </a>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <div class="display-4 text-primary mb-2">
+                    <i class="bi bi-palette"></i>
+                </div>
+                <h5 class="card-title">{{ stats.misturas_hoje }}</h5>
+                <p class="card-text text-muted">Misturas Hoje</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <div class="display-4 text-success mb-2">
+                    <i class="bi bi-tags"></i>
+                </div>
+                <h5 class="card-title">{{ stats.etiquetas_geradas }}</h5>
+                <p class="card-text text-muted">Etiquetas Geradas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <div class="display-4 text-warning mb-2">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <h5 class="card-title">{{ stats.misturas_pendentes }}</h5>
+                <p class="card-text text-muted">Pendentes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <div class="display-4 text-info mb-2">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <h5 class="card-title">R$ {{ stats.valor_total|floatformat:2 }}</h5>
+                <p class="card-text text-muted">Valor Total Hoje</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Misturas Recentes -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history"></i> Misturas Recentes
+                </h5>
+                <a href="{% url 'etiquetas:misturas' %}" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+            </div>
+            <div class="card-body">
+                {% if misturas_recentes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Cliente</th>
+                                    <th>Cor</th>
+                                    <th>Volume</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mistura in misturas_recentes %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ mistura.codigo_mistura }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ mistura.created_at|date:"d/m H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {{ mistura.cliente_nome }}
+                                        {% if mistura.cliente_telefone %}
+                                            <br><small class="text-muted">{{ mistura.cliente_telefone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="color-sample me-2" 
+                                                 style="width: 20px; height: 20px; border-radius: 3px; background-color: {{ mistura.formula.cor_definida.cor_hex }}; border: 1px solid #ddd;">
+                                            </div>
+                                            {{ mistura.formula.cor_definida.nome_cor }}
+                                        </div>
+                                    </td>
+                                    <td>{{ mistura.volume_solicitado }}L</td>
+                                    <td>
+                                        {% if mistura.situacao == 'CALCULADA' %}
+                                            <span class="badge bg-secondary">Calculada</span>
+                                        {% elif mistura.situacao == 'CONFIRMADA' %}
+                                            <span class="badge bg-primary">Confirmada</span>
+                                        {% elif mistura.situacao == 'PRODUZIDA' %}
+                                            <span class="badge bg-success">Produzida</span>
+                                        {% elif mistura.situacao == 'ENTREGUE' %}
+                                            <span class="badge bg-success">Entregue</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ mistura.situacao }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'etiquetas:gerar_etiqueta' mistura.id %}" 
+                                               class="btn btn-primary" title="Gerar Etiqueta">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                            <a href="{% url 'etiquetas:preview_etiqueta' mistura.id %}" 
+                                               class="btn btn-outline-secondary" title="Preview">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="display-1 text-muted mb-3">
+                            <i class="bi bi-inbox"></i>
+                        </div>
+                        <h5>Nenhuma mistura encontrada</h5>
+                        <p class="text-muted">Crie sua primeira mistura para começar a gerar etiquetas</p>
+                        <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Mistura
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ações Rápidas -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Ações Rápidas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nova Mistura
+                    </a>
+                    <a href="{% url 'etiquetas:misturas' %}?status=CONFIRMADA" class="btn btn-success">
+                        <i class="bi bi-printer"></i> Etiquetas Pendentes
+                    </a>
+                    <a href="{% url 'etiquetas:historico' %}" class="btn btn-info">
+                        <i class="bi bi-clock-history"></i> Histórico
+                    </a>
+                    <a href="{% url 'etiquetas:templates' %}" class="btn btn-secondary">
+                        <i class="bi bi-file-earmark-text"></i> Configurar Templates
+                    </a>
+                </div>
+                
+                <hr>
+                
+                <h6 class="text-muted mb-3">Estoque de Pigmentos</h6>
+                {% for estoque in estoques_baixos %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <small><strong>{{ estoque.pigmento.nome }}</strong></small>
+                            <br>
+                            <small class="text-muted">{{ estoque.saldo_ml }}ml restante</small>
+                        </div>
+                        <span class="badge bg-warning">Baixo</span>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-2">
+                        <small class="text-success">
+                            <i class="bi bi-check-circle"></i> Todos os estoques OK
+                        </small>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Últimas Etiquetas Geradas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-printer"></i> Últimas Etiquetas
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if etiquetas_recentes %}
+                    {% for etiqueta in etiquetas_recentes %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <strong>{{ etiqueta.mistura.codigo_mistura }}</strong>
+                                <br>
+                                <small class="text-muted">{{ etiqueta.data_geracao|date:"d/m H:i" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <a href="{% url 'etiquetas:download_etiqueta' etiqueta.id %}" 
+                                   class="btn btn-sm btn-outline-primary" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <small class="text-muted">Nenhuma etiqueta gerada ainda</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+<div class="floating-actions">
+    <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary btn-lg rounded-circle shadow" title="Nova Mistura">
+        <i class="bi bi-plus fs-4"></i>
+    </a>
+</div>
+{% endblock %}

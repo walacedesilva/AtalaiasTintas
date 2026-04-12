@@ -1,0 +1,1043 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Gerenciar Templates{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-manager {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .template-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .template-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .template-preview-large {
+        height: 200px;
+        background: #f8fafc;
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .template-preview-large.default {
+        background: linear-gradient(45deg, #f1f5f9 25%, #e2e8f0 25%, #e2e8f0 50%, #f1f5f9 50%, #f1f5f9 75%, #e2e8f0 75%);
+        background-size: 20px 20px;
+    }
+    
+    .template-preview-large.compact {
+        background: #fafafa;
+        font-size: 0.9em;
+    }
+    
+    .template-preview-large.premium {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+    }
+    
+    .template-preview-large.eco {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .preview-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 80%;
+    }
+    
+    .preview-miniature {
+        background: rgba(255,255,255,0.9);
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 0 auto;
+        width: 120px;
+        height: 80px;
+        font-size: 8px;
+        line-height: 1.2;
+        position: relative;
+    }
+    
+    .eco .preview-miniature,
+    .premium .preview-miniature {
+        background: rgba(0,0,0,0.1);
+        border-color: rgba(255,255,255,0.3);
+        color: white;
+    }
+    
+    .template-info {
+        padding: 20px;
+    }
+    
+    .template-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+    
+    .template-title {
+        flex: 1;
+    }
+    
+    .template-title h5 {
+        margin: 0 0 5px 0;
+        color: #1f2937;
+    }
+    
+    .template-subtitle {
+        color: #6b7280;
+        font-size: 13px;
+    }
+    
+    .template-status {
+        flex-shrink: 0;
+        margin-left: 10px;
+    }
+    
+    .status-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .status-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .status-default {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .template-specs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 15px 0;
+        font-size: 12px;
+    }
+    
+    .spec-item {
+        display: flex;
+        align-items: center;
+        color: #6b7280;
+    }
+    
+    .spec-item i {
+        margin-right: 6px;
+        width: 16px;
+        text-align: center;
+    }
+    
+    .template-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 15px;
+    }
+    
+    .btn-action {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+    
+    .editor-modal .modal-dialog {
+        max-width: 1200px;
+    }
+    
+    .editor-content {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 20px;
+        height: 70vh;
+    }
+    
+    .editor-panel {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+    }
+    
+    .preview-panel {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+    }
+    
+    .form-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-title i {
+        margin-right: 8px;
+        color: #6b7280;
+    }
+    
+    .color-picker-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .color-input {
+        width: 50px;
+        height: 35px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    
+    .template-live-preview {
+        width: 300px;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 15px;
+        font-size: 11px;
+        line-height: 1.3;
+    }
+    
+    .usage-stats {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1f2937;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Quick Actions Component -->
+{% include "etiquetas/components/quick-actions.html" with section="templates" %}
+
+<div class="template-manager">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-palette"></i> Gerenciar Templates
+        </h2>
+        <div>
+            <button type="button" class="btn btn-outline-success me-2" onclick="importTemplate()">
+                <i class="bi bi-upload"></i> Importar
+            </button>
+            <button type="button" class="btn btn-primary" onclick="createNewTemplate()">
+                <i class="bi bi-plus"></i> Novo Template
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filter and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchTemplates" 
+                               placeholder="Buscar templates...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterStatus">
+                        <option value="">Todos os Status</option>
+                        <option value="active">Ativos</option>
+                        <option value="inactive">Inativos</option>
+                        <option value="default">Padrão</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterCategory">
+                        <option value="">Todas as Categorias</option>
+                        <option value="standard">Padrão</option>
+                        <option value="compact">Compacto</option>
+                        <option value="premium">Premium</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        <i class="bi bi-arrow-clockwise"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates Grid -->
+    <div class="templates-grid" id="templatesGrid">
+        <!-- Template Padrão -->
+        <div class="template-card" data-status="default" data-category="standard">
+            <div class="template-preview-large default">
+                <div class="preview-content">
+                    <div class="preview-miniature">
+                        <div style="font-weight: bold; margin-bottom: 3px;">SISTEMA TINTAS</div>
+                        <div style="font-size: 6px; margin-bottom: 2px;">MT001-2024</div>
+                        <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                            <div style="width: 8px; height: 8px; background: #2563eb; border-radius: 50%; margin-right: 4px;"></div>
+                            <div style="font-size: 5px;">Azul Royal</div>
+                        </div>
+                        <div style="font-size: 5px;">Cliente: João Silva</div>
+                        <div style="font-size: 4px; margin-top: 2px;">Vol: 3.6L | R$ 45,50</div>
+                    </div>
+                </div>
+            </div>
+            <div class="template-info">
+                <div class="template-header">
+                    <div class="template-title">
+                        <h5>Template Padrão</h5>
+                        <div class="template-subtitle">Layout clássico completo</div>
+                    </div>
+                    <div class="template-status">
+                        <span class="status-badge status-default">Padrão</span>
+                    </div>
+                </div>
+                
+                <div class="template-specs">
+                    <div class="spec-item">
+                        <i class="bi bi-rulers"></i>
+                        <span>100x150mm</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-palette"></i>
+                        <span>Colorido</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-qr-code"></i>
+                        <span>QR + Barcode</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-clock"></i>
+                        <span>Usado hoje</span>
+                    </div>
+                </div>
+                
+                <div class="template-actions">
+                    <button class="btn btn-outline-primary btn-action" onclick="previewTemplate('default')">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </button>
+                    <button class="btn btn-outline-success btn-action" onclick="editTemplate('default')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-outline-info btn-action" onclick="duplicateTemplate('default')">
+                        <i class="bi bi-files"></i> Duplicar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Template Compacto -->
+        <div class="template-card" data-status="active" data-category="compact">
+            <div class="template-preview-large compact">
+                <div class="preview-content">
+                    <div class="preview-miniature">
+                        <div style="font-weight: bold; font-size: 6px; margin-bottom: 2px;">MT002-2024</div>
+                        <div style="display: flex; align-items: center; margin-bottom: 1px;">
+                            <div style="width: 6px; height: 6px; background: #059669; border-radius: 50%; margin-right: 3px;"></div>
+                            <div style="font-size: 4px;">Verde Esmeralda</div>
+                        </div>
+                        <div style="font-size: 4px;">João Silva</div>
+                        <div style="font-size: 3px; margin-top: 1px;">2.5L | R$ 32,00</div>
+                        <div style="font-size: 3px; margin-top: 2px; text-align: center;">█████████</div>
+                    </div>
+                </div>
+            </div>
+            <div class="template-info">
+                <div class="template-header">
+                    <div class="template-title">
+                        <h5>Template Compacto</h5>
+                        <div class="template-subtitle">Versão reduzida para economia</div>
+                    </div>
+                    <div class="template-status">
+                        <span class="status-badge status-active">Ativo</span>
+                    </div>
+                </div>
+                
+                <div class="template-specs">
+                    <div class="spec-item">
+                        <i class="bi bi-rulers"></i>
+                        <span>75x100mm</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-palette"></i>
+                        <span>P&B</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-upc"></i>
+                        <span>Apenas Barcode</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-graph-up"></i>
+                        <span>143 usos</span>
+                    </div>
+                </div>
+                
+                <div class="template-actions">
+                    <button class="btn btn-outline-primary btn-action" onclick="previewTemplate('compact')">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </button>
+                    <button class="btn btn-outline-success btn-action" onclick="editTemplate('compact')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-outline-warning btn-action" onclick="toggleStatus('compact')">
+                        <i class="bi bi-pause"></i> Desativar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Template Premium -->
+        <div class="template-card" data-status="active" data-category="premium">
+            <div class="template-preview-large premium">
+                <div class="preview-content">
+                    <div class="preview-miniature">
+                        <div style="font-weight: bold; font-size: 6px; margin-bottom: 2px; text-align: center;">✦ PREMIUM ✦</div>
+                        <div style="font-size: 5px; margin-bottom: 2px; text-align: center;">MT003-2024</div>
+                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
+                            <div style="width: 8px; height: 8px; background: #dc2626; border-radius: 50%; margin-right: 3px;"></div>
+                            <div style="font-size: 4px;">Vermelho Cardinal</div>
+                        </div>
+                        <div style="font-size: 4px; text-align: center;">Maria Santos</div>
+                        <div style="font-size: 4px; margin-top: 2px; text-align: center; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 2px;">5.0L | R$ 78,90</div>
+                    </div>
+                </div>
+            </div>
+            <div class="template-info">
+                <div class="template-header">
+                    <div class="template-title">
+                        <h5>Template Premium</h5>
+                        <div class="template-subtitle">Design elegante diferenciado</div>
+                    </div>
+                    <div class="template-status">
+                        <span class="status-badge status-active">Ativo</span>
+                    </div>
+                </div>
+                
+                <div class="template-specs">
+                    <div class="spec-item">
+                        <i class="bi bi-rulers"></i>
+                        <span>120x180mm</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-palette"></i>
+                        <span>Full Color</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-award"></i>
+                        <span>Logo + QR</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-star"></i>
+                        <span>87 usos</span>
+                    </div>
+                </div>
+                
+                <div class="template-actions">
+                    <button class="btn btn-outline-primary btn-action" onclick="previewTemplate('premium')">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </button>
+                    <button class="btn btn-outline-success btn-action" onclick="editTemplate('premium')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-outline-info btn-action" onclick="duplicateTemplate('premium')">
+                        <i class="bi bi-files"></i> Duplicar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Template Eco -->
+        <div class="template-card" data-status="inactive" data-category="standard">
+            <div class="template-preview-large eco">
+                <div class="preview-content">
+                    <div class="preview-miniature">
+                        <div style="font-weight: bold; font-size: 5px; margin-bottom: 2px;">🌱 ECO FRIENDLY</div>
+                        <div style="font-size: 5px; margin-bottom: 2px;">MT004-2024</div>
+                        <div style="display: flex; align-items: center; margin-bottom: 2px;">
+                            <div style="width: 6px; height: 6px; background: #059669; border-radius: 50%; margin-right: 3px;"></div>
+                            <div style="font-size: 4px;">Verde Natureza</div>
+                        </div>
+                        <div style="font-size: 4px;">Eco Cliente</div>
+                        <div style="font-size: 4px; margin-top: 2px;">1.8L | Sustentável</div>
+                    </div>
+                </div>
+            </div>
+            <div class="template-info">
+                <div class="template-header">
+                    <div class="template-title">
+                        <h5>Template Eco</h5>
+                        <div class="template-subtitle">Sustentável e minimalista</div>
+                    </div>
+                    <div class="template-status">
+                        <span class="status-badge status-inactive">Inativo</span>
+                    </div>
+                </div>
+                
+                <div class="template-specs">
+                    <div class="spec-item">
+                        <i class="bi bi-rulers"></i>
+                        <span>90x120mm</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-droplet"></i>
+                        <span>Tinta Mín.</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-recycle"></i>
+                        <span>QR Apenas</span>
+                    </div>
+                    <div class="spec-item">
+                        <i class="bi bi-pause-circle"></i>
+                        <span>23 usos</span>
+                    </div>
+                </div>
+                
+                <div class="template-actions">
+                    <button class="btn btn-outline-primary btn-action" onclick="previewTemplate('eco')">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </button>
+                    <button class="btn btn-outline-success btn-action" onclick="editTemplate('eco')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-outline-success btn-action" onclick="toggleStatus('eco')">
+                        <i class="bi bi-play"></i> Ativar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Usage Statistics -->
+    <div class="usage-stats">
+        <h5>
+            <i class="bi bi-graph-up"></i> Estatísticas de Uso dos Templates
+        </h5>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">673</div>
+                <div class="stat-label">Total Gerado</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">4</div>
+                <div class="stat-label">Templates Ativos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">89</div>
+                <div class="stat-label">Esta Semana</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">45%</div>
+                <div class="stat-label">Uso Padrão</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editor de Template -->
+<div class="modal fade editor-modal" id="templateEditor" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-palette"></i> Editor de Template: 
+                    <span id="editorTemplateTitle">Novo Template</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="editor-content">
+                    <!-- Panel de Configuração -->
+                    <div class="editor-panel">
+                        <form id="templateForm">
+                            <!-- Informações Básicas -->
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="bi bi-info-circle"></i>
+                                    Informações Básicas
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Nome do Template:</label>
+                                    <input type="text" class="form-control" id="templateName" 
+                                           placeholder="Ex: Template Personalizado">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Descrição:</label>
+                                    <textarea class="form-control" id="templateDescription" rows="2"
+                                              placeholder="Descreva o propósito e características do template"></textarea>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="form-label">Categoria:</label>
+                                        <select class="form-select" id="templateCategory">
+                                            <option value="standard">Padrão</option>
+                                            <option value="compact">Compacto</option>
+                                            <option value="premium">Premium</option>
+                                            <option value="custom">Personalizado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Status:</label>
+                                        <select class="form-select" id="templateStatus">
+                                            <option value="active">Ativo</option>
+                                            <option value="inactive">Inativo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dimensões e Layout -->
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="bi bi-rulers"></i>
+                                    Dimensões e Layout
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="form-label">Largura (mm):</label>
+                                        <input type="number" class="form-control" id="templateWidth" value="100" min="50" max="300">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Altura (mm):</label>
+                                        <input type="number" class="form-control" id="templateHeight" value="150" min="50" max="300">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Margem Interna (mm):</label>
+                                    <input type="number" class="form-control" id="templateMargin" value="5" min="0" max="20">
+                                </div>
+                            </div>
+                            
+                            <!-- Cores e Estilo -->
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="bi bi-palette"></i>
+                                    Cores e Estilo
+                                </div>
+                                
+                                <div class="color-picker-group">
+                                    <label class="form-label">Cor de Fundo:</label>
+                                    <input type="color" class="color-input" id="backgroundColor" value="#ffffff">
+                                    <input type="text" class="form-control" value="#ffffff" readonly>
+                                </div>
+                                
+                                <div class="color-picker-group">
+                                    <label class="form-label">Cor do Texto:</label>
+                                    <input type="color" class="color-input" id="textColor" value="#000000">
+                                    <input type="text" class="form-control" value="#000000" readonly>
+                                </div>
+                                
+                                <div class="color-picker-group">
+                                    <label class="form-label">Cor de Destaque:</label>
+                                    <input type="color" class="color-input" id="accentColor" value="#2563eb">
+                                    <input type="text" class="form-control" value="#2563eb" readonly>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Fonte:</label>
+                                    <select class="form-select" id="fontFamily">
+                                        <option value="Arial">Arial</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Times">Times New Roman</option>
+                                        <option value="Courier">Courier New</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Elementos Incluídos -->
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="bi bi-list-check"></i>
+                                    Elementos Incluídos
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeQRCode" checked>
+                                    <label class="form-check-label" for="includeQRCode">
+                                        QR Code
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeBarCode" checked>
+                                    <label class="form-check-label" for="includeBarCode">
+                                        Código de Barras
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeLogo" checked>
+                                    <label class="form-check-label" for="includeLogo">
+                                        Logo da Empresa
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeFormula" checked>
+                                    <label class="form-check-label" for="includeFormula">
+                                        Lista de Pigmentos
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeCustomer" checked>
+                                    <label class="form-check-label" for="includeCustomer">
+                                        Dados do Cliente
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Panel Preview -->
+                    <div class="preview-panel">
+                        <div class="template-live-preview" id="livePreview">
+                            <div style="text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 8px;">
+                                <div style="font-weight: bold; font-size: 12px;">SISTEMA DE TINTAS</div>
+                                <div style="font-size: 8px; color: #666;">31/03/2024 14:30</div>
+                            </div>
+                            
+                            <div style="text-align: center; margin-bottom: 8px;">
+                                <div style="font-size: 14px; font-weight: bold;">MT005-2024</div>
+                                <div style="font-size: 8px; background: #f0f0f0; padding: 1px 6px; border-radius: 8px; display: inline-block;">FOR001</div>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; margin-bottom: 8px; padding: 6px; background: #f8f8f8; border-radius: 4px;">
+                                <div style="width: 20px; height: 20px; border-radius: 4px; background: #2563eb; margin-right: 8px;"></div>
+                                <div>
+                                    <div style="font-weight: bold; font-size: 10px;">Azul Marinho</div>
+                                    <div style="font-size: 8px; color: #666;">Linha Premium | #2563eb</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-weight: bold; font-size: 10px;">Maria Silva</div>
+                                <div style="font-size: 8px; color: #666;">(11) 99999-9999</div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; font-size: 8px;">
+                                <div style="text-align: center; padding: 4px; background: #f8f8f8; border-radius: 3px;">
+                                    <div style="color: #666;">Volume</div>
+                                    <div style="font-weight: bold;">3.6L</div>
+                                </div>
+                                <div style="text-align: center; padding: 4px; background: #f8f8f8; border-radius: 3px;">
+                                    <div style="color: #666;">Custo</div>
+                                    <div style="font-weight: bold;">R$ 45,50</div>
+                                </div>
+                            </div>
+                            
+                            <div style="border-top: 1px solid #ccc; padding-top: 6px; font-size: 7px;">
+                                <div style="text-align: center; color: #666; margin-bottom: 4px;">COMPOSIÇÃO</div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 1px;">
+                                    <span>Azul Ftalocianina</span>
+                                    <span>12ml</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 1px;">
+                                    <span>Branco Titânio</span>
+                                    <span>8ml</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 6px;">
+                                <div style="font-size: 6px; text-align: center;">
+                                    <div style="width: 30px; height: 30px; border: 1px solid #ccc; margin-bottom: 2px; display: flex; align-items: center; justify-content: center; font-size: 4px;">QR</div>
+                                </div>
+                                <div style="text-align: center; flex: 1;">
+                                    <div style="height: 12px; background: linear-gradient(90deg, #000 50%, transparent 50%); background-size: 2px 100%; margin-bottom: 2px;"></div>
+                                    <div style="font-family: monospace; font-size: 5px;">123456789012</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="testPrint()">
+                    <i class="bi bi-printer"></i> Testar Impressão
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+                    <i class="bi bi-check"></i> Salvar Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Template management functions
+    function previewTemplate(templateId) {
+        alert(`Visualizando template: ${templateId}`);
+        // Em produção, abrir preview em nova janela
+    }
+    
+    function editTemplate(templateId) {
+        document.getElementById('editorTemplateTitle').textContent = `Editando ${templateId}`;
+        
+        // Load template data (simulation)
+        const templates = {
+            'default': {
+                name: 'Template Padrão',
+                description: 'Layout clássico com todas as informações',
+                category: 'standard',
+                status: 'active'
+            },
+            'compact': {
+                name: 'Template Compacto', 
+                description: 'Versão reduzida para economia de papel',
+                category: 'compact',
+                status: 'active'
+            }
+        };
+        
+        const template = templates[templateId] || {};
+        document.getElementById('templateName').value = template.name || '';
+        document.getElementById('templateDescription').value = template.description || '';
+        document.getElementById('templateCategory').value = template.category || 'standard';
+        document.getElementById('templateStatus').value = template.status || 'active';
+        
+        const modal = new bootstrap.Modal(document.getElementById('templateEditor'));
+        modal.show();
+    }
+    
+    function duplicateTemplate(templateId) {
+        const newName = prompt(`Nome para a cópia do template ${templateId}:`);
+        if (newName) {
+            alert(`Template duplicado como: ${newName}`);
+            // Em produção, fazer chamada para API
+        }
+    }
+    
+    function toggleStatus(templateId) {
+        const card = document.querySelector(`[data-template="${templateId}"]`);
+        const statusBadge = card.querySelector('.status-badge');
+        const toggleBtn = card.querySelector('.btn-outline-warning, .btn-outline-success');
+        
+        if (statusBadge.classList.contains('status-active')) {
+            statusBadge.classList.remove('status-active');
+            statusBadge.classList.add('status-inactive');
+            statusBadge.textContent = 'Inativo';
+            toggleBtn.innerHTML = '<i class="bi bi-play"></i> Ativar';
+            toggleBtn.classList.remove('btn-outline-warning');
+            toggleBtn.classList.add('btn-outline-success');
+        } else {
+            statusBadge.classList.remove('status-inactive');
+            statusBadge.classList.add('status-active');
+            statusBadge.textContent = 'Ativo';
+            toggleBtn.innerHTML = '<i class="bi bi-pause"></i> Desativar';
+            toggleBtn.classList.remove('btn-outline-success');
+            toggleBtn.classList.add('btn-outline-warning');
+        }
+    }
+    
+    function createNewTemplate() {
+        document.getElementById('editorTemplateTitle').textContent = 'Novo Template';
+        document.getElementById('templateForm').reset();
+        
+        const modal = new bootstrap.Modal(document.getElementById('templateEditor'));
+        modal.show();
+    }
+    
+    function importTemplate() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                alert(`Importando template: ${file.name}`);
+                // Em produção, processar arquivo JSON
+            }
+        };
+        input.click();
+    }
+    
+    function saveTemplate() {
+        const formData = {
+            name: document.getElementById('templateName').value,
+            description: document.getElementById('templateDescription').value,
+            category: document.getElementById('templateCategory').value,
+            status: document.getElementById('templateStatus').value,
+            dimensions: {
+                width: document.getElementById('templateWidth').value,
+                height: document.getElementById('templateHeight').value,
+                margin: document.getElementById('templateMargin').value
+            },
+            colors: {
+                background: document.getElementById('backgroundColor').value,
+                text: document.getElementById('textColor').value,
+                accent: document.getElementById('accentColor').value
+            },
+            font: document.getElementById('fontFamily').value,
+            elements: {
+                qr_code: document.getElementById('includeQRCode').checked,
+                barcode: document.getElementById('includeBarCode').checked,
+                logo: document.getElementById('includeLogo').checked,
+                formula: document.getElementById('includeFormula').checked,
+                customer: document.getElementById('includeCustomer').checked
+            }
+        };
+        
+        console.log('Salvando template:', formData);
+        
+        // Em produção, fazer POST para API
+        alert('Template salvo com sucesso!');
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('templateEditor'));
+        modal.hide();
+    }
+    
+    function testPrint() {
+        alert('Enviando teste de impressão...');
+        // Em produção, gerar preview de teste
+    }
+    
+    // Live preview update
+    function updateLivePreview() {
+        const preview = document.getElementById('livePreview');
+        const bgColor = document.getElementById('backgroundColor').value;
+        const textColor = document.getElementById('textColor').value;
+        const accentColor = document.getElementById('accentColor').value;
+        const font = document.getElementById('fontFamily').value;
+        
+        preview.style.backgroundColor = bgColor;
+        preview.style.color = textColor;
+        preview.style.fontFamily = font;
+        
+        // Update accent color elements
+        preview.querySelectorAll('.accent-color').forEach(el => {
+            el.style.color = accentColor;
+        });
+    }
+    
+    // Color picker sync
+    document.querySelectorAll('.color-input').forEach(input => {
+        input.addEventListener('change', function() {
+            this.nextElementSibling.value = this.value;
+            updateLivePreview();
+        });
+    });
+    
+    // Form inputs update preview
+    document.querySelectorAll('#templateForm input, #templateForm select').forEach(input => {
+        input.addEventListener('change', updateLivePreview);
+    });
+    
+    // Filter and search
+    function resetFilters() {
+        document.getElementById('searchTemplates').value = '';
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('filterCategory').value = '';
+        filterTemplates();
+    }
+    
+    function filterTemplates() {
+        const search = document.getElementById('searchTemplates').value.toLowerCase();
+        const status = document.getElementById('filterStatus').value;
+        const category = document.getElementById('filterCategory').value;
+        
+        document.querySelectorAll('.template-card').forEach(card => {
+            const title = card.querySelector('h5').textContent.toLowerCase();
+            const cardStatus = card.dataset.status;
+            const cardCategory = card.dataset.category;
+            
+            const matchSearch = !search || title.includes(search);
+            const matchStatus = !status || cardStatus === status;
+            const matchCategory = !category || cardCategory === category;
+            
+            card.style.display = matchSearch && matchStatus && matchCategory ? 'block' : 'none';
+        });
+    }
+    
+    // Add event listeners
+    document.getElementById('searchTemplates').addEventListener('input', filterTemplates);
+    document.getElementById('filterStatus').addEventListener('change', filterTemplates);
+    document.getElementById('filterCategory').addEventListener('change', filterTemplates);
+</script>
+{% endblock %}

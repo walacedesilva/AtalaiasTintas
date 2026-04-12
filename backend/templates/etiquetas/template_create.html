@@ -1,0 +1,365 @@
+{% extends "etiquetas/base.html" %}
+
+{% block title %}Criar Template - Sistema de Etiquetas{% endblock %}
+
+{% block toolbar %}
+<div class="btn-group" role="group">
+    <a href="{% url 'etiquetas:templates' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Quick Actions Component -->
+{% include "etiquetas/components/quick-actions.html" with section="templates" %}
+
+<div class="template-creator">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-plus-lg"></i> Criar Novo Template
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="templateCreateForm" data-preserve-state class="preserve-state">
+                        {% csrf_token %}
+                        
+                        <!-- Form State Controls -->
+                        <div class="form-state-controls">
+                            <div class="auto-save-status" id="autoSaveStatus">
+                                <i class="bi bi-circle-fill"></i>
+                                <span>Auto-save ativo</span>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary manual-save-btn" onclick="manualSave()">
+                                <i class="bi bi-floppy"></i> Salvar Agora
+                            </button>
+                            <button type="button" class="btn clear-state-btn" onclick="clearFormDraft()">
+                                <i class="bi bi-trash3"></i> Limpar Rascunho
+                            </button>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="template_name" class="form-label required">Nome do Template</label>
+                                    <input type="text" class="form-control" id="template_name" name="template_name" required maxlength="100">
+                                    <div class="form-help">Nome único para identificar este template</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="category" class="form-label">Categoria</label>
+                                    <select class="form-control" id="category" name="category">
+                                        <option value="">Selecione uma categoria</option>
+                                        {% for value, label in categories %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="paper_size" class="form-label required">Tamanho do Papel</label>
+                                    <select class="form-control" id="paper_size" name="paper_size" required>
+                                        <option value="">Selecione o tamanho</option>
+                                        {% for value, label in paper_sizes %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="orientation" class="form-label">Orientação</label>
+                                    <select class="form-control" id="orientation" name="orientation">
+                                        <option value="portrait">Retrato</option>
+                                        <option value="landscape">Paisagem</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="description" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" maxlength="500"></textarea>
+                            <div class="form-help">Breve descrição do propósito deste template</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+                                    <label class="form-check-label" for="is_default">
+                                        Definir como padrão
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                                    <label class="form-check-label" for="is_active">
+                                        Template ativo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="include_qr_code" name="include_qr_code">
+                                    <label class="form-check-label" for="include_qr_code">
+                                        Incluir QR Code
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg"></i> Criar Template
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                                <i class="bi bi-arrow-clockwise"></i> Limpar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye"></i> Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="template-preview" id="templatePreview">
+                        <div class="preview-placeholder">
+                            <i class="bi bi-file-earmark-text display-4 text-muted"></i>
+                            <p class="text-muted mt-2">Preencha os campos para ver o preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Dicas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-0">
+                            <strong>Nome:</strong> Use nomes descritivos como "Etiqueta Premium 50x30"
+                        </div>
+                        <div class="list-group-item px-0">
+                            <strong>Categoria:</strong> Organize por tipo de produto ou uso
+                        </div>
+                        <div class="list-group-item px-0">
+                            <strong>Tamanho:</strong> Escolha baseado na impressora disponível
+                        </div>
+                        <div class="list-group-item px-0">
+                            <strong>QR Code:</strong> Útil para rastreamento digital
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function resetForm() {
+    document.getElementById('templateCreateForm').reset();
+    updatePreview();
+}
+
+function updatePreview() {
+    const name = document.getElementById('template_name').value || 'Novo Template';
+    const size = document.getElementById('paper_size').selectedOptions[0]?.text || 'Não definido';
+    const preview = document.getElementById('templatePreview');
+    
+    if (document.getElementById('template_name').value) {
+        preview.innerHTML = `
+            <div class="preview-content">
+                <h6>${name}</h6>
+                <p class="small text-muted">${size}</p>
+                <div class="preview-layout">
+                    <div class="preview-field">Nome: [NOME_CLIENTE]</div>
+                    <div class="preview-field">Código: [CODIGO_MISTURA]</div>
+                    <div class="preview-field">Cor: [COR_MISTURA]</div>
+                    <div class="preview-field">Volume: [VOLUME]</div>
+                    ${document.getElementById('include_qr_code').checked ? 
+                        '<div class="preview-qr">📱 QR Code</div>' : ''}
+                </div>
+            </div>
+        `;
+    } else {
+        preview.innerHTML = `
+            <div class="preview-placeholder">
+                <i class="bi bi-file-earmark-text display-4 text-muted"></i>
+                <p class="text-muted mt-2">Preencha os campos para ver o preview</p>
+            </div>
+        `;
+    }
+}
+
+// Update preview when form changes
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('templateCreateForm');
+    form.addEventListener('change', updatePreview);
+    form.addEventListener('input', updatePreview);
+    
+    // Initialize form state preservation
+    if (window.formStateManager) {
+        // The form will be automatically registered due to data-preserve-state attribute
+        console.log('Template create form registered for state preservation');
+        
+        // Update auto-save status indicator
+        const updateAutoSaveStatus = () => {
+            const indicator = document.getElementById('autoSaveStatus');
+            const hasChanges = window.hasUnsavedChanges('templateCreateForm');
+            
+            if (hasChanges) {
+                indicator.querySelector('i').className = 'bi bi-circle-fill text-warning';
+                indicator.querySelector('span').textContent = 'Alterações não salvas';
+            } else {
+                indicator.querySelector('i').className = 'bi bi-check-circle-fill text-success';
+                indicator.querySelector('span').textContent = 'Auto-save ativo';
+            }
+        };
+        
+        // Check status every few seconds
+        setInterval(updateAutoSaveStatus, 2000);
+        
+        // Show notification when form is restored
+        const checkForRestoredData = () => {
+            const nameField = document.getElementById('template_name');
+            if (nameField && nameField.value) {
+                // Data might have been restored, show a subtle indicator
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-info fade show mt-3';
+                notification.innerHTML = `
+                    <i class="bi bi-info-circle"></i>
+                    Dados do formulário foram restaurados de uma sessão anterior.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                const form = document.getElementById('templateCreateForm');
+                form.parentNode.insertBefore(notification, form);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 5000);
+            }
+        };
+        
+        // Check after a short delay to allow restoration to complete
+        setTimeout(checkForRestoredData, 500);
+    }
+});
+
+// Manual save function
+window.manualSave = function() {
+    if (window.saveFormState && window.saveFormState('templateCreateForm')) {
+        // Show temporary success message
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Salvo!';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-primary');
+        }, 2000);
+    }
+};
+
+// Clear state function with confirmation
+window.clearFormDraft = function() {
+    if (confirm('Tem certeza que deseja limpar o rascunho salvo? Esta ação não pode ser desfeita.')) {
+        if (window.clearFormState) {
+            window.clearFormState('templateCreateForm');
+            
+            // Reset the form
+            document.getElementById('templateCreateForm').reset();
+            updatePreview();
+            
+            // Show confirmation
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success fade show';
+            alert.innerHTML = `
+                <i class="bi bi-trash3"></i>
+                Rascunho limpo com sucesso.
+            `;
+            
+            const form = document.getElementById('templateCreateForm');
+            form.parentNode.insertBefore(alert, form);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 3000);
+        }
+    }
+};
+</script>
+
+<style>
+.template-preview {
+    min-height: 200px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    padding: 1rem;
+}
+
+.preview-placeholder {
+    text-align: center;
+}
+
+.preview-content {
+    text-align: center;
+    width: 100%;
+}
+
+.preview-layout {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.preview-field {
+    margin-bottom: 0.25rem;
+    color: #6c757d;
+}
+
+.preview-qr {
+    margin-top: 0.5rem;
+    padding: 0.25rem;
+    background: #e9ecef;
+    border-radius: 3px;
+    font-size: 0.7rem;
+}
+</style>
+{% endblock %}

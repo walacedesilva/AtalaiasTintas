@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: tintas_system_db
+    environment:
+      POSTGRES_DB: tintas_system_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: tintas_system_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Django Web Application
+  web:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.web
+    container_name: tintas_system_web
+    environment:
+      - DJANGO_ENVIRONMENT=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tintas_system_dev
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - SECRET_KEY=development-secret-key-not-for-production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../backend:/app/backend
+      - ../../static:/app/static
+      - ../../media:/app/media
+      - ../../logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        cd backend &&
+        python manage.py makemigrations &&
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker for Background Tasks
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.worker
+    container_name: tintas_system_worker
+    environment:
+      - DJANGO_ENVIRONMENT=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tintas_system_dev
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - SECRET_KEY=development-secret-key-not-for-production
+    volumes:
+      - ../../backend:/app/backend
+      - ../../logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        cd backend &&
+        celery -A tintas_system worker --loglevel=info --concurrency=2
+      "
+
+  # Celery Beat for Scheduled Tasks
+  beat:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.worker
+    container_name: tintas_system_beat
+    environment:
+      - DJANGO_ENVIRONMENT=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=tintas_system_dev
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - SECRET_KEY=development-secret-key-not-for-production
+    volumes:
+      - ../../backend:/app/backend
+      - ../../logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        cd backend &&
+        celery -A tintas_system beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      "
+
+  # Flower for Celery Monitoring (Development only)
+  flower:
+    image: mher/flower:0.9.7
+    container_name: tintas_system_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    command: flower --broker=redis://redis:6379/0
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: tintas_system_network
+    driver: bridge

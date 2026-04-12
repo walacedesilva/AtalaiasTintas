@@ -1,0 +1,607 @@
+/*
+ * Color Accessibility CSS
+ * 
+ * Provides comprehensive color accessibility support including:
+ * - High contrast mode styles
+ * - Color-blind friendly patterns and indicators
+ * - WCAG 2.1 AA compliant color schemes
+ * - Alternative visual representations for color-coded information
+ * - System preference detection and support
+ */
+
+/* ===================================================================
+   ACCESSIBILITY CONTROL PANEL
+   =================================================================== */
+
+.color-accessibility-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+
+.color-accessibility-options {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 280px;
+    background: var(--bs-body-bg, #fff);
+    border: 2px solid var(--bs-border-color, #dee2e6);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-top: 8px;
+}
+
+.color-accessibility-options h3 {
+    color: var(--bs-body-color, #212529);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.color-accessibility-options .form-check {
+    margin-bottom: 0.5rem;
+}
+
+.color-accessibility-options fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.color-accessibility-options legend {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--bs-secondary, #6c757d);
+}
+
+/* ===================================================================
+   HIGH CONTRAST MODE
+   =================================================================== */
+
+html.high-contrast {
+    --bs-primary: #0066cc;
+    --bs-primary-rgb: 0, 102, 204;
+    --bs-secondary: #333333;
+    --bs-secondary-rgb: 51, 51, 51;
+    --bs-success: #008800;
+    --bs-success-rgb: 0, 136, 0;
+    --bs-info: #0066cc;
+    --bs-info-rgb: 0, 102, 204;
+    --bs-warning: #ff8800;
+    --bs-warning-rgb: 255, 136, 0;
+    --bs-danger: #cc0000;
+    --bs-danger-rgb: 204, 0, 0;
+    --bs-light: #ffffff;
+    --bs-light-rgb: 255, 255, 255;
+    --bs-dark: #000000;
+    --bs-dark-rgb: 0, 0, 0;
+    
+    /* Enhanced contrast for backgrounds and text */
+    --bs-body-color: #000000;
+    --bs-body-bg: #ffffff;
+    --bs-border-color: #000000;
+    --bs-secondary-color: #333333;
+    --bs-secondary-bg: #f8f9fa;
+    
+    /* Link colors with higher contrast */
+    --bs-link-color: #0066cc;
+    --bs-link-hover-color: #004499;
+    
+    /* Form control colors */
+    --bs-form-valid-color: #008800;
+    --bs-form-valid-border-color: #008800;
+    --bs-form-invalid-color: #cc0000;
+    --bs-form-invalid-border-color: #cc0000;
+}
+
+/* Force stronger borders and outlines in high contrast */
+html.high-contrast * {
+    border-color: currentColor !important;
+}
+
+html.high-contrast .btn,
+html.high-contrast .card,
+html.high-contrast .form-control,
+html.high-contrast .form-select {
+    border-width: 2px !important;
+    border-style: solid !important;
+}
+
+html.high-contrast .btn:focus,
+html.high-contrast .form-control:focus,
+html.high-contrast .form-select:focus {
+    outline: 3px solid var(--bs-primary) !important;
+    outline-offset: 2px !important;
+}
+
+/* Enhanced button contrast */
+html.high-contrast .btn-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    color: #ffffff !important;
+}
+
+html.high-contrast .btn-outline-primary {
+    color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+
+html.high-contrast .btn-outline-primary:hover {
+    background-color: var(--bs-primary) !important;
+    color: #ffffff !important;
+}
+
+/* Enhanced alert contrast */
+html.high-contrast .alert {
+    border-width: 3px !important;
+}
+
+html.high-contrast .alert-success {
+    color: #004400 !important;
+    background-color: #e8f5e8 !important;
+    border-color: var(--bs-success) !important;
+}
+
+html.high-contrast .alert-warning {
+    color: #664400 !important;
+    background-color: #fff3e0 !important;
+    border-color: var(--bs-warning) !important;
+}
+
+html.high-contrast .alert-danger {
+    color: #660000 !important;
+    background-color: #ffeaea !important;
+    border-color: var(--bs-danger) !important;
+}
+
+html.high-contrast .alert-info {
+    color: #003366 !important;
+    background-color: #e6f3ff !important;
+    border-color: var(--bs-info) !important;
+}
+
+/* Enhanced badge contrast */
+html.high-contrast .badge {
+    border: 2px solid currentColor !important;
+    font-weight: 700 !important;
+}
+
+/* ===================================================================
+   COLOR-BLIND FRIENDLY PATTERNS
+   =================================================================== */
+
+/* Base pattern styles */
+.success-pattern,
+.warning-pattern,
+.danger-pattern,
+.info-pattern {
+    position: relative;
+}
+
+.success-pattern::before,
+.warning-pattern::before,
+.danger-pattern::before,
+.info-pattern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-repeat: repeat;
+    background-size: 8px 8px;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Success pattern: diagonal lines */
+.success-pattern::before {
+    background-image: linear-gradient(45deg, 
+        transparent 25%, 
+        currentColor 25%, 
+        currentColor 50%, 
+        transparent 50%, 
+        transparent 75%, 
+        currentColor 75%);
+}
+
+/* Warning pattern: zigzag */
+.warning-pattern::before {
+    background-image: linear-gradient(90deg, 
+        transparent 0%, 
+        transparent 25%, 
+        currentColor 25%, 
+        currentColor 50%, 
+        transparent 50%, 
+        transparent 75%, 
+        currentColor 75%);
+}
+
+/* Danger pattern: cross-hatch */
+.danger-pattern::before {
+    background-image: 
+        linear-gradient(45deg, 
+            transparent 25%, 
+            currentColor 25%, 
+            currentColor 50%, 
+            transparent 50%, 
+            transparent 75%, 
+            currentColor 75%),
+        linear-gradient(-45deg, 
+            transparent 25%, 
+            currentColor 25%, 
+            currentColor 50%, 
+            transparent 50%, 
+            transparent 75%, 
+            currentColor 75%);
+}
+
+/* Info pattern: dots */
+.info-pattern::before {
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+}
+
+/* ===================================================================
+   COLOR INDICATORS
+   =================================================================== */
+
+.color-indicator {
+    display: inline-block;
+    margin-right: 0.25rem;
+    font-weight: bold;
+    font-size: 0.875em;
+}
+
+.badge .color-indicator {
+    margin-right: 0.125rem;
+}
+
+/* Enhanced indicators for high contrast mode */
+html.high-contrast .color-indicator {
+    font-size: 1em !important;
+    text-shadow: none !important;
+}
+
+/* ===================================================================
+   COLOR-BLIND SIMULATION FILTERS
+   =================================================================== */
+
+/* Protanopia (Red-blind) simulation */
+html.colorblind-protanopia {
+    filter: 
+        url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg"><defs><filter id="protanopia"><feColorMatrix values="0.567,0.433,0,0,0 0.558,0.442,0,0,0 0,0.242,0.758,0,0 0,0,0,1,0"/></filter></defs></svg>#protanopia');
+}
+
+/* Deuteranopia (Green-blind) simulation */
+html.colorblind-deuteranopia {
+    filter: 
+        url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg"><defs><filter id="deuteranopia"><feColorMatrix values="0.625,0.375,0,0,0 0.7,0.3,0,0,0 0,0.3,0.7,0,0 0,0,0,1,0"/></filter></defs></svg>#deuteranopia');
+}
+
+/* Tritanopia (Blue-blind) simulation */
+html.colorblind-tritanopia {
+    filter: 
+        url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg"><defs><filter id="tritanopia"><feColorMatrix values="0.95,0.05,0,0,0 0,0.433,0.567,0,0 0,0.475,0.525,0,0 0,0,0,1,0"/></filter></defs></svg>#tritanopia');
+}
+
+/* Fallback for browsers that don't support filters */
+@supports not (filter: url('#test')) {
+    html.colorblind-protanopia,
+    html.colorblind-deuteranopia,
+    html.colorblind-tritanopia {
+        /* Enhanced patterns and indicators for color-blind users */
+    }
+    
+    html.colorblind-protanopia .text-danger,
+    html.colorblind-protanopia .bg-danger,
+    html.colorblind-deuteranopia .text-success,
+    html.colorblind-deuteranopia .bg-success {
+        text-decoration: underline !important;
+        font-weight: bold !important;
+    }
+}
+
+/* ===================================================================
+   ENHANCED FOCUS INDICATORS
+   =================================================================== */
+
+/* Stronger focus indicators for better visibility */
+html.high-contrast *:focus {
+    outline: 3px solid var(--bs-primary, #0066cc) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 4px var(--bs-primary, #0066cc) !important;
+}
+
+/* ===================================================================
+   CONTRAST VALIDATION RESULTS
+   =================================================================== */
+
+.contrast-results-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 600px;
+    background: var(--bs-body-bg, #ffffff);
+    border: 2px solid var(--bs-border-color, #dee2e6);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 1060;
+}
+
+.contrast-result-item {
+    background: var(--bs-light, #f8f9fa);
+    transition: background-color 0.2s ease;
+}
+
+.contrast-result-item:hover {
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+
+.contrast-highlight {
+    animation: contrastHighlight 3s ease-out;
+    position: relative;
+    z-index: 1000;
+}
+
+@keyframes contrastHighlight {
+    0% {
+        box-shadow: 0 0 0 4px #ff6b35;
+        background-color: #fff3cd !important;
+    }
+    50% {
+        box-shadow: 0 0 0 8px #ff6b35;
+    }
+    100% {
+        box-shadow: none;
+        background-color: transparent !important;
+    }
+}
+
+/* ===================================================================
+   CHART AND DATA VISUALIZATION ENHANCEMENTS
+   =================================================================== */
+
+.chart-accessible {
+    position: relative;
+}
+
+.chart-accessible::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+    border-radius: 50%;
+    opacity: 0.7;
+}
+
+.chart-description {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bs-light, #f8f9fa);
+    border-radius: 6px;
+    border-left: 4px solid var(--bs-primary, #0d6efd);
+}
+
+/* ===================================================================
+   PROGRESS BAR ENHANCEMENTS
+   =================================================================== */
+
+.progress-bar {
+    position: relative;
+}
+
+.progress-bar .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--bs-dark, #212529);
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+/* High contrast progress bars */
+html.high-contrast .progress {
+    background-color: #ffffff !important;
+    border: 2px solid var(--bs-dark) !important;
+}
+
+html.high-contrast .progress-bar {
+    background-color: var(--bs-primary) !important;
+}
+
+/* ===================================================================
+   STATUS INDICATORS
+   =================================================================== */
+
+.status-dot,
+.color-dot {
+    position: relative;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1px currentColor;
+}
+
+/* Add text labels for status dots in high contrast mode */
+html.high-contrast .status-dot::after,
+html.high-contrast .color-dot::after {
+    content: attr(aria-label);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bs-dark);
+    color: var(--bs-light);
+    padding: 0.125rem 0.25rem;
+    border-radius: 3px;
+    font-size: 0.625rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
+}
+
+html.high-contrast .status-dot:hover::after,
+html.high-contrast .color-dot:hover::after {
+    opacity: 1;
+}
+
+/* ===================================================================
+   SYSTEM PREFERENCE SUPPORT
+   =================================================================== */
+
+/* Respect prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+    html.prefers-dark {
+        --bs-body-color: #ffffff;
+        --bs-body-bg: #212529;
+        --bs-border-color: #495057;
+    }
+    
+    .color-accessibility-options {
+        background: var(--bs-body-bg);
+        border-color: var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+}
+
+/* Respect prefers-contrast: high */
+@media (prefers-contrast: high) {
+    :root {
+        --bs-border-width: 2px;
+    }
+    
+    * {
+        border-width: var(--bs-border-width) !important;
+    }
+    
+    *:focus {
+        outline-width: 3px !important;
+        outline-offset: 2px !important;
+    }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    html.reduce-motion,
+    html.reduce-motion * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+    }
+    
+    html.reduce-motion .contrast-highlight {
+        animation: none !important;
+        background-color: #fff3cd !important;
+        box-shadow: 0 0 0 3px #ff6b35 !important;
+    }
+}
+
+/* ===================================================================
+   PRINT STYLES
+   =================================================================== */
+
+@media print {
+    /* Ensure good contrast in print */
+    .color-accessibility-panel,
+    .contrast-results-panel {
+        display: none !important;
+    }
+    
+    /* Force black text on white background for print */
+    * {
+        color: #000000 !important;
+        background: #ffffff !important;
+        border-color: #000000 !important;
+    }
+    
+    /* Preserve semantic patterns in print */
+    .success-pattern::before,
+    .warning-pattern::before,
+    .danger-pattern::before,
+    .info-pattern::before {
+        opacity: 0.3 !important;
+    }
+}
+
+/* ===================================================================
+   MOBILE RESPONSIVENESS
+   =================================================================== */
+
+@media (max-width: 768px) {
+    .color-accessibility-panel {
+        top: 10px;
+        right: 10px;
+    }
+    
+    .color-accessibility-options {
+        width: calc(100vw - 40px);
+        right: -10px;
+    }
+    
+    .contrast-results-panel {
+        width: 95%;
+        margin: 10px;
+        padding: 1rem;
+    }
+    
+    .contrast-result-item {
+        padding: 0.75rem;
+    }
+}
+
+/* ===================================================================
+   ACCESSIBILITY UTILITIES
+   =================================================================== */
+
+/* Screen reader only text that becomes visible on focus */
+.sr-only-focusable:focus {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0.25rem 0.5rem !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+    background: var(--bs-warning) !important;
+    color: var(--bs-dark) !important;
+    border: 2px solid var(--bs-dark) !important;
+    border-radius: 4px !important;
+    z-index: 1060 !important;
+}
+
+/* High contrast focus rings for better visibility */
+.focus-ring-high-contrast:focus {
+    outline: 3px solid var(--bs-primary, #0066cc) !important;
+    outline-offset: 2px !important;
+    box-shadow: 
+        0 0 0 1px var(--bs-body-bg, #ffffff),
+        0 0 0 4px var(--bs-primary, #0066cc) !important;
+}
+
+/* Ensure minimum touch target size (44px) */
+.btn,
+.form-check-input,
+.form-control,
+.form-select {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    min-width: 1.25rem;
+    min-height: 1.25rem;
+}

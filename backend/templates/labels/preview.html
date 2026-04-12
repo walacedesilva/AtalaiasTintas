@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview - Etiqueta {{ label_data.mistura.codigo }}</title>
+    <style>
+        :root {
+            --primary-color: {{ css_vars.primary_color }};
+            --secondary-color: {{ css_vars.secondary_color }};
+            --accent-color: {{ css_vars.accent_color }};
+            --background-color: {{ css_vars.background_color }};
+            --text-primary: {{ css_vars.text_primary }};
+            --text-secondary: {{ css_vars.text_secondary }};
+            --font-primary: {{ css_vars.font_primary }}, Arial, sans-serif;
+            --font-secondary: {{ css_vars.font_secondary }}, Arial, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: var(--font-secondary);
+            background-color: #f5f5f5;
+            color: var(--text-primary);
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .etiqueta {
+            width: {{ width_mm }}mm;
+            height: {{ height_mm }}mm;
+            background-color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            padding: {{ template.layout.padding }}mm;
+            box-sizing: border-box;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transform: scale(2); /* Zoom para melhor visualização */
+            transform-origin: center;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: {{ template.layout.element_spacing }}mm;
+        }
+        
+        .header h1 {
+            font-family: var(--font-primary);
+            font-size: {{ template.fonts.size_title }}pt;
+            color: var(--primary-color);
+            margin: 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: {{ template.layout.element_spacing }}mm;
+        }
+        
+        .info-section {
+            flex: 1;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 1mm;
+            font-size: {{ template.fonts.size_body }}pt;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: var(--text-secondary);
+            min-width: 25mm;
+        }
+        
+        .info-value {
+            color: var(--text-primary);
+            flex: 1;
+        }
+        
+        .color-preview {
+            width: {{ template.layout.qr_size }}mm;
+            height: {{ template.layout.qr_size }}mm;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            margin-left: {{ template.layout.element_spacing }}mm;
+            flex-shrink: 0;
+        }
+        
+        .codes-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: {{ template.layout.element_spacing }}mm 0;
+        }
+        
+        .qr-code {
+            width: {{ template.layout.qr_size }}mm;
+            height: {{ template.layout.qr_size }}mm;
+            background-color: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: {{ template.fonts.size_small }}pt;
+            color: var(--text-secondary);
+        }
+        
+        .qr-code img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .barcode {
+            width: 35mm;
+            height: {{ template.layout.barcode_height }}mm;
+            background-color: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: {{ template.fonts.size_small }}pt;
+            color: var(--text-secondary);
+        }
+        
+        .barcode img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        {% if template.show_pigment_list %}
+        .pigments-section {
+            margin: {{ template.layout.element_spacing }}mm 0;
+        }
+        
+        .pigments-title {
+            font-size: {{ template.fonts.size_subtitle }}pt;
+            font-weight: bold;
+            color: var(--text-secondary);
+            margin-bottom: 1mm;
+        }
+        
+        .pigments-list {
+            font-size: {{ template.fonts.size_small }}pt;
+            color: var(--text-primary);
+        }
+        
+        .pigment-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5mm;
+        }
+        {% endif %}
+        
+        {% if template.show_technical_info %}
+        .technical-info {
+            font-size: {{ template.fonts.size_small }}pt;
+            color: var(--text-secondary);
+            text-align: center;
+            margin: {{ template.layout.element_spacing }}mm 0;
+            padding: 1mm 0;
+            border-top: 1px solid #eee;
+        }
+        {% endif %}
+        
+        .footer {
+            text-align: center;
+            font-size: {{ template.fonts.size_small }}pt;
+            color: var(--text-secondary);
+            margin-top: {{ template.layout.element_spacing }}mm;
+            font-style: italic;
+        }
+        
+        .preview-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            font-size: 14px;
+        }
+        
+        .preview-info h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .info-item strong {
+            color: var(--text-primary);
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            
+            .preview-info {
+                display: none;
+            }
+            
+            .etiqueta {
+                transform: scale(1);
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <!-- Informações do Preview (visível apenas na tela) -->
+        <div class="preview-info">
+            <h3>Preview da Etiqueta - {{ label_data.mistura.codigo }}</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Cor:</strong> {{ label_data.cor.nome }} ({{ label_data.cor.codigo }})
+                </div>
+                <div class="info-item">
+                    <strong>Volume:</strong> {{ label_data.mistura.volume_litros }}L
+                </div>
+                <div class="info-item">
+                    <strong>Template:</strong> {{ template.name }}
+                </div>
+                <div class="info-item">
+                    <strong>Dimensões:</strong> {{ width_mm }}mm × {{ height_mm }}mm
+                </div>
+            </div>
+        </div>
+        
+        <!-- Etiqueta Principal -->
+        <div class="etiqueta">
+            {% if template.header_text %}
+            <div class="header">
+                <h1>{{ template.header_text }}</h1>
+            </div>
+            {% endif %}
+            
+            <div class="main-content">
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">Cor:</span>
+                        <span class="info-value">{{ label_data.cor.nome }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Código:</span>
+                        <span class="info-value">{{ label_data.cor.codigo }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Volume:</span>
+                        <span class="info-value">{{ label_data.mistura.volume_litros }}L</span>
+                    </div>
+                    
+                    {% if template.show_formula_details %}
+                    <div class="info-row">
+                        <span class="info-label">Fórmula:</span>
+                        <span class="info-value">{{ label_data.formula.nome }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Base:</span>
+                        <span class="info-value">{{ label_data.formula.base_produto }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if template.show_client_info and label_data.cliente.nome != "Cliente Anônimo" %}
+                    <div class="info-row">
+                        <span class="info-label">Cliente:</span>
+                        <span class="info-value">{{ label_data.cliente.nome }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="info-row">
+                        <span class="info-label">Data:</span>
+                        <span class="info-value">{{ label_data.mistura.data_criacao }}</span>
+                    </div>
+                </div>
+                
+                {% if template.show_color_preview %}
+                <div class="color-preview" style="background-color: {{ label_data.cor.hex }};"></div>
+                {% endif %}
+            </div>
+            
+            {% if template.show_qr_code or template.show_barcode %}
+            <div class="codes-section">
+                {% if template.show_qr_code %}
+                <div class="qr-code">
+                    {% if label_data.qr_code.image_base64 %}
+                    <img src="data:image/png;base64,{{ label_data.qr_code.image_base64 }}" alt="QR Code">
+                    {% else %}
+                    QR CODE
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if template.show_barcode %}
+                <div class="barcode">
+                    {% if label_data.barcode.image_base64 %}
+                    <img src="data:image/png;base64,{{ label_data.barcode.image_base64 }}" alt="Código de Barras">
+                    {% else %}
+                    || {{ label_data.barcode.code }} ||
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if template.show_pigment_list and label_data.pigmentos %}
+            <div class="pigments-section">
+                <div class="pigments-title">Pigmentos:</div>
+                <div class="pigments-list">
+                    {% for pigmento in label_data.pigmentos %}
+                    <div class="pigment-item">
+                        <span>{{ pigmento.codigo }}</span>
+                        <span>{{ pigmento.quantidade_ml }}ml ({{ pigmento.percentual|floatformat:1 }}%)</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if template.show_technical_info %}
+            <div class="technical-info">
+                {{ label_data.cor.rgb }} • {{ label_data.cor.lab }}
+                <br>Tracking: {{ label_data.barcode.code }}
+            </div>
+            {% endif %}
+            
+            {% if template.footer_text %}
+            <div class="footer">
+                {{ template.footer_text }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,734 @@
+openapi: 3.0.3
+info:
+  title: Sistema Core de Infraestrutura API
+  description: Core infrastructure APIs for authentication, monitoring, and system management
+  version: 1.0.0
+  contact:
+    name: Sistema de Gestão de Tintas
+    
+servers:
+  - url: https://api.tintas.local/v1
+    description: Local development
+  - url: https://api-staging.tintas.com/v1  
+    description: Staging environment
+  - url: https://api.tintas.com/v1
+    description: Production environment
+
+security:
+  - sessionAuth: []
+  - csrfToken: []
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      summary: User authentication
+      description: Authenticate user with username/password and create session
+      tags: [Authentication]
+      security: []  # No auth required for login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: "vendedor01"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+                remember_me:
+                  type: boolean
+                  default: false
+                  description: "Extend session timeout to 30 days"
+      responses:
+        200:
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+                  session_expires_at:
+                    type: string
+                    format: date-time
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                    example: ["sales.view", "customers.create", "inventory.view"]
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        423:
+          description: Account locked due to failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: User logout
+      description: Terminate current session and invalidate session cookie
+      tags: [Authentication]
+      responses:
+        200:
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Session terminated successfully"
+
+  /auth/me:
+    get:
+      summary: Get current user profile
+      description: Returns current authenticated user information and permissions
+      tags: [Authentication]
+      responses:
+        200:
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/change-password:
+    post:
+      summary: Change user password
+      description: Change password for current authenticated user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        200:
+          description: Password changed successfully
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  # User Management (Admin only)
+  /users:
+    get:
+      summary: List all users
+      description: Get paginated list of all system users
+      tags: [User Management]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [ADMIN, VENDOR, OPERATOR]
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create new user
+      description: Create new user account (admin only)
+      tags: [User Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        201:
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{user_id}:
+    parameters:
+      - name: user_id  
+        in: path
+        required: true
+        schema:
+          type: integer
+          
+    get:
+      summary: Get user details
+      description: Get detailed information about specific user
+      tags: [User Management]
+      responses:
+        200:
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update user
+      description: Update user information (admin only)
+      tags: [User Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        200:
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Deactivate user
+      description: Deactivate user account (soft delete)
+      tags: [User Management]
+      responses:
+        200:
+          description: User deactivated successfully
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  # System Health Monitoring
+  /health:
+    get:
+      summary: System health check
+      description: Get current system health status
+      tags: [Monitoring]
+      security: []  # Public endpoint for load balancer health checks
+      responses:
+        200:
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        503:
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/detailed:
+    get:
+      summary: Detailed health metrics
+      description: Get comprehensive system health metrics (admin only)
+      tags: [Monitoring]
+      responses:
+        200:
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealth'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+  # System Configuration
+  /config:
+    get:
+      summary: Get system configuration
+      description: Get system configuration parameters (admin only)
+      tags: [Configuration]
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [SECURITY, MONITORING, BACKUP, GENERAL]
+      responses:
+        200:
+          description: Configuration parameters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConfigParameter'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Update configuration
+      description: Update system configuration parameter (admin only)
+      tags: [Configuration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdate'
+      responses:
+        200:
+          description: Configuration updated successfully
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+  # Audit Logs
+  /audit-logs:
+    get:
+      summary: Get audit logs
+      description: Get paginated audit log entries (admin only)
+      tags: [Audit]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: resource_type
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Paginated audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: Django session authentication
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRFToken
+      description: CSRF protection token
+
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "vendedor01"
+        email:
+          type: string
+          format: email
+          example: "vendedor@tintas.com"
+        first_name:
+          type: string
+          example: "João"
+        last_name:
+          type: string
+          example: "Silva"
+        role:
+          type: string
+          enum: [ADMIN, VENDOR, OPERATOR]
+          example: "VENDOR"
+        employee_id:
+          type: string
+          example: "EMP001"
+        phone_number:
+          type: string
+          example: "+5511999999999"
+        is_active:
+          type: boolean
+          example: true
+        last_login:
+          type: string
+          format: date-time
+        date_joined:
+          type: string
+          format: date-time
+        profile:
+          type: object
+          properties:
+            timezone:
+              type: string
+              example: "America/Sao_Paulo"
+            language:
+              type: string
+              example: "pt-BR"
+            email_notifications:
+              type: boolean
+              example: true
+            sms_notifications:
+              type: boolean
+              example: false
+
+    UserCreate:
+      type: object
+      required: [username, password, email, first_name, last_name, role]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 150
+        password:
+          type: string
+          format: password
+          minLength: 8
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          type: string
+          enum: [ADMIN, VENDOR, OPERATOR]
+        employee_id:
+          type: string
+          maxLength: 20
+        phone_number:
+          type: string
+          maxLength: 15
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          type: string
+          enum: [ADMIN, VENDOR, OPERATOR]
+        employee_id:
+          type: string
+          maxLength: 20
+        phone_number:
+          type: string
+          maxLength: 15
+        is_active:
+          type: boolean
+        profile:
+          type: object
+          properties:
+            timezone:
+              type: string
+            language:
+              type: string
+            email_notifications:
+              type: boolean
+            sms_notifications:
+              type: boolean
+
+    PaginatedUsers:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, warning, critical]
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        uptime_seconds:
+          type: integer
+          example: 86400
+
+    DetailedHealth:
+      type: object
+      properties:
+        overall_status:
+          type: string
+          enum: [healthy, warning, critical]
+        components:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "database"
+              status:
+                type: string
+                enum: [healthy, warning, critical]
+              metrics:
+                type: object
+                additionalProperties: true
+                example:
+                  response_time_ms: 45
+                  active_connections: 12
+                  cpu_usage_percent: 23.5
+              last_checked:
+                type: string
+                format: date-time
+
+    ConfigParameter:
+      type: object
+      properties:
+        key:
+          type: string
+          example: "SESSION_TIMEOUT_MINUTES"
+        value:
+          type: string
+          example: "480"
+        data_type:
+          type: string
+          enum: [STRING, INTEGER, FLOAT, BOOLEAN, JSON]
+        description:
+          type: string
+          example: "Session timeout in minutes"
+        category:
+          type: string
+          example: "SECURITY"
+
+    ConfigUpdate:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            username:
+              type: string
+        action:
+          type: string
+          example: "LOGIN"
+        resource_type:
+          type: string
+          example: "User"
+        resource_id:
+          type: string
+          example: "123"
+        description:
+          type: string
+          example: "User logged in successfully"
+        timestamp:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+          example: "192.168.1.100"
+        success:
+          type: boolean
+          example: true
+
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Invalid credentials"
+        code:
+          type: string
+          example: "INVALID_CREDENTIALS"
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request - validation errors
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

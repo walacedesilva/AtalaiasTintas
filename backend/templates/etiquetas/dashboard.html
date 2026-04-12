@@ -1,0 +1,311 @@
+{% extends "etiquetas/base.html" %}
+
+{% block title %}Dashboard - Sistema de Etiquetas{% endblock %}
+
+{% block toolbar %}
+<div class="btn-group" role="toolbar" aria-label="Ações principais">
+    <a href="{% url 'etiquetas:gerar' %}" 
+       class="btn btn-primary"
+       aria-label="Gerar novas etiquetas">
+        <i class="bi bi-printer" aria-hidden="true"></i> 
+        <span>Gerar Etiquetas</span>
+    </a>
+    <a href="{% url 'etiquetas:nova_mistura' %}" 
+       class="btn btn-success"
+       aria-label="Criar nova mistura de tinta">
+        <i class="bi bi-plus-circle" aria-hidden="true"></i> 
+        <span>Nova Mistura</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Title for Screen Readers -->
+<h1 id="page-title" class="visually-hidden">Dashboard do Sistema de Etiquetas</h1>
+
+<!-- Quick Actions Component -->
+{% include "etiquetas/components/quick-actions.html" with section="dashboard" %}
+
+<!-- Estatísticas rápidas -->
+<section aria-labelledby="stats-heading">
+    <h2 id="stats-heading" class="visually-hidden">Estatísticas do Sistema</h2>
+    
+    <div class="row mb-4" role="region" aria-label="Estatísticas rápidas">
+        <div class="col-md-3">
+            <article class="card text-white bg-primary stats-card" 
+                     role="region" 
+                     aria-labelledby="templates-stat"
+                     aria-describedby="templates-desc">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 id="templates-stat" class="card-title h4">{{ total_templates }}</h3>
+                            <p id="templates-desc" class="card-text">Templates Ativos</p>
+                        </div>
+                        <div class="align-self-center" aria-hidden="true">
+                            <i class="bi bi-file-earmark-text fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        
+        <div class="col-md-3">
+            <article class="card text-white bg-warning stats-card" 
+                     role="region" 
+                     aria-labelledby="jobs-stat"
+                     aria-describedby="jobs-desc">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 id="jobs-stat" class="card-title h4">{{ jobs_pendentes }}</h3>
+                            <p id="jobs-desc" class="card-text">Jobs Pendentes</p>
+                        </div>
+                        <div class="align-self-center" aria-hidden="true">
+                            <i class="bi bi-clock fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        
+        <div class="col-md-3">
+            <article class="card text-white bg-info stats-card" 
+                     role="region" 
+                     aria-labelledby="processing-stat"
+                     aria-describedby="processing-desc">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 id="processing-stat" class="card-title h4">{{ jobs_processando }}</h3>
+                            <p id="processing-desc" class="card-text">Processando</p>
+                        </div>
+                        <div class="align-self-center" aria-hidden="true">
+                            <i class="bi bi-gear fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        
+        <div class="col-md-3">
+            <article class="card text-white bg-secondary stats-card" 
+                     role="region" 
+                     aria-labelledby="noetiqueta-stat"
+                     aria-describedby="noetiqueta-desc">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 id="noetiqueta-stat" class="card-title h4">{{ misturas_sem_etiqueta }}</h3>
+                            <p id="noetiqueta-desc" class="card-text">Sem Etiqueta</p>
+                        </div>
+                        <div class="align-self-center" aria-hidden="true">
+                            <i class="bi bi-exclamation-triangle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- Jobs recentes -->
+<section class="row mb-4" aria-labelledby="jobs-heading">
+    <div class="col-lg-8">
+        <article class="card" role="region" aria-labelledby="jobs-heading">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 id="jobs-heading" class="h5 mb-0">Jobs de Impressão Recentes</h2>
+                <a href="#" 
+                   class="btn btn-sm btn-outline-primary"
+                   aria-label="Ver todos os jobs de impressão">
+                    <span>Ver Todos</span>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if jobs_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-sm" 
+                           role="table" 
+                           aria-label="Jobs de impressão recentes"
+                           aria-describedby="jobs-desc">
+                        <caption id="jobs-desc" class="visually-hidden">
+                            Lista dos últimos jobs de impressão processados no sistema
+                        </caption>
+                        <thead>
+                            <tr role="row">
+                                <th scope="col" abbr="ID">ID</th>
+                                <th scope="col">Template</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Misturas</th>
+                                <th scope="col">Criado</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs_recentes %}
+                            <tr role="row">
+                                <td role="cell">
+                                    <code aria-label="ID do job: {{ job.job_id|stringformat:"s"|slice:":8" }}">{{ job.job_id|stringformat:"s"|slice:":8" }}</code>
+                                </td>
+                                <td role="cell">{{ job.template.name }}</td>
+                                <td role="cell">
+                                    <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'processing' %}primary{% elif job.status == 'failed' %}danger{% else %}secondary{% endif %}"
+                                          aria-label="Status do job: {{ job.get_status_display }}">
+                                        {{ job.get_status_display }}
+                                    </span>
+                                </td>
+                                <td role="cell">{{ job.misturas_count }}</td>
+                                <td role="cell">
+                                    <time datetime="{{ job.created_at|date:'c' }}">
+                                        {{ job.created_at|timesince }} atrás
+                                    </time>
+                                </td>
+                                <td role="cell">
+                                    <a href="{% url 'etiquetas:job_status' job.job_id %}" 
+                                       class="btn btn-sm btn-outline-primary"
+                                       aria-label="Ver detalhes do job {{ job.job_id|stringformat:'s'|slice:':8' }}">
+                                        <i class="bi bi-eye" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Ver detalhes</span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted" 
+                     role="region" 
+                     aria-label="Nenhum job encontrado">
+                    <i class="bi bi-inbox fs-1" aria-hidden="true"></i>
+                    <p class="mt-2">Nenhum job de impressão encontrado</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Templates ativos -->
+        <article class="card" role="region" aria-labelledby="templates-heading">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 id="templates-heading" class="h5 mb-0">Templates Ativos</h2>
+                <a href="{% url 'etiquetas:templates' %}" 
+                   class="btn btn-sm btn-outline-primary"
+                   aria-label="Ver todos os templates">
+                    <span>Ver Todos</span>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if templates_ativos %}
+                <div class="list-group list-group-flush" 
+                     role="list" 
+                     aria-label="Lista de templates ativos">
+                    {% for template in templates_ativos %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0" 
+                         role="listitem">
+                        <div>
+                            <h3 class="h6 mb-1">{{ template.name }}</h3>
+                            <small class="text-muted">{{ template.get_category_display }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark" 
+                                  aria-label="Usado {{ template.usage_count }} vezes">{{ template.usage_count }}</span>
+                            {% if template.is_default %}
+                            <i class="bi bi-star-fill text-warning ms-1" 
+                               aria-label="Template padrão"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3 text-muted" 
+                     role="region" 
+                     aria-label="Nenhum template ativo">
+                    <p>Nenhum template ativo</p>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        
+        <!-- Status do sistema -->
+        <article class="card mt-3" role="region" aria-labelledby="system-status-heading">
+            <div class="card-header">
+                <h2 id="system-status-heading" class="h5 mb-0">Status do Sistema</h2>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2" 
+                     role="status" 
+                     aria-labelledby="printers-label" 
+                     aria-describedby="printers-count">
+                    <span id="printers-label">Impressoras Ativas</span>
+                    <span id="printers-count" 
+                          class="badge bg-{% if impressoras_ativas > 0 %}success{% else %}secondary{% endif %}"
+                          aria-label="{{ impressoras_ativas }} impressoras ativas">
+                        {{ impressoras_ativas }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center" 
+                     role="status" 
+                     aria-labelledby="system-label" 
+                     aria-describedby="system-status">
+                    <span id="system-label">Sistema</span>
+                    <span id="system-status" 
+                          class="badge bg-success"
+                          aria-label="Sistema está online">
+                        Online
+                    </span>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+
+<!-- Ações rápidas -->
+<section class="row" aria-labelledby="quick-actions-heading">
+    <div class="col-12">
+        <article class="card" role="region" aria-labelledby="quick-actions-heading">
+            <div class="card-header">
+                <h2 id="quick-actions-heading" class="h5 mb-0">Ações Rápidas</h2>
+            </div>
+            <div class="card-body">
+                <div class="row" role="group" aria-label="Ações rápidas do dashboard">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'etiquetas:gerar' %}" 
+                           class="btn btn-outline-primary w-100"
+                           aria-label="Abrir gerador de etiquetas">
+                            <i class="bi bi-printer fs-4 d-block mb-2" aria-hidden="true"></i>
+                            <span>Gerar Etiquetas</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'etiquetas:misturas' %}?sem_etiqueta=1" 
+                           class="btn btn-outline-warning w-100"
+                           aria-label="Ver misturas que não possuem etiquetas">
+                            <i class="bi bi-exclamation-triangle fs-4 d-block mb-2" aria-hidden="true"></i>
+                            <span>Misturas Sem Etiqueta</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'etiquetas:templates' %}" 
+                           class="btn btn-outline-info w-100"
+                           aria-label="Gerenciar templates de etiquetas">
+                            <i class="bi bi-file-earmark-text fs-4 d-block mb-2" aria-hidden="true"></i>
+                            <span>Gerenciar Templates</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'etiquetas:nova_mistura' %}" 
+                           class="btn btn-outline-success w-100"
+                           aria-label="Criar nova mistura de tinta">
+                            <i class="bi bi-plus-circle fs-4 d-block mb-2" aria-hidden="true"></i>
+                            <span>Nova Mistura</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

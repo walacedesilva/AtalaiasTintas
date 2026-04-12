@@ -1,0 +1,19 @@
+# Dependências específicas para o sistema de etiquetas
+# Geração de QR Codes
+qrcode[pil]==7.4.2
+
+# Geração de códigos de barras
+python-barcode[images]==0.15.1
+
+# Geração de PDFs
+reportlab==4.0.7
+
+# Manipulação de imagens
+Pillow==10.1.0
+
+# Para impressão direta (opcional)
+# python-escpos==3.0a9
+
+# Para processamento assíncrono de etiquetas (opcional)
+# celery==5.3.4
+# redis==5.0.1

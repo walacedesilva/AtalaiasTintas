@@ -1,0 +1,590 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Preview Etiqueta - {{ mistura.codigo_mistura }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .etiqueta-container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        position: relative;
+    }
+    
+    .etiqueta-header {
+        text-align: center;
+        border-bottom: 2px solid #2563eb;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .etiqueta-logo {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 5px;
+    }
+    
+    .etiqueta-data {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .etiqueta-codigo {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .codigo-mistura {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 5px;
+    }
+    
+    .codigo-formula {
+        font-size: 12px;
+        color: #666;
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    
+    .etiqueta-cor {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 6px;
+    }
+    
+    .cor-sample {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+    
+    .cor-info h6 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .cor-info small {
+        color: #666;
+        font-size: 11px;
+    }
+    
+    .etiqueta-cliente {
+        margin-bottom: 15px;
+    }
+    
+    .cliente-nome {
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 3px;
+    }
+    
+    .cliente-telefone {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .etiqueta-detalhes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 15px;
+        font-size: 12px;
+    }
+    
+    .detalhe-item {
+        text-align: center;
+        padding: 8px;
+        background: #f8fafc;
+        border-radius: 4px;
+    }
+    
+    .detalhe-label {
+        color: #666;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .detalhe-value {
+        font-weight: bold;
+        font-size: 13px;
+        color: #1f2937;
+    }
+    
+    .etiqueta-pigmentos {
+        margin-bottom: 15px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 10px;
+    }
+    
+    .pigmentos-title {
+        font-size: 11px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    
+    .pigmento-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 0;
+        font-size: 10px;
+    }
+    
+    .pigmento-nome {
+        font-weight: 500;
+    }
+    
+    .pigmento-quantidade {
+        color: #666;
+    }
+    
+    .etiqueta-codes {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .qr-code {
+        flex-shrink: 0;
+    }
+    
+    .barcode {
+        flex-shrink: 0;
+        text-align: center;
+    }
+    
+    .barcode img {
+        max-width: 120px;
+    }
+    
+    .barcode-number {
+        font-family: monospace;
+        font-size: 10px;
+        margin-top: 2px;
+    }
+    
+    .print-actions {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 1000;
+    }
+    
+    .template-selector {
+        margin-bottom: 20px;
+    }
+    
+    @media print {
+        .template-selector,
+        .print-actions,
+        .navbar,
+        .sidebar {
+            display: none !important;
+        }
+        
+        .main-content {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .etiqueta-container {
+            max-width: none;
+            box-shadow: none;
+            border: none;
+            margin: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-eye"></i> Preview da Etiqueta 
+        <small class="text-muted">{{ mistura.codigo_mistura }}</small>
+    </h2>
+    <div>
+        <a href="{% url 'etiquetas:misturas' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+        <a href="{% url 'etiquetas:gerar_etiqueta' mistura.id %}" class="btn btn-primary">
+            <i class="bi bi-printer"></i> Gerar PDF
+        </a>
+    </div>
+</div>
+
+<!-- Seletor de Template -->
+<div class="template-selector">
+    <div class="card">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label">Template da Etiqueta:</label>
+                    <select class="form-select" id="templateSelect">
+                        <option value="default" selected>Padrão</option>
+                        <option value="compact">Compacto</option>
+                        <option value="premium">Premium</option>
+                        <option value="eco">Econômico</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="refreshPreview()">
+                            <i class="bi bi-arrow-clockwise"></i> Atualizar Preview
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Imprimir Preview
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="showQRData()">
+                            <i class="bi bi-qr-code"></i> Ver Dados QR
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview da Etiqueta -->
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div id="etiquetaPreview" class="etiqueta-container">
+            <!-- Header -->
+            <div class="etiqueta-header">
+                <div class="etiqueta-logo">SISTEMA DE TINTAS</div>
+                <div class="etiqueta-data">{{ mistura.created_at|date:"d/m/Y H:i" }}</div>
+            </div>
+            
+            <!-- Código da Mistura -->
+            <div class="etiqueta-codigo">
+                <div class="codigo-mistura">{{ mistura.codigo_mistura }}</div>
+                <div class="codigo-formula">{{ mistura.formula.codigo_formula }}</div>
+            </div>
+            
+            <!-- Informações da Cor -->
+            <div class="etiqueta-cor">
+                <div class="cor-sample" style="background-color: {{ mistura.formula.cor_definida.cor_hex }};"></div>
+                <div class="cor-info">
+                    <h6>{{ mistura.formula.cor_definida.nome_cor }}</h6>
+                    <small>{{ mistura.formula.cor_definida.familia_cor }} | {{ mistura.formula.cor_definida.linha_produto }}</small>
+                    <br>
+                    <small>{{ mistura.formula.cor_definida.cor_hex|upper }}</small>
+                </div>
+            </div>
+            
+            <!-- Cliente -->
+            <div class="etiqueta-cliente">
+                <div class="cliente-nome">{{ mistura.cliente_nome }}</div>
+                {% if mistura.cliente_telefone %}
+                    <div class="cliente-telefone">{{ mistura.cliente_telefone }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Detalhes -->
+            <div class="etiqueta-detalhes">
+                <div class="detalhe-item">
+                    <div class="detalhe-label">Volume</div>
+                    <div class="detalhe-value">{{ mistura.volume_solicitado }}L</div>
+                </div>
+                <div class="detalhe-item">
+                    <div class="detalhe-label">Custo</div>
+                    <div class="detalhe-value">R$ {{ mistura.custo_total|floatformat:2 }}</div>
+                </div>
+                <div class="detalhe-item">
+                    <div class="detalhe-label">Base</div>
+                    <div class="detalhe-value">{{ mistura.formula.base_produto.nome_variacao|truncatechars:10 }}</div>
+                </div>
+                <div class="detalhe-item">
+                    <div class="detalhe-label">Loja</div>
+                    <div class="detalhe-value">{{ mistura.loja.codigo }}</div>
+                </div>
+            </div>
+            
+            <!-- Pigmentos -->
+            <div class="etiqueta-pigmentos">
+                <div class="pigmentos-title">Composição</div>
+                {% for item in mistura.itens.all %}
+                    <div class="pigmento-item">
+                        <span class="pigmento-nome">{{ item.pigmento.nome|truncatechars:15 }}</span>
+                        <span class="pigmento-quantidade">{{ item.quantidade_calculada }}ml</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- QR Code e Código de Barras -->
+            <div class="etiqueta-codes">
+                <div class="qr-code">
+                    <div id="qrCodeContainer">
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <div style="font-size: 10px;">Carregando QR...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="barcode">
+                    <div id="barcodeContainer">
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <div style="font-size: 10px;">Carregando código...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Painel de Informações -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Informações da Mistura
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">ID:</dt>
+                    <dd class="col-sm-8">{{ mistura.id }}</dd>
+                    
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        {% if mistura.situacao == 'CALCULADA' %}
+                            <span class="badge bg-secondary">Calculada</span>
+                        {% elif mistura.situacao == 'CONFIRMADA' %}
+                            <span class="badge bg-primary">Confirmada</span>
+                        {% elif mistura.situacao == 'PRODUZIDA' %}
+                            <span class="badge bg-success">Produzida</span>
+                        {% elif mistura.situacao == 'ENTREGUE' %}
+                            <span class="badge bg-info">Entregue</span>
+                        {% else %}
+                            <span class="badge bg-danger">{{ mistura.situacao }}</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Operador:</dt>
+                    <dd class="col-sm-8">{{ mistura.usuario_operacao.first_name }} {{ mistura.usuario_operacao.last_name }}</dd>
+                    
+                    <dt class="col-sm-4">Criação:</dt>
+                    <dd class="col-sm-8">{{ mistura.created_at|date:"d/m/Y H:i" }}</dd>
+                    
+                    {% if mistura.data_confirmacao %}
+                    <dt class="col-sm-4">Confirmação:</dt>
+                    <dd class="col-sm-8">{{ mistura.data_confirmacao|date:"d/m/Y H:i" }}</dd>
+                    {% endif %}
+                </dl>
+                
+                {% if mistura.observacoes_cliente %}
+                    <div class="mt-3">
+                        <h6>Observações do Cliente:</h6>
+                        <div class="alert alert-info">
+                            {{ mistura.observacoes_cliente }}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if mistura.observacoes_internas %}
+                    <div class="mt-3">
+                        <h6>Observações Internas:</h6>
+                        <div class="alert alert-secondary">
+                            {{ mistura.observacoes_internas }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Detalhes da Fórmula -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-flask"></i> Detalhes da Fórmula
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ mistura.formula.nome_formula }}</h6>
+                <p class="text-muted">{{ mistura.formula.codigo_formula }}</p>
+                
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Pigmento</th>
+                                <th>Cor Base</th>
+                                <th>Quantidade</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in mistura.itens.all %}
+                            <tr>
+                                <td>{{ item.pigmento.nome }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ item.pigmento.cor_base|lower }};">
+                                        {{ item.pigmento.cor_base }}
+                                    </span>
+                                </td>
+                                <td>{{ item.quantidade_calculada }}ml</td>
+                                <td>{{ item.quantidade_calculada|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Actions -->
+<div class="print-actions">
+    <a href="{% url 'etiquetas:gerar_etiqueta' mistura.id %}" class="btn btn-success btn-lg rounded-circle shadow">
+        <i class="bi bi-printer fs-4"></i>
+    </a>
+</div>
+
+<!-- Modal para Dados do QR Code -->
+<div class="modal fade" id="qrDataModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dados do QR Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Estes são os dados codificados no QR Code da etiqueta:
+                </div>
+                <pre id="qrDataContent" class="bg-light p-3 rounded" style="font-size: 12px; overflow-x: auto;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let qrData = null;
+    
+    // Carregar QR Code e Barcode
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCodes();
+    });
+    
+    function loadCodes() {
+        // Carregar QR Code
+        fetch(`/api/v1/tintometry/etiquetas/qr-code/{{ mistura.id }}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.qr_image_base64) {
+                document.getElementById('qrCodeContainer').innerHTML = 
+                    `<img src="data:image/png;base64,${data.qr_image_base64}" 
+                          style="width: 60px; height: 60px;" alt="QR Code">`;
+                qrData = data.qr_data;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar QR Code:', error);
+            document.getElementById('qrCodeContainer').innerHTML = 
+                '<small class="text-danger">Erro ao carregar QR</small>';
+        });
+        
+        // Carregar Barcode
+        fetch(`/api/v1/tintometry/etiquetas/barcode/{{ mistura.id }}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.barcode_image_base64) {
+                document.getElementById('barcodeContainer').innerHTML = `
+                    <img src="data:image/png;base64,${data.barcode_image_base64}" 
+                         style="height: 25px;" alt="Código de Barras">
+                    <div class="barcode-number">${data.tracking_code}</div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar Barcode:', error);
+            document.getElementById('barcodeContainer').innerHTML = 
+                '<small class="text-danger">Erro ao carregar código</small>';
+        });
+    }
+    
+    function refreshPreview() {
+        showLoading();
+        loadCodes();
+        setTimeout(hideLoading, 1000);
+    }
+    
+    function showQRData() {
+        if (qrData) {
+            document.getElementById('qrDataContent').textContent = JSON.stringify(qrData, null, 2);
+            const modal = new bootstrap.Modal(document.getElementById('qrDataModal'));
+            modal.show();
+        } else {
+            alert('Dados do QR ainda não foram carregados. Aguarde um momento e tente novamente.');
+        }
+    }
+    
+    // Alterar template (simulação - em produção viria do backend)
+    document.getElementById('templateSelect').addEventListener('change', function() {
+        const template = this.value;
+        const container = document.getElementById('etiquetaPreview');
+        
+        // Aplicar diferentes estilos baseado no template
+        switch(template) {
+            case 'compact':
+                container.style.fontSize = '11px';
+                container.style.padding = '15px';
+                break;
+            case 'premium':
+                container.style.background = 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)';
+                container.style.border = '2px solid gold';
+                break;
+            case 'eco':
+                container.style.background = '#f0fdf4';
+                container.style.border = '2px solid #22c55e';
+                break;
+            default:
+                container.style.fontSize = '';
+                container.style.padding = '20px';
+                container.style.background = 'white';
+                container.style.border = '1px solid #ddd';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,696 @@
+/**
+ * Screen Reader Compatibility CSS
+ * 
+ * Provides CSS support for screen reader enhancements including:
+ * - Screen reader specific optimizations
+ * - Enhanced focus indicators
+ * - Skip link styling
+ * - Live region management
+ * - Alternative content display
+ * - Print-friendly accessibility
+ */
+
+/* ===========================================================================
+   SCREEN READER UTILITIES
+   =========================================================================== */
+
+/* Visually hidden but available to screen readers */
+.visually-hidden,
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Make visually hidden content visible when focused */
+.visually-hidden:focus,
+.sr-only:focus {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: inherit !important;
+    margin: inherit !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+}
+
+/* Enhanced for screen readers class */
+.enhanced-for-screen-reader {
+    /* Improved text rendering for screen readers */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===========================================================================
+   SKIP LINKS AND NAVIGATION
+   =========================================================================== */
+
+.skip-links {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 8px;
+    background: #000;
+    color: #fff;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 0 0 4px 4px;
+    z-index: 9999;
+    transition: top 0.3s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 3px solid #ffff00;
+    outline-offset: 2px;
+}
+
+/* ===========================================================================
+   ENHANCED FOCUS INDICATORS
+   =========================================================================== */
+
+.screen-reader-active *:focus {
+    outline: 3px solid #0066cc;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 4px #0066cc;
+}
+
+.screen-reader-active button:focus,
+.screen-reader-active input:focus,
+.screen-reader-active textarea:focus,
+.screen-reader-active select:focus {
+    outline: 3px solid #0066cc;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 4px #0066cc;
+}
+
+.screen-reader-active a:focus {
+    outline: 3px solid #cc6600;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 4px #cc6600;
+    background-color: #fff3cd;
+}
+
+/* High contrast focus for dark backgrounds */
+.screen-reader-active .bg-dark *:focus,
+.screen-reader-active .text-dark *:focus {
+    outline-color: #ffff00;
+    box-shadow: 0 0 0 1px #000000, 0 0 0 4px #ffff00;
+}
+
+/* ===========================================================================
+   LIVE REGIONS
+   =========================================================================== */
+
+[aria-live] {
+    /* Ensure live regions are properly positioned */
+    position: relative;
+}
+
+/* Live region containers */
+.live-region-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    z-index: -1;
+}
+
+/* Status announcements */
+.status-announcement {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Error announcements */
+.error-announcement {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Loading announcements */
+.loading-announcement {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* ===========================================================================
+   FORM ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active .form-group {
+    position: relative;
+}
+
+.screen-reader-active .form-label,
+.screen-reader-active label {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.screen-reader-active .required::after {
+    content: " (obrigatório)";
+    color: #dc3545;
+    font-weight: normal;
+    font-size: 0.875em;
+}
+
+/* Field descriptions */
+.screen-reader-active .field-description {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Error messages */
+.screen-reader-active .field-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    font-weight: bold;
+}
+
+.screen-reader-active .field-error::before {
+    content: "Erro: ";
+    font-weight: bold;
+}
+
+/* Success messages */
+.screen-reader-active .field-success {
+    color: #28a745;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    font-weight: bold;
+}
+
+.screen-reader-active .field-success::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+/* ===========================================================================
+   TABLE ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.screen-reader-active table caption {
+    font-weight: bold;
+    text-align: left;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.screen-reader-active th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-align: left;
+    padding: 0.75rem;
+    border: 2px solid #dee2e6;
+}
+
+.screen-reader-active td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+}
+
+.screen-reader-active th[scope="col"]::after {
+    content: " (coluna)";
+    font-weight: normal;
+    font-size: 0.75em;
+    color: #6c757d;
+}
+
+.screen-reader-active th[scope="row"]::after {
+    content: " (linha)";
+    font-weight: normal;
+    font-size: 0.75em;
+    color: #6c757d;
+}
+
+/* ===========================================================================
+   LANDMARK ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active [role="banner"],
+.screen-reader-active header[role="banner"] {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.screen-reader-active [role="main"],
+.screen-reader-active main {
+    min-height: 400px;
+    padding: 1rem 0;
+}
+
+.screen-reader-active [role="navigation"],
+.screen-reader-active nav {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}
+
+.screen-reader-active [role="complementary"],
+.screen-reader-active aside {
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.screen-reader-active [role="contentinfo"],
+.screen-reader-active footer[role="contentinfo"] {
+    border-top: 2px solid #dee2e6;
+    margin-top: 2rem;
+    padding-top: 1rem;
+}
+
+/* ===========================================================================
+   BUTTON AND LINK ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active button[aria-expanded="true"]::after {
+    content: " (expandido)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+.screen-reader-active button[aria-expanded="false"]::after {
+    content: " (recolhido)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+.screen-reader-active button[aria-pressed="true"]::after {
+    content: " (ativado)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+.screen-reader-active button[aria-pressed="false"]::after {
+    content: " (desativado)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+.screen-reader-active a[target="_blank"]::after {
+    content: " (abre em nova janela)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+.screen-reader-active a[download]::after {
+    content: " (download)";
+    font-size: 0.75em;
+    font-weight: normal;
+}
+
+/* ===========================================================================
+   ALERT AND STATUS ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active .alert[role="alert"] {
+    border-left: 4px solid #dc3545;
+    padding-left: 1rem;
+}
+
+.screen-reader-active .alert[role="alert"]::before {
+    content: "Alerta: ";
+    font-weight: bold;
+}
+
+.screen-reader-active .alert-success::before {
+    content: "Sucesso: ";
+    font-weight: bold;
+}
+
+.screen-reader-active .alert-warning::before {
+    content: "Aviso: ";
+    font-weight: bold;
+}
+
+.screen-reader-active .alert-info::before {
+    content: "Informação: ";
+    font-weight: bold;
+}
+
+.screen-reader-active .alert-danger::before {
+    content: "Erro: ";
+    font-weight: bold;
+}
+
+/* ===========================================================================
+   LOADING AND BUSY STATES
+   =========================================================================== */
+
+.screen-reader-active [aria-busy="true"] {
+    position: relative;
+    opacity: 0.7;
+}
+
+.screen-reader-active [aria-busy="true"]::after {
+    content: " (carregando...)";
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.screen-reader-active .loading-indicator::before {
+    content: "Carregando: ";
+    font-weight: bold;
+}
+
+/* ===========================================================================
+   PROGRESS AND METER ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active progress,
+.screen-reader-active meter {
+    height: 2rem;
+    width: 100%;
+}
+
+.screen-reader-active progress::before,
+.screen-reader-active meter::before {
+    content: attr(aria-label) ": " attr(aria-valuenow) " de " attr(aria-valuemax);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: bold;
+}
+
+/* ===========================================================================
+   ENHANCED TYPOGRAPHY FOR SCREEN READERS
+   =========================================================================== */
+
+.screen-reader-active h1,
+.screen-reader-active h2,
+.screen-reader-active h3,
+.screen-reader-active h4,
+.screen-reader-active h5,
+.screen-reader-active h6 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.25rem;
+}
+
+.screen-reader-active h1::before {
+    content: "Nível 1: ";
+    font-size: 0.75em;
+    font-weight: normal;
+    color: #6c757d;
+}
+
+.screen-reader-active h2::before {
+    content: "Nível 2: ";
+    font-size: 0.75em;
+    font-weight: normal;
+    color: #6c757d;
+}
+
+.screen-reader-active h3::before {
+    content: "Nível 3: ";
+    font-size: 0.75em;
+    font-weight: normal;
+    color: #6c757d;
+}
+
+/* ===========================================================================
+   IMAGE AND MEDIA ENHANCEMENTS
+   =========================================================================== */
+
+.screen-reader-active img[alt=""] {
+    /* Decorative images */
+    outline: 2px dashed #28a745;
+}
+
+.screen-reader-active img:not([alt]) {
+    /* Missing alt text */
+    outline: 2px dashed #dc3545;
+}
+
+.screen-reader-active img:not([alt])::after {
+    content: "Imagem sem descrição";
+    position: absolute;
+    background: #dc3545;
+    color: white;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+/* ===========================================================================
+   INTERACTIVE ELEMENT INDICATORS
+   =========================================================================== */
+
+.screen-reader-active [role="button"]:not(button):not(input) {
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+}
+
+.screen-reader-active [role="button"]:not(button):not(input):hover {
+    background-color: #e9ecef;
+}
+
+.screen-reader-active [tabindex="0"]:not(button):not(input):not(select):not(textarea):not(a) {
+    outline: 1px dotted #6c757d;
+    outline-offset: 2px;
+}
+
+/* ===========================================================================
+   PRINT STYLES FOR ACCESSIBILITY
+   =========================================================================== */
+
+@media print {
+    .visually-hidden,
+    .sr-only {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        clip: auto !important;
+        white-space: normal !important;
+        font-size: 0.8em;
+        color: #666;
+    }
+    
+    .skip-links,
+    .accessibility-controls {
+        display: none !important;
+    }
+    
+    a[href^="http"]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        color: #666;
+    }
+    
+    .alert::before,
+    .field-error::before,
+    .field-success::before {
+        position: static;
+        display: inline;
+    }
+}
+
+/* ===========================================================================
+   REDUCED MOTION PREFERENCES
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .screen-reader-active *,
+    .screen-reader-active *::before,
+    .screen-reader-active *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ===========================================================================
+   HIGH CONTRAST PREFERENCES
+   =========================================================================== */
+
+@media (prefers-contrast: high) {
+    .screen-reader-active {
+        filter: contrast(150%);
+    }
+    
+    .screen-reader-active *:focus {
+        outline-width: 4px;
+        outline-offset: 3px;
+    }
+    
+    .screen-reader-active .alert {
+        border-width: 3px;
+    }
+    
+    .screen-reader-active table th,
+    .screen-reader-active table td {
+        border-width: 2px;
+    }
+}
+
+/* ===========================================================================
+   MOBILE SCREEN READER ENHANCEMENTS
+   =========================================================================== */
+
+@media (max-width: 768px) {
+    .screen-reader-active .skip-links {
+        font-size: 1.1rem;
+    }
+    
+    .screen-reader-active .skip-link {
+        padding: 12px 20px;
+        top: -50px;
+    }
+    
+    .screen-reader-active .skip-link:focus {
+        top: 0;
+    }
+    
+    .screen-reader-active button,
+    .screen-reader-active [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .screen-reader-active input,
+    .screen-reader-active textarea,
+    .screen-reader-active select {
+        min-height: 44px;
+    }
+}
+
+/* ===========================================================================
+   DARK MODE SCREEN READER ENHANCEMENTS
+   =========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .screen-reader-active .skip-link {
+        background: #fff;
+        color: #000;
+    }
+    
+    .screen-reader-active .skip-link:focus {
+        outline-color: #ffff00;
+    }
+    
+    .screen-reader-active th {
+        background-color: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .screen-reader-active td {
+        border-color: #4a5568;
+    }
+    
+    .screen-reader-active [role="complementary"] {
+        background-color: #2d3748;
+        border-color: #4a5568;
+    }
+}
+
+/* ===========================================================================
+   UTILITY CLASSES FOR DEVELOPERS
+   =========================================================================== */
+
+/* Force screen reader announcement */
+.announce-change {
+    position: relative;
+}
+
+.announce-change[data-announce]::after {
+    content: attr(data-announce);
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Describe complex elements */
+.complex-element[aria-describedby]::before {
+    content: "Elemento complexo. ";
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Keyboard navigation hints */
+.keyboard-navigable::after {
+    content: " (navegável por teclado)";
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Interactive elements that aren't obviously interactive */
+.screen-reader-active .clickable:not(button):not(a):not([role="button"]) {
+    cursor: pointer;
+    border: 1px dashed #0066cc;
+    padding: 2px;
+}
+
+.screen-reader-active .clickable:not(button):not(a):not([role="button"]):hover {
+    border-style: solid;
+    background-color: rgba(0, 102, 204, 0.1);
+}
+
+/* Debug mode for accessibility testing */
+.debug-accessibility .visually-hidden {
+    background: #ff0 !important;
+    color: #000 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 2px !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+    border: 2px solid #f00 !important;
+}

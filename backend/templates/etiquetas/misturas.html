@@ -1,0 +1,574 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Misturas - Sistema de Etiquetas{% endblock %}
+{% block nav_misturas %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .action-buttons .btn {
+        width: 35px;
+        height: 35px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mistura-row.selected {
+        background-color: #f0f9ff;
+    }
+    
+    .color-sample {
+        width: 25px;
+        height: 25px;
+        border-radius: 6px;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        flex-shrink: 0;
+    }
+    
+    .status-filter .btn {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Quick Actions Component -->
+{% include "etiquetas/components/quick-actions.html" with section="mixing" %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-ul"></i> Lista de Misturas</h2>
+    <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nova Mistura
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-lg-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchInput" 
+                           placeholder="Buscar por código, cliente ou cor..." value="{{ request.GET.search }}">
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <select class="form-select" id="filterStatus">
+                    <option value="">Todos os Status</option>
+                    <option value="CALCULADA" {% if request.GET.status == 'CALCULADA' %}selected{% endif %}>Calculada</option>
+                    <option value="CONFIRMADA" {% if request.GET.status == 'CONFIRMADA' %}selected{% endif %}>Confirmada</option>
+                    <option value="PRODUZIDA" {% if request.GET.status == 'PRODUZIDA' %}selected{% endif %}>Produzida</option>
+                    <option value="ENTREGUE" {% if request.GET.status == 'ENTREGUE' %}selected{% endif %}>Entregue</option>
+                    <option value="CANCELADA" {% if request.GET.status == 'CANCELADA' %}selected{% endif %}>Cancelada</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <input type="date" class="form-control" id="filterDate" value="{{ request.GET.date }}">
+            </div>
+            <div class="col-lg-3">
+                <div class="btn-group w-100">
+                    <button type="button" class="btn btn-outline-secondary" id="clearFilters">
+                        <i class="bi bi-x"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="applyFilters">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações em Lote -->
+{% if misturas %}
+<div class="card mb-4" id="batchActions" style="display: none;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span id="selectedCount">0</span> mistura(s) selecionada(s)
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" onclick="generateBatchLabels()">
+                    <i class="bi bi-printer"></i> Gerar Etiquetas
+                </button>
+                <button type="button" class="btn btn-success" onclick="markAsProduced()">
+                    <i class="bi bi-check-circle"></i> Marcar como Produzidas
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
+                    <i class="bi bi-x"></i> Limpar Seleção
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tabela de Misturas -->
+<div class="card">
+    <div class="card-body">
+        {% if misturas %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Cor</th>
+                            <th>Volume</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Custo</th>
+                            <th width="160">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mistura in misturas %}
+                        <tr class="mistura-row" data-mistura-id="{{ mistura.id }}">
+                            <td>
+                                <input type="checkbox" class="form-check-input mistura-checkbox" 
+                                       value="{{ mistura.id }}">
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ mistura.codigo_mistura }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ mistura.formula.codigo_formula }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    {{ mistura.cliente_nome }}
+                                    {% if mistura.cliente_telefone %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-phone"></i> {{ mistura.cliente_telefone }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="color-sample me-2" 
+                                         style="background-color: {{ mistura.formula.cor_definida.cor_hex }};"></div>
+                                    <div>
+                                        {{ mistura.formula.cor_definida.nome_cor }}
+                                        <br>
+                                        <small class="text-muted">{{ mistura.formula.cor_definida.familia_cor }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ mistura.volume_solicitado }}L</strong>
+                                {% if mistura.volume_produzido and mistura.volume_produzido != mistura.volume_solicitado %}
+                                    <br>
+                                    <small class="text-muted">Prod: {{ mistura.volume_produzido }}L</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if mistura.situacao == 'CALCULADA' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-calculator"></i> Calculada
+                                    </span>
+                                {% elif mistura.situacao == 'CONFIRMADA' %}
+                                    <span class="badge bg-primary">
+                                        <i class="bi bi-check"></i> Confirmada
+                                    </span>
+                                {% elif mistura.situacao == 'PRODUZIDA' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Produzida
+                                    </span>
+                                {% elif mistura.situacao == 'ENTREGUE' %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-box-arrow-right"></i> Entregue
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> {{ mistura.situacao }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    {{ mistura.created_at|date:"d/m/y" }}
+                                    <br>
+                                    <small class="text-muted">{{ mistura.created_at|date:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <strong>R$ {{ mistura.custo_total|floatformat:2 }}</strong>
+                                {% if mistura.custo_base %}
+                                    <br>
+                                    <small class="text-muted">
+                                        Base: R$ {{ mistura.custo_base|floatformat:2 }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <!-- Gerar Etiqueta -->
+                                    {% if mistura.situacao == 'CONFIRMADA' or mistura.situacao == 'PRODUZIDA' %}
+                                        <a href="{% url 'etiquetas:gerar_etiqueta' mistura.id %}" 
+                                           class="btn btn-primary btn-sm" title="Gerar Etiqueta">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    {% else %}
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                title="Confirme a mistura primeiro" disabled>
+                                            <i class="bi bi-printer"></i>
+                                        </button>
+                                    {% endif %}
+                                    
+                                    <!-- Preview -->
+                                    <a href="{% url 'etiquetas:preview_etiqueta' mistura.id %}" 
+                                       class="btn btn-info btn-sm" title="Preview da Etiqueta">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    
+                                    <!-- Editar Status -->
+                                    <button type="button" class="btn btn-warning btn-sm" 
+                                            title="Alterar Status" onclick="editStatus('{{ mistura.id }}')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    
+                                    <!-- Menu de Mais Opções -->
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                                data-bs-toggle="dropdown" title="Mais opções">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="#">
+                                                    <i class="bi bi-info-circle"></i> Detalhes
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#">
+                                                    <i class="bi bi-files"></i> Duplicar
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#" 
+                                                   onclick="cancelMistura('{{ mistura.id }}')">
+                                                    <i class="bi bi-x-circle"></i> Cancelar
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+            {% if is_paginated %}
+                <nav aria-label="Paginação">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                    Anterior
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                    Próximo
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+            
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="display-1 text-muted mb-3">
+                    <i class="bi bi-inbox"></i>
+                </div>
+                <h4>Nenhuma mistura encontrada</h4>
+                <p class="text-muted mb-4">
+                    {% if request.GET.search %}
+                        Não encontramos misturas com os filtros aplicados.
+                    {% else %}
+                        Comece criando sua primeira mistura de tinta.
+                    {% endif %}
+                </p>
+                <div>
+                    {% if request.GET.search %}
+                        <a href="{% url 'etiquetas:misturas' %}" class="btn btn-outline-secondary me-2">
+                            <i class="bi bi-arrow-left"></i> Limpar Filtros
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'etiquetas:nova_mistura' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nova Mistura
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para Editar Status -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alterar Status da Mistura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <input type="hidden" id="misturaId">
+                    <div class="mb-3">
+                        <label class="form-label">Novo Status:</label>
+                        <select class="form-select" id="newStatus" required>
+                            <option value="CALCULADA">Calculada</option>
+                            <option value="CONFIRMADA">Confirmada</option>
+                            <option value="PRODUZIDA">Produzida</option>
+                            <option value="ENTREGUE">Entregue</option>
+                            <option value="CANCELADA">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observações:</label>
+                        <textarea class="form-control" id="statusObservacoes" rows="3"
+                                  placeholder="Motivo da alteração..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveStatus()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Seleção múltipla
+    let selectedMisturas = new Set();
+    
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.mistura-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+            updateSelection(cb.value, cb.checked);
+        });
+        updateBatchActionsVisibility();
+    });
+    
+    document.querySelectorAll('.mistura-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelection(this.value, this.checked);
+            updateBatchActionsVisibility();
+            
+            // Atualizar select all
+            const totalCheckboxes = document.querySelectorAll('.mistura-checkbox').length;
+            const checkedCheckboxes = document.querySelectorAll('.mistura-checkbox:checked').length;
+            const selectAll = document.getElementById('selectAll');
+            
+            selectAll.checked = totalCheckboxes === checkedCheckboxes;
+            selectAll.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+        });
+    });
+    
+    function updateSelection(misturaId, selected) {
+        if (selected) {
+            selectedMisturas.add(misturaId);
+        } else {
+            selectedMisturas.delete(misturaId);
+        }
+    }
+    
+    function updateBatchActionsVisibility() {
+        const batchActions = document.getElementById('batchActions');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        if (selectedMisturas.size > 0) {
+            batchActions.style.display = 'block';
+            selectedCount.textContent = selectedMisturas.size;
+        } else {
+            batchActions.style.display = 'none';
+        }
+    }
+    
+    function clearSelection() {
+        selectedMisturas.clear();
+        document.querySelectorAll('.mistura-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        updateBatchActionsVisibility();
+    }
+    
+    // Filtros
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        const search = document.getElementById('searchInput').value;
+        const status = document.getElementById('filterStatus').value;
+        const date = document.getElementById('filterDate').value;
+        
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        if (date) params.append('date', date);
+        
+        window.location.href = '?' + params.toString();
+    });
+    
+    document.getElementById('clearFilters').addEventListener('click', function() {
+        window.location.href = window.location.pathname;
+    });
+    
+    // Enter para buscar
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('applyFilters').click();
+        }
+    });
+    
+    // Editar status
+    function editStatus(misturaId) {
+        document.getElementById('misturaId').value = misturaId;
+        const modal = new bootstrap.Modal(document.getElementById('statusModal'));
+        modal.show();
+    }
+    
+    function saveStatus() {
+        const misturaId = document.getElementById('misturaId').value;
+        const newStatus = document.getElementById('newStatus').value;
+        const observacoes = document.getElementById('statusObservacoes').value;
+        
+        showLoading();
+        
+        fetch(`/api/v1/tintometry/misturas/${misturaId}/status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                situacao: newStatus,
+                observacoes: observacoes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao alterar status: ' + (data.error || 'Erro desconhecido'));
+                hideLoading();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao comunicar com o servidor');
+            hideLoading();
+        });
+    }
+    
+    // Ações em lote
+    function generateBatchLabels() {
+        if (selectedMisturas.size === 0) return;
+        
+        showLoading();
+        
+        const misturaIds = Array.from(selectedMisturas);
+        window.open(`/etiquetas/gerar-lote/?ids=${misturaIds.join(',')}`);
+        
+        setTimeout(hideLoading, 1000);
+    }
+    
+    function markAsProduced() {
+        if (selectedMisturas.size === 0) return;
+        
+        if (!confirm(`Marcar ${selectedMisturas.size} mistura(s) como produzidas?`)) return;
+        
+        showLoading();
+        
+        fetch('/api/v1/tintometry/misturas/batch-update/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                mistura_ids: Array.from(selectedMisturas),
+                situacao: 'PRODUZIDA'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao atualizar misturas: ' + (data.error || 'Erro desconhecido'));
+                hideLoading();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao comunicar com o servidor');
+            hideLoading();
+        });
+    }
+    
+    function cancelMistura(misturaId) {
+        if (!confirm('Tem certeza que deseja cancelar esta mistura?')) return;
+        
+        showLoading();
+        
+        fetch(`/api/v1/tintometry/misturas/${misturaId}/status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                situacao: 'CANCELADA'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao cancelar mistura: ' + (data.error || 'Erro desconhecido'));
+                hideLoading();
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao comunicar com o servidor');
+            hideLoading();
+        });
+    }
+</script>
+{% endblock %}

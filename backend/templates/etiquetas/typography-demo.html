@@ -1,0 +1,648 @@
+{% extends "etiquetas/base.html" %}
+{% load static %}
+
+{% block title %}Typography Scale System - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="display-4 mb-1">Typography Scale System</h1>
+                    <p class="text-muted">Feature: 3-modern-web-interface | Task: T009 - Typography Scale</p>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleTheme()">
+                        <i class="bi bi-moon"></i> Toggle Theme
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleDensity()">
+                        <i class="bi bi-arrows-expand"></i> Toggle Density
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Display Typography -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Display Typography</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="display-1 mb-2">Display 1</div>
+                        <small class="text-muted">display-1 - 64px (4rem) - Extrabold</small>
+                    </div>
+                    <div class="mb-4">
+                        <div class="display-2 mb-2">Display 2</div>
+                        <small class="text-muted">display-2 - 48px (3rem) - Bold</small>
+                    </div>
+                    <div class="mb-4">
+                        <div class="display-3 mb-2">Display 3</div>
+                        <small class="text-muted">display-3 - 36px (2.25rem) - Bold</small>
+                    </div>
+                    <div class="mb-0">
+                        <div class="display-4 mb-2">Display 4</div>
+                        <small class="text-muted">display-4 - 32px (2rem) - Bold</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Heading Hierarchy -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Heading Hierarchy (H1-H6)</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="mb-3">H1 Heading - Main Page Title <small class="text-muted">(32px)</small></h1>
+                    <h2 class="mb-3">H2 Heading - Section Title <small class="text-muted">(30px)</small></h2>
+                    <h3 class="mb-3">H3 Heading - Subsection Title <small class="text-muted">(24px)</small></h3>
+                    <h4 class="mb-3">H4 Heading - Component Title <small class="text-muted">(20px)</small></h4>
+                    <h5 class="mb-3">H5 Heading - Small Section <small class="text-muted">(18px)</small></h5>
+                    <h6 class="mb-0">H6 HEADING - LABELS <small class="text-muted">(16px, uppercase)</small></h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Font Size Scale -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Font Size Scale</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Standard Sizes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-xs">Extra Small Text - 12px</div>
+                                <code>.text-xs</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-sm">Small Text - 14px</div>
+                                <code>.text-sm</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-base">Base Text - 16px (Default)</div>
+                                <code>.text-base</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-md">Medium Text - 18px</div>
+                                <code>.text-md</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg">Large Text - 20px</div>
+                                <code>.text-lg</code>
+                            </div>
+                            <div class="mb-0">
+                                <div class="text-xl">Extra Large Text - 24px</div>
+                                <code>.text-xl</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Large Sizes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="text-2xl">2XL Text - 30px</div>
+                                <code>.text-2xl</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-3xl">3XL Text - 32px</div>
+                                <code>.text-3xl</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-4xl">4XL Text - 36px</div>
+                                <code>.text-4xl</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-5xl">5XL Text - 48px</div>
+                                <code>.text-5xl</code>
+                            </div>
+                            <div class="mb-0">
+                                <div class="text-6xl">6XL - 64px</div>
+                                <code>.text-6xl</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Font Weight Examples -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Font Weight Scale</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="text-lg font-thin">Thin (100)</div>
+                                <code>.font-thin</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg font-extralight">Extra Light (200)</div>
+                                <code>.font-extralight</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg font-light">Light (300)</div>
+                                <code>.font-light</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg font-normal">Normal (400)</div>
+                                <code>.font-normal</code>
+                            </div>
+                            <div class="mb-0">
+                                <div class="text-lg font-medium">Medium (500)</div>
+                                <code>.font-medium</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="text-lg font-semibold">Semibold (600)</div>
+                                <code>.font-semibold</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg font-bold">Bold (700)</div>
+                                <code>.font-bold</code>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-lg font-extrabold">Extra Bold (800)</div>
+                                <code>.font-extrabold</code>
+                            </div>
+                            <div class="mb-0">
+                                <div class="text-lg font-black">Black (900)</div>
+                                <code>.font-black</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Line Height & Letter Spacing -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Line Height & Letter Spacing</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Line Height</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p class="leading-none">
+                                    Leading None (1.0) - This text has very tight line spacing with no extra space between lines.
+                                </p>
+                                <code>.leading-none</code>
+                            </div>
+                            <div class="mb-3">
+                                <p class="leading-tight">
+                                    Leading Tight (1.25) - This text has tight line spacing that's good for headings and short text.
+                                </p>
+                                <code>.leading-tight</code>
+                            </div>
+                            <div class="mb-3">
+                                <p class="leading-normal">
+                                    Leading Normal (1.5) - This text has normal line spacing that meets WCAG accessibility guidelines.
+                                </p>
+                                <code>.leading-normal</code>
+                            </div>
+                            <div class="mb-0">
+                                <p class="leading-relaxed mb-0">
+                                    Leading Relaxed (1.625) - This text has relaxed line spacing that's very readable for body content.
+                                </p>
+                                <code>.leading-relaxed</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Letter Spacing</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p class="tracking-tighter">Tracking Tighter (-0.05em)</p>
+                                <code>.tracking-tighter</code>
+                            </div>
+                            <div class="mb-3">
+                                <p class="tracking-tight">Tracking Tight (-0.025em)</p>
+                                <code>.tracking-tight</code>
+                            </div>
+                            <div class="mb-3">
+                                <p class="tracking-normal">Tracking Normal (0em)</p>
+                                <code>.tracking-normal</code>
+                            </div>
+                            <div class="mb-3">
+                                <p class="tracking-wide">Tracking Wide (0.025em)</p>
+                                <code>.tracking-wide</code>
+                            </div>
+                            <div class="mb-0">
+                                <p class="tracking-widest mb-0">TRACKING WIDEST (0.1EM)</p>
+                                <code>.tracking-widest</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paint Store Typography -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Paint Store Specific Typography</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Product Labels</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="paint-name">Sherwin Williams ProClassic</div>
+                                <small class="text-muted">.paint-name</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="paint-code">SW-7005</div>
+                                <small class="text-muted">.paint-code</small>
+                            </div>
+                            
+                            <div class="mb-0">
+                                <div class="stock-status text-success">IN STOCK</div>
+                                <small class="text-muted">.stock-status</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Pricing</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="price-large">$79.99</div>
+                                <small class="text-muted">.price-large</small>
+                            </div>
+                            
+                            <div class="mb-0">
+                                <div class="price-default">$52.49</div>
+                                <small class="text-muted">.price-default</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Formulas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="formula-text mb-2">
+                                Base: Ultra White<br>
+                                + 2oz Magenta<br>
+                                + 1oz Yellow<br>
+                                + 0.5oz Blue
+                            </div>
+                            <small class="text-muted">.formula-text</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Text Utilities -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Text Utilities</h2>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Alignment</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-left mb-2">Left aligned text</p>
+                            <p class="text-center mb-2">Center aligned text</p>
+                            <p class="text-right mb-0">Right aligned text</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Transform</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="uppercase mb-2">uppercase text</p>
+                            <p class="lowercase mb-2">LOWERCASE TEXT</p>
+                            <p class="capitalize mb-0">capitalize each word</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Decoration</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="underline mb-2">Underlined text</p>
+                            <p class="line-through mb-2">Strikethrough text</p>
+                            <p class="no-underline mb-0">No decoration</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Overflow</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="truncate mb-2" style="width: 100px;">This text will be truncated with ellipsis</p>
+                            <p class="break-words mb-0">Thisverylongwordwillbreakacrosslines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Body Text Examples -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Body Text Variations</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <p class="body-large">
+                            Large body text (18px) - Used for important introductory paragraphs or lead text that needs emphasis while maintaining readability. This size works well for callouts and important notices.
+                        </p>
+                        <code>.body-large</code>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="body-default">
+                            Default body text (16px) - The standard paragraph text size that provides optimal readability for most content. This is the base font size used throughout the application for regular content.
+                        </p>
+                        <code>.body-default</code>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="body-small">
+                            Small body text (14px) - Used for secondary information, captions, or when space is limited. Still maintains good readability while taking up less space.
+                        </p>
+                        <code>.body-small</code>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <p class="caption mb-0">
+                            Caption text (12px) - Used for image captions, footnotes, or supplementary information that supports the main content.
+                        </p>
+                        <code>.caption</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Responsive Typography -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Responsive Typography</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <h5 class="alert-heading">Responsive Behavior</h5>
+                        <p class="mb-2">All typography scales automatically for different screen sizes:</p>
+                        <ul class="mb-0">
+                            <li><strong>Mobile (up to 767px):</strong> Reduced font sizes for better mobile readability</li>
+                            <li><strong>Desktop (768px - 1199px):</strong> Standard sizes as defined</li>
+                            <li><strong>Large screens (1200px+):</strong> Slightly larger sizes for better visibility</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h3 class="display-2 text-primary">Responsive Display Text</h3>
+                        <p class="text-muted">This text automatically adjusts size based on screen width</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="body-default">
+                                Try resizing your browser window to see how the typography adapts. The system uses CSS custom properties and media queries to provide optimal typography at every screen size.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="body-small">
+                                Mobile users will see smaller, more compact text that's easier to read on small screens, while desktop users get larger, more spacious typography.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Typography Testing -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Typography Accessibility</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ WCAG Compliant</h5>
+                            <ul class="list-unstyled">
+                                <li>• Minimum 1.5 line height</li>
+                                <li>• High contrast ratios</li>
+                                <li>• Scalable font sizes</li>
+                                <li>• Clear hierarchy</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ Responsive Design</h5>
+                            <ul class="list-unstyled">
+                                <li>• Mobile-optimized sizing</li>
+                                <li>• Flexible line heights</li>
+                                <li>• Readable at all sizes</li>
+                                <li>• Touch-friendly targets</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ Modern Features</h5>
+                            <ul class="list-unstyled">
+                                <li>• CSS custom properties</li>
+                                <li>• System font fallbacks</li>
+                                <li>• Performance optimized</li>
+                                <li>• Cross-browser compatible</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTheme = 'light';
+let currentDensity = 'comfortable';
+
+function toggleTheme() {
+    const html = document.documentElement;
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', currentTheme);
+    
+    // Update button
+    const btn = event.target.closest('button');
+    const icon = btn.querySelector('i');
+    icon.className = currentTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
+    
+    // Save preference
+    localStorage.setItem('theme', currentTheme);
+}
+
+function toggleDensity() {
+    const html = document.documentElement;
+    const densities = ['compact', 'comfortable', 'spacious'];
+    const currentIndex = densities.indexOf(currentDensity);
+    currentDensity = densities[(currentIndex + 1) % densities.length];
+    
+    // Remove all density classes and add new one
+    densities.forEach(density => html.classList.remove(`density-${density}`));
+    html.classList.add(`density-${currentDensity}`);
+    
+    // Update button text
+    const btn = event.target.closest('button');
+    btn.title = `Current density: ${currentDensity}`;
+    
+    // Save preference
+    localStorage.setItem('density', currentDensity);
+}
+
+// Load saved preferences
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('theme');
+    const savedDensity = localStorage.getItem('density');
+    
+    if (savedTheme) {
+        currentTheme = savedTheme;
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    }
+    
+    if (savedDensity) {
+        currentDensity = savedDensity;
+        document.documentElement.classList.add(`density-${currentDensity}`);
+    }
+});
+
+// Typography tester - allows users to test different combinations
+function createTypographyTester() {
+    const tester = document.createElement('div');
+    tester.innerHTML = `
+        <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+            <div class="card" style="min-width: 300px;">
+                <div class="card-header">
+                    <h6 class="mb-0">Typography Tester</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Sample Text</label>
+                        <input type="text" class="form-control" value="The quick brown fox jumps over the lazy dog" id="sampleText">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label">Size</label>
+                            <select class="form-select" id="fontSize">
+                                <option value="text-xs">XS (12px)</option>
+                                <option value="text-sm">SM (14px)</option>
+                                <option value="text-base" selected>Base (16px)</option>
+                                <option value="text-md">MD (18px)</option>
+                                <option value="text-lg">LG (20px)</option>
+                                <option value="text-xl">XL (24px)</option>
+                                <option value="text-2xl">2XL (30px)</option>
+                                <option value="text-3xl">3XL (32px)</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Weight</label>
+                            <select class="form-select" id="fontWeight">
+                                <option value="font-light">Light</option>
+                                <option value="font-normal" selected>Normal</option>
+                                <option value="font-medium">Medium</option>
+                                <option value="font-semibold">Semibold</option>
+                                <option value="font-bold">Bold</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preview</label>
+                        <div class="p-3 border rounded" id="previewText" style="min-height: 60px; background: var(--bg-secondary);">
+                            The quick brown fox jumps over the lazy dog
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="closeTester()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(tester);
+    
+    // Add event listeners
+    document.getElementById('sampleText').oninput = updatePreview;
+    document.getElementById('fontSize').onchange = updatePreview;
+    document.getElementById('fontWeight').onchange = updatePreview;
+    
+    updatePreview();
+}
+
+function updatePreview() {
+    const text = document.getElementById('sampleText').value;
+    const fontSize = document.getElementById('fontSize').value;
+    const fontWeight = document.getElementById('fontWeight').value;
+    const preview = document.getElementById('previewText');
+    
+    preview.textContent = text;
+    preview.className = `p-3 border rounded ${fontSize} ${fontWeight}`;
+}
+
+function closeTester() {
+    const tester = document.querySelector('.position-fixed');
+    if (tester) tester.remove();
+}
+
+// Add a button to open the tester
+document.addEventListener('DOMContentLoaded', function() {
+    const button = document.createElement('button');
+    button.className = 'btn btn-primary btn-sm position-fixed';
+    button.style.cssText = 'bottom: 20px; left: 20px; z-index: 1040;';
+    button.innerHTML = '<i class="bi bi-type"></i> Typography Tester';
+    button.onclick = createTypographyTester;
+    document.body.appendChild(button);
+});
+</script>
+{% endblock %}

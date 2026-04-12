@@ -1,0 +1,26 @@
+# Base requirements
+-r base.txt
+
+# Production WSGI Server
+gunicorn>=21.2.0
+
+# Process Management
+supervisor>=4.2.0
+
+# Production Database
+psycopg2>=2.9.11
+
+# Monitoring & Observability
+sentry-sdk[django]>=2.0.0
+django-health-check>=3.17.0
+prometheus-client>=0.17.0
+
+# Security
+django-security>=0.17.0
+whitenoise>=6.5.0
+
+# Performance
+django-cachalot>=2.5.1
+
+# Environment Variables
+python-decouple>=3.8

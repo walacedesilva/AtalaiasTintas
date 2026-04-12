@@ -1,0 +1,514 @@
+<!-- ===================================
+     Breadcrumb Navigation Component
+     Feature: 3-modern-web-interface
+     Task: T005 - Breadcrumb Navigation
+     =================================== -->
+
+<!-- Breadcrumb Container -->
+<nav class="breadcrumb-nav" aria-label="Breadcrumb navigation" role="navigation">
+    <ol class="breadcrumb-list" vocab="https://schema.org/" typeof="BreadcrumbList">
+        
+        <!-- Home/Dashboard Breadcrumb -->
+        <li class="breadcrumb-item" property="itemListElement" typeof="ListItem">
+            <a property="item" typeof="WebPage" href="{% url 'etiquetas:index' %}" class="breadcrumb-link">
+                <span property="name">
+                    <i class="bi bi-house" aria-hidden="true"></i>
+                    <span class="breadcrumb-text">Início</span>
+                </span>
+            </a>
+            <meta property="position" content="1" />
+        </li>
+        
+        <!-- Dynamic Breadcrumb Based on Current Page -->
+        {% block breadcrumbs %}
+            <!-- Default implementation - pages should override this block -->
+            
+            {% if request.resolver_match.url_name == 'nova_mistura' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Nova Mistura</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'misturas' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-list-ul" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Misturas</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'historico' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-clock-history" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Histórico</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'templates' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Templates</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'template_create' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item" property="itemListElement" typeof="ListItem">
+                    <a property="item" typeof="WebPage" href="{% url 'etiquetas:templates' %}" class="breadcrumb-link">
+                        <span property="name">
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Templates</span>
+                        </span>
+                    </a>
+                    <meta property="position" content="2" />
+                </li>
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Novo Template</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="3" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'gerar' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item" property="itemListElement" typeof="ListItem">
+                    <a property="item" typeof="WebPage" href="{% url 'etiquetas:misturas' %}" class="breadcrumb-link">
+                        <span property="name">
+                            <i class="bi bi-list-ul" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Misturas</span>
+                        </span>
+                    </a>
+                    <meta property="position" content="2" />
+                </li>
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-printer" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Gerar Etiqueta</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="3" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'job_status' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item" property="itemListElement" typeof="ListItem">
+                    <a property="item" typeof="WebPage" href="{% url 'etiquetas:historico' %}" class="breadcrumb-link">
+                        <span property="name">
+                            <i class="bi bi-clock-history" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Histórico</span>
+                        </span>
+                    </a>
+                    <meta property="position" content="2" />
+                </li>
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Status do Job</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="3" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'print_queue' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-printer-fill" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Fila de Impressão</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+        {% endblock %}
+    </ol>
+    
+    <!-- Mobile-only compact breadcrumb -->
+    <div class="breadcrumb-mobile-compact d-md-none" aria-hidden="true">
+        <button class="btn btn-sm btn-outline-secondary breadcrumb-mobile-toggle" 
+                type="button" 
+                data-bs-toggle="tooltip" 
+                data-bs-placement="top" 
+                title="Mostrar navegação completa">
+            <i class="bi bi-three-dots"></i>
+            <span class="visually-hidden">Expandir navegação</span>
+        </button>
+    </div>
+</nav>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'historico' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-tags" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Histórico Etiquetas</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'templates' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Templates</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="2" />
+                </li>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'gerar' %}
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item" property="itemListElement" typeof="ListItem">
+                    <a property="item" typeof="WebPage" href="{% url 'etiquetas:misturas' %}" class="breadcrumb-link">
+                        <span property="name">
+                            <i class="bi bi-list-ul" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Misturas</span>
+                        </span>
+                    </a>
+                    <meta property="position" content="2" />
+                </li>
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <i class="bi bi-chevron-right"></i>
+                </li>
+                <li class="breadcrumb-item breadcrumb-current" property="itemListElement" typeof="ListItem" aria-current="page">
+                    <span property="item" typeof="WebPage">
+                        <span property="name">
+                            <i class="bi bi-printer" aria-hidden="true"></i>
+                            <span class="breadcrumb-text">Gerar Etiqueta</span>
+                        </span>
+                    </span>
+                    <meta property="position" content="3" />
+                </li>
+            {% endif %}
+            
+        {% endblock %}
+    </ol>
+</nav>
+
+<!-- Breadcrumb Styling and Responsive Behavior -->
+<style>
+/* ===================================
+ * Breadcrumb Navigation Styles
+ * =================================== */
+
+.breadcrumb-nav {
+    background: transparent;
+    padding: 0 0 var(--spacing-md) 0;
+    margin-bottom: var(--spacing-lg);
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--font-size-sm);
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--secondary-color);
+    text-decoration: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease-in-out;
+    min-height: 32px;
+}
+
+.breadcrumb-link:hover,
+.breadcrumb-link:focus {
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 5%, white);
+    text-decoration: none;
+    outline: 2px solid transparent;
+}
+
+.breadcrumb-link:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.breadcrumb-current {
+    color: var(--primary-color);
+    font-weight: 600;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.breadcrumb-current span[property="name"] {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.breadcrumb-separator {
+    color: var(--secondary-color);
+    opacity: 0.5;
+    font-size: 0.8em;
+    margin: 0 var(--spacing-xs);
+}
+
+.breadcrumb-text {
+    white-space: nowrap;
+}
+
+/* ===================================
+ * Responsive Breadcrumb Behavior
+ * =================================== */
+
+/* Mobile: Compact breadcrumbs */
+@media (max-width: 767px) {
+    .breadcrumb-nav {
+        padding: 0 0 var(--spacing-sm) 0;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .breadcrumb-list {
+        gap: 2px;
+        font-size: var(--font-size-xs);
+    }
+    
+    /* Hide text on mobile, keep icons */
+    .breadcrumb-text {
+        display: none;
+    }
+    
+    .breadcrumb-link,
+    .breadcrumb-current {
+        padding: var(--spacing-xs);
+        min-width: 32px;
+        justify-content: center;
+    }
+    
+    .breadcrumb-separator {
+        margin: 0 2px;
+        font-size: 0.7em;
+    }
+    
+    /* Show current item text */
+    .breadcrumb-current .breadcrumb-text {
+        display: inline;
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* Small mobile: Ultra-compact */
+@media (max-width: 479px) {
+    .breadcrumb-list {
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+    }
+    
+    /* Only show last 2 items on very small screens */
+    .breadcrumb-item:not(:nth-last-child(-n+3)),
+    .breadcrumb-separator:not(:nth-last-child(-n+2)) {
+        display: none;
+    }
+    
+    /* Add ellipsis indicator */
+    .breadcrumb-list::before {
+        content: '...';
+        color: var(--secondary-color);
+        opacity: 0.5;
+        margin-right: var(--spacing-xs);
+    }
+}
+
+/* Tablet and up: Full breadcrumbs */
+@media (min-width: 768px) {
+    .breadcrumb-nav {
+        background: #fbfcfd;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        border-radius: var(--border-radius);
+        border: 1px solid #f1f5f9;
+    }
+    
+    .breadcrumb-list {
+        font-size: var(--font-size-sm);
+    }
+    
+    .breadcrumb-link:hover {
+        transform: translateX(2px);
+    }
+}
+
+/* ===================================  
+ * High Contrast Mode Support
+ * =================================== */
+
+@media (prefers-contrast: high) {
+    .breadcrumb-nav {
+        border-color: currentColor;
+    }
+    
+    .breadcrumb-link {
+        border: 1px solid transparent;
+    }
+    
+    .breadcrumb-link:hover,
+    .breadcrumb-link:focus {
+        border-color: currentColor;
+        background: transparent;
+    }
+    
+    .breadcrumb-current {
+        border: 2px solid currentColor;
+        border-radius: var(--border-radius);
+    }
+}
+
+/* ===================================
+ * Reduced Motion Support
+ * =================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .breadcrumb-link {
+        transition: none;
+    }
+    
+    .breadcrumb-link:hover {
+        transform: none;
+    }
+}
+</style>
+
+<!-- Breadcrumb Keyboard Navigation Enhancement -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced keyboard navigation for breadcrumbs
+    const breadcrumbLinks = document.querySelectorAll('.breadcrumb-link');
+    
+    breadcrumbLinks.forEach((link, index) => {
+        link.addEventListener('keydown', function(e) {
+            // Arrow key navigation between breadcrumb items
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (index > 0) {
+                        breadcrumbLinks[index - 1].focus();
+                    }
+                    break;
+                    
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (index < breadcrumbLinks.length - 1) {
+                        breadcrumbLinks[index + 1].focus();
+                    }
+                    break;
+                    
+                case 'Home':
+                    e.preventDefault();
+                    breadcrumbLinks[0].focus();
+                    break;
+                    
+                case 'End':
+                    e.preventDefault();
+                    breadcrumbLinks[breadcrumbLinks.length - 1].focus();
+                    break;
+            }
+        });
+    });
+    
+    // Add breadcrumb click analytics (if analytics available)
+    breadcrumbLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const breadcrumbName = this.querySelector('.breadcrumb-text')?.textContent || 'Unknown';
+            
+            // Analytics tracking (optional)
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'breadcrumb_click', {
+                    'breadcrumb_name': breadcrumbName,
+                    'page_location': window.location.href
+                });
+            }
+        });
+    });
+});
+</script>

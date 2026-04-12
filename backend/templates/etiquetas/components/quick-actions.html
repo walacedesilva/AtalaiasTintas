@@ -1,0 +1,422 @@
+{% load static %}
+
+<!-- Quick Actions Component -->
+<div class="quick-actions-container mb-4" 
+     data-section="{{ section }}" 
+     id="quick-actions"
+     role="region" 
+     aria-labelledby="quick-actions-heading">
+    
+    <div class="quick-actions-header d-flex justify-content-between align-items-center mb-3">
+        <h5 id="quick-actions-heading" class="mb-0 text-secondary">
+            <i class="bi bi-lightning-fill" aria-hidden="true"></i> Ações Rápidas
+        </h5>
+        <button type="button" 
+                class="btn btn-sm btn-outline-secondary" 
+                data-bs-toggle="modal" 
+                data-bs-target="#customizeActionsModal"
+                aria-label="Personalizar ações rápidas"
+                aria-describedby="customize-actions-help">
+            <i class="bi bi-gear" aria-hidden="true"></i>
+            <span class="visually-hidden">Personalizar</span>
+        </button>
+    </div>
+    
+    <div class="quick-actions-grid" 
+         id="quickActionsGrid" 
+         role="toolbar" 
+         aria-label="Ações rápidas disponíveis"
+         aria-describedby="quick-actions-help">
+        
+        <!-- Accessibility help text -->
+        <div id="quick-actions-help" class="visually-hidden">
+            Use as setas do teclado para navegar entre as ações. Pressione Enter ou Espaço para ativar uma ação.
+        </div>
+        
+        <!-- Dashboard Quick Actions -->
+        {% if section == 'dashboard' %}
+        <div class="quick-action-item" role="none">
+            <button type="button" 
+                    class="btn btn-outline-primary quick-action-btn"
+                    onclick="quickActions.viewRecentJobs()"
+                    data-quick-action="1"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Ver jobs de impressão recentes (Atalho: Alt+1)"
+                    title="Ver jobs de impressão recentes">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <span>Jobs Recentes</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" role="none">
+            <a href="{% url 'etiquetas:nova_mistura' %}" 
+               class="btn btn-outline-success quick-action-btn"
+               data-quick-action="2"
+               role="button"
+               tabindex="-1"
+               aria-label="Criar nova mistura rapidamente (Atalho: Alt+2)"
+               title="Criar nova mistura rapidamente">
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                <span>Mistura Rápida</span>
+            </a>
+        </div>
+        
+        <div class="quick-action-item" role="none">
+            <a href="{% url 'etiquetas:gerar' %}" 
+               class="btn btn-outline-warning quick-action-btn"
+               data-quick-action="3"
+               role="button"
+               tabindex="-1"
+               aria-label="Gerar etiqueta rapidamente (Atalho: Alt+3)"
+               title="Gerar etiqueta rapidamente">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                <span>Gerar Etiqueta</span>
+            </a>
+        </div>
+        
+        <div class="quick-action-item" data-action="view_templates">
+            <a href="{% url 'etiquetas:templates' %}" 
+               class="btn btn-outline-info quick-action-btn"
+               title="Gerenciar templates">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Templates</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- Templates Quick Actions -->
+        {% if section == 'templates' %}
+        <div class="quick-action-item" data-action="search_templates">
+            <button type="button" 
+                    class="btn btn-outline-primary quick-action-btn"
+                    onclick="quickActions.focusSearch()"
+                    title="Buscar templates rapidamente">
+                <i class="bi bi-search"></i>
+                <span>Buscar Templates</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="create_template">
+            <a href="{% url 'etiquetas:template_create' %}" 
+               class="btn btn-outline-success quick-action-btn"
+               title="Criar novo template">
+                <i class="bi bi-plus-lg"></i>
+                <span>Criar Template</span>
+            </a>
+        </div>
+        
+        <div class="quick-action-item" data-action="duplicate_template">
+            <button type="button" 
+                    class="btn btn-outline-info quick-action-btn"
+                    onclick="quickActions.duplicateTemplate()"
+                    title="Duplicar template selecionado">
+                <i class="bi bi-files"></i>
+                <span>Duplicar</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="bulk_edit">
+            <button type="button" 
+                    class="btn btn-outline-warning quick-action-btn"
+                    onclick="quickActions.toggleBulkEdit()"
+                    title="Editar múltiplos templates">
+                <i class="bi bi-pencil-square"></i>
+                <span>Edição em Lote</span>
+            </button>
+        </div>
+        {% endif %}
+        
+        <!-- Mixing Quick Actions -->
+        {% if section == 'mixing' %}
+        <div class="quick-action-item" data-action="select_formula">
+            <button type="button" 
+                    class="btn btn-outline-primary quick-action-btn"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#formulaSelectModal"
+                    title="Selecionar fórmula tintométrica">
+                <i class="bi bi-list-check"></i>
+                <span>Selecionar Fórmula</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="calculate_quantity">
+            <button type="button" 
+                    class="btn btn-outline-success quick-action-btn"
+                    onclick="quickActions.openCalculator()"
+                    title="Calcular quantidade de pigmentos">
+                <i class="bi bi-calculator"></i>
+                <span>Calcular Quantidade</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="generate_mix">
+            <button type="button" 
+                    class="btn btn-outline-warning quick-action-btn"
+                    onclick="quickActions.generateMix()"
+                    title="Gerar mistura com parâmetros atuais">
+                <i class="bi bi-gear-fill"></i>
+                <span>Gerar Mistura</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="recent_formulas">
+            <button type="button" 
+                    class="btn btn-outline-info quick-action-btn"
+                    onclick="quickActions.showRecentFormulas()"
+                    title="Ver fórmulas usadas recentemente">
+                <i class="bi bi-clock-history"></i>
+                <span>Fórmulas Recentes</span>
+            </button>
+        </div>
+        {% endif %}
+        
+        <!-- Jobs Quick Actions -->
+        {% if section == 'jobs' %}
+        <div class="quick-action-item" data-action="view_status">
+            <button type="button" 
+                    class="btn btn-outline-primary quick-action-btn"
+                    onclick="quickActions.refreshJobStatus()"
+                    title="Atualizar status dos jobs">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Atualizar Status</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="download_labels">
+            <button type="button" 
+                    class="btn btn-outline-success quick-action-btn"
+                    onclick="quickActions.downloadSelectedLabels()"
+                    title="Baixar etiquetas selecionadas">
+                <i class="bi bi-download"></i>
+                <span>Baixar Selecionadas</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="mark_complete">
+            <button type="button" 
+                    class="btn btn-outline-warning quick-action-btn"
+                    onclick="quickActions.markSelectedComplete()"
+                    title="Marcar jobs selecionados como completos">
+                <i class="bi bi-check-square"></i>
+                <span>Marcar Completo</span>
+            </button>
+        </div>
+        
+        <div class="quick-action-item" data-action="print_queue">
+            <a href="{% url 'etiquetas:print_queue' %}" 
+               class="btn btn-outline-info quick-action-btn"
+               title="Ver fila de impressão">
+                <i class="bi bi-list-ul"></i>
+                <span>Fila de Impressão</span>
+            </a>
+        </div>
+        {% endif %}
+        
+    </div>
+    
+    <!-- User Custom Actions (dynamically loaded) -->
+    <div class="custom-actions mt-3" id="customActions" style="display: none;">
+        <hr>
+        <h6 class="text-muted mb-2">Ações Personalizadas</h6>
+        <div class="custom-actions-grid" id="customActionsGrid">
+            <!-- Custom actions will be loaded here via JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Customize Actions Modal -->
+<div class="modal fade" id="customizeActionsModal" tabindex="-1" aria-labelledby="customizeActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customizeActionsModalLabel">
+                    <i class="bi bi-gear"></i> Personalizar Ações Rápidas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Ações Disponíveis</h6>
+                        <div class="available-actions" id="availableActions">
+                            <!-- Available actions will be populated here -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Suas Ações Ativas</h6>
+                        <div class="active-actions" id="activeActions">
+                            <!-- Active actions will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="custom-action-form">
+                    <h6>Criar Ação Personalizada</h6>
+                    <form id="customActionForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="actionName" class="form-label">Nome da Ação</label>
+                                    <input type="text" class="form-control" id="actionName" maxlength="50" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="actionIcon" class="form-label">Ícone Bootstrap</label>
+                                    <input type="text" class="form-control" id="actionIcon" placeholder="bi-star" value="bi-star">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="actionUrl" class="form-label">URL ou Função JavaScript</label>
+                            <input type="text" class="form-control" id="actionUrl" placeholder="/apps/custom-action/ ou javascriptFunction()" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-lg"></i> Adicionar Ação
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="quickActions.savePreferences()">
+                    <i class="bi bi-check-lg"></i> Salvar Configurações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Styles -->
+<style>
+.quick-actions-container {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--rounded-lg);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+}
+
+.quick-action-item {
+    display: flex;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 80px;
+    width: 100%;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    border-radius: var(--rounded);
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-btn i {
+    font-size: 1.5rem;
+}
+
+.quick-action-btn span {
+    text-align: center;
+    line-height: var(--line-height-tight);
+}
+
+.custom-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-2);
+}
+
+.available-actions, .active-actions {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--rounded);
+    padding: var(--space-3);
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    justify-content: between;
+    padding: var(--space-2);
+    margin-bottom: var(--space-1);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--rounded-sm);
+    cursor: pointer;
+}
+
+.action-item:hover {
+    background-color: var(--gray-50);
+}
+
+.action-item.active {
+    background-color: var(--primary-50);
+    border-color: var(--primary-200);
+}
+
+/* Responsive adjustments */
+@media (max-width: 575.98px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: var(--space-2);
+    }
+    
+    .quick-action-btn {
+        height: 70px;
+        font-size: var(--font-size-xs);
+    }
+    
+    .quick-action-btn i {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .quick-actions-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+    
+    .modal-dialog.modal-lg {
+        max-width: 95%;
+        margin: var(--space-4);
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .quick-action-btn:hover {
+        transform: none;
+    }
+}
+
+.quick-action-btn:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+</style>
+
+<!-- Quick Actions JavaScript will be included in base.html -->

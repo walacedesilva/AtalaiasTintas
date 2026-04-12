@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="no-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="msapplication-TileColor" content="#2563eb">
+    <title>{% block title %}Sistema de Etiquetas{% endblock %}</title>
+    
+    <!-- DNS Prefetch for Performance -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Modern UI and Responsive CSS -->
+    {% load static %}
+    <link href="{% static 'css/modern-ui.css' %}" rel="stylesheet">
+    <link href="{% static 'css/responsive.css' %}" rel="stylesheet">
+    <link href="{% static 'css/components.css' %}" rel="stylesheet">
+    <link href="{% static 'css/typography.css' %}" rel="stylesheet">
+    <link href="{% static 'css/color-palette.css' %}" rel="stylesheet">
+    <link href="{% static 'css/color-accessibility.css' %}" rel="stylesheet">
+    <link href="{% static 'css/screen-reader.css' %}" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+        }
+        
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .main-content {
+            min-height: calc(100vh - 56px);
+            padding: 2rem;
+        }
+        
+        .etiqueta-preview {
+            border: 2px dashed #cbd5e1;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+        }
+        
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .qr-code-preview {
+            max-width: 80px;
+            height: auto;
+        }
+        
+        .barcode-preview {
+            max-width: 120px;
+            height: auto;
+        }
+        
+        .floating-actions {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="no-scroll-x">
+    <!-- Progressive Enhancement: Provide fallbacks for JavaScript-disabled users -->
+    <noscript>
+        <style>
+            /* Fallback styles when JavaScript is disabled */
+            .js-only { display: none !important; }
+            .no-js-only { display: block !important; }
+            .enhanced-only { display: none !important; }
+            .fallback-only { display: block !important; }
+            
+            /* Static styles for enhanced elements */
+            .btn:hover { 
+                background-color: #0056b3; 
+                transform: none; 
+            }
+            .card:hover { 
+                transform: none; 
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            }
+            
+            /* Ensure forms work without AJAX */
+            .ajax-form { opacity: 1 !important; pointer-events: auto !important; }
+        </style>
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i>
+            <strong>JavaScript Desabilitado:</strong> 
+            O sistema funciona normalmente, mas alguns recursos avançados como salvamento automático e ações rápidas não estão disponíveis. 
+            Para uma experiência completa, ative o JavaScript em seu navegador.
+        </div>
+    </noscript>
+    
+    <!-- Accessibility Controls -->
+    <div class="accessibility-controls" 
+         role="region" 
+         aria-label="Controles de acessibilidade">
+        <!-- Skip Links -->
+        <div class="skip-links" aria-label="Links de navegação rápida">
+            <a href="#main-content" 
+               class="skip-link" 
+               tabindex="1">
+                Pular para conteúdo principal
+            </a>
+            <a href="#navigation" 
+               class="skip-link" 
+               tabindex="2">
+                Pular para navegação
+            </a>
+            <a href="#page-footer" 
+               class="skip-link" 
+               tabindex="3">
+                Pular para rodapé
+            </a>
+        </div>
+        
+        <!-- Color accessibility controls will be inserted here by JavaScript -->
+        
+        <!-- Screen Reader Testing Panel -->
+        <div id="screen-reader-test-panel" class="visually-hidden" aria-live="polite" aria-label="Painel de teste do leitor de tela">
+            <div class="sr-test-controls">
+                <button id="sr-test-announce" type="button" class="btn btn-sm btn-outline-secondary" aria-label="Testar sistema de anúncios do leitor de tela">Testar Anúncios</button>
+                <button id="sr-test-navigation" type="button" class="btn btn-sm btn-outline-secondary" aria-label="Testar navegação do leitor de tela">Testar Navegação</button>
+                <button id="sr-test-forms" type="button" class="btn btn-sm btn-outline-secondary" aria-label="Testar formulários do leitor de tela">Testar Formulários</button>
+                <button id="sr-test-status" type="button" class="btn btn-sm btn-outline-info" aria-label="Ver status do sistema de leitor de tela">Status do Sistema</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Network Status Indicator (only shown when offline) -->
+    <div class="offline-indicator">
+        <i class="bi bi-wifi-off"></i> Você está offline. Algumas funcionalidades podem não estar disponíveis.
+    </div>
+    <!-- Modern App Layout Grid -->
+    <div class="app-layout">
+        <!-- Header -->
+        <header class="app-header" role="banner">
+            <div class="header-content">
+                <a class="header-brand" href="{% url 'etiquetas:index' %}" aria-label="Sistema de Etiquetas - Página inicial">
+                    <i class="bi bi-palette" aria-hidden="true"></i>
+                    <span>Sistema de Etiquetas</span>
+                </a>
+                
+                <div class="header-actions">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" 
+                           href="#" 
+                           role="button" 
+                           data-bs-toggle="dropdown" 
+                           aria-expanded="false" 
+                           aria-haspopup="true" 
+                           id="user-menu-button" 
+                           aria-label="Menu do usuário - Operador">
+                            <i class="bi bi-person-circle" aria-hidden="true"></i> 
+                            <span>Operador</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" 
+                            aria-labelledby="user-menu-button" 
+                            role="menu">
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Configurações</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" role="navigation" id="navigation" aria-label="Navegação principal">
+            {% include 'etiquetas/components/navigation.html' %}
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="app-main" role="main" id="main-content">
+            {% if messages %}
+                <div class="messages-container" aria-live="polite" aria-atomic="true">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar alerta"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- Breadcrumb Navigation (skip on dashboard) -->
+            {% if request.resolver_match.url_name != 'index' %}
+                <nav aria-label="Navegação estrutural">
+                    {% include 'etiquetas/components/breadcrumbs.html' %}
+                </nav>
+            {% endif %}
+            
+            <!-- Main Content Section -->
+            <section role="main" aria-labelledby="page-title">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer" id="page-footer" role="contentinfo">
+            <div>
+                Sistema de Etiquetas © 2026 - AtalaiasTintas
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-3" role="status"></div>
+            <div>Gerando etiqueta...</div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- UI Interactions & Quick Actions JavaScript -->
+    <script src="{% static 'js/ui-interactions.js' %}"></script>
+    
+    <!-- Form State Preservation JavaScript -->
+    <script src="{% static 'js/form-helpers.js' %}"></script>
+    
+    <!-- Keyboard Navigation & Accessibility JavaScript -->
+    <script src="{% static 'js/accessibility.js' %}"></script>
+    
+    <!-- Color Accessibility System -->
+    <script src="{% static 'js/color-accessibility.js' %}"></script>
+    
+    <!-- Screen Reader Compatibility System -->
+    <script src="{% static 'js/screen-reader.js' %}"></script>
+    
+    <!-- Screen Reader Testing System -->
+    <script src="{% static 'js/screen-reader-testing.js' %}"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Progressive Enhancement: Monitor online/offline status
+        function updateConnectionStatus() {
+            if (navigator.onLine) {
+                document.body.classList.remove('offline');
+            } else {
+                document.body.classList.add('offline');
+            }
+        }
+        
+        // Listen for connection changes
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Mostrar loading overlay
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        }
+        
+        // Esconder loading overlay
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    if (bootstrap.Alert) {
+                        try {
+                            const bsAlert = new bootstrap.Alert(alert);
+                            bsAlert.close();
+                        } catch (e) {
+                            // Graceful degradation: just hide the alert
+                            alert.style.display = 'none';
+                        }
+                    }
+                });
+            }, 5000);
+        });
+        
+        // Global error handler for graceful degradation
+        window.addEventListener('error', function(e) {
+            console.warn('JavaScript error caught, degrading gracefully:', e.error);
+            // Don't break the page - continue with basic functionality
+            return true;
+        });
+        
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(e) {
+            console.warn('Unhandled promise rejection:', e.reason);
+            // Prevent uncaught promise rejections from breaking the page
+            e.preventDefault();
+        });
+        
+        // Initialize progressive enhancement features when available
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add main content ID for skip links
+            const mainContent = document.querySelector('.main-content, main');
+            if (mainContent && !mainContent.id) {
+                mainContent.id = 'main-content';
+            }
+            
+            // Mark forms for AJAX enhancement
+            const forms = document.querySelectorAll('form:not(.no-ajax)');
+            forms.forEach(form => {
+                if (!form.classList.contains('no-ajax')) {
+                    form.setAttribute('data-ajax', 'true');
+                    form.classList.add('ajax-form');
+                }
+            });
+            
+            // Add animation classes to cards
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.setAttribute('data-animate', 'fadeInUp');
+            });
+            
+            // Enhance buttons
+            const buttons = document.querySelectorAll('.btn:not(.no-enhance)');
+            buttons.forEach(btn => {
+                btn.classList.add('btn-enhanced');
+            });
+            
+            console.log('🎯 Base template initialized - Progressive Enhancement ready');
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

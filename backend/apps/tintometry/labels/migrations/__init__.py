@@ -1,0 +1,1 @@
+# Migrações do sistema de etiquetas

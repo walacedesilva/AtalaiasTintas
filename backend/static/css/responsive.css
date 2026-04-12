@@ -1,0 +1,421 @@
+/* ===================================
+ * Responsive Design System
+ * Feature: 3-modern-web-interface  
+ * Task: T003 - Responsive Breakpoint System
+ * =================================== */
+
+/* ===================================
+ * Breakpoint Definitions
+ * =================================== */
+
+/*
+ * Mobile First Approach - CSS Media Queries
+ * 320px: Mobile portrait (minimum supported width)
+ * 768px: Tablet portrait and small desktop
+ * 1024px: Tablet landscape and medium desktop  
+ * 1440px: Large desktop
+ * 2560px: Ultra-wide displays (maximum tested width)
+ */
+
+/* ===================================
+ * Base Mobile Styles (320px+)
+ * =================================== */
+
+/* Ensure 44px minimum touch targets on mobile */
+.btn,
+.form-control,
+.form-select,
+button,
+input[type="button"],
+input[type="submit"],
+[role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Mobile-first typography */
+body {
+    font-size: var(--font-size-sm); /* 14px minimum */
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.2;
+    margin-bottom: var(--spacing-md);
+}
+
+h1 { font-size: var(--font-size-2xl); }   /* 24px on mobile */
+h2 { font-size: var(--font-size-xl); }    /* 20px on mobile */
+h3 { font-size: var(--font-size-lg); }    /* 18px on mobile */
+h4 { font-size: var(--font-size-base); }  /* 16px on mobile */
+h5 { font-size: var(--font-size-sm); }    /* 14px on mobile */
+h6 { font-size: var(--font-size-xs); }    /* 12px on mobile */
+
+/* Mobile content spacing */
+.content-spacing {
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Mobile form adjustments */
+.form-control,
+.form-select {
+    width: 100%;
+    font-size: var(--font-size-base); /* Prevent zoom on iOS */
+}
+
+/* Mobile table handling */
+.table-responsive-stack {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ===================================
+ * Small Mobile (320px - 479px)
+ * =================================== */
+
+@media (max-width: 479px) {
+    /* Ultra-compact spacing for very small screens */
+    .app-main {
+        padding: var(--spacing-sm);
+    }
+    
+    .content-header {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    /* Stack all form elements */
+    .form-row {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Compact navigation */
+    .nav-item {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-sm);
+    }
+}
+
+/* ===================================  
+ * Tablet Portrait (480px - 767px)
+ * =================================== */
+
+@media (min-width: 480px) and (max-width: 767px) {
+    /* Slightly larger typography */
+    h1 { font-size: var(--font-size-3xl); }   /* 30px */
+    h2 { font-size: var(--font-size-2xl); }   /* 24px */
+    
+    /* Two-column form layouts where appropriate */
+    .form-row.tablet-two-col {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    /* Card grid starts to show multiple columns */
+    .card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+/* ===================================
+ * Tablet Landscape (768px - 1023px)  
+ * =================================== */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    /* Larger typography scale */
+    body {
+        font-size: var(--font-size-base); /* 16px */
+    }
+    
+    h1 { font-size: var(--font-size-4xl); }   /* 32px maximum */
+    h2 { font-size: var(--font-size-3xl); }   /* 30px */
+    h3 { font-size: var(--font-size-2xl); }   /* 24px */
+    
+    /* Show sidebar as overlay or collapsed */
+    .app-layout.sidebar-overlay {
+        grid-template-areas: 
+            "header header"
+            "main main"
+            "footer footer";
+        grid-template-columns: 1fr;
+    }
+    
+    .app-sidebar.overlay {
+        position: fixed;
+        left: -100%;
+        top: var(--header-height);
+        width: var(--sidebar-width);
+        height: calc(100vh - var(--header-height));
+        z-index: 999;
+        transition: left 0.3s ease-in-out;
+        box-shadow: var(--box-shadow-lg);
+    }
+    
+    .app-sidebar.overlay.open {
+        left: 0;
+    }
+    
+    /* Three-column forms on tablet landscape */
+    .form-row.tablet-three-col {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    /* Optimized card grid */
+    .card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+/* ===================================
+ * Desktop (1024px - 1439px)
+ * =================================== */
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+    /* Full desktop layout */
+    .app-layout {
+        grid-template-areas: 
+            "header header"
+            "sidebar main"
+            "sidebar footer";
+        grid-template-columns: var(--sidebar-width) 1fr;
+    }
+    
+    .app-sidebar {
+        position: static;
+        display: block;
+    }
+    
+    /* Larger content spacing */
+    .app-main {
+        padding: var(--spacing-xl);
+    }
+    
+    /* Multi-column forms */
+    .form-row.desktop-two-col {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .form-row.desktop-three-col {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    .form-row.desktop-four-col {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+    
+    /* Optimized card layouts */
+    .card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+    
+    /* Hover states for mouse users */
+    .nav-item:hover,
+    .btn:hover,
+    .card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--box-shadow-lg);
+    }
+}
+
+/* ===================================
+ * Large Desktop (1440px - 2559px) 
+ * =================================== */
+
+@media (min-width: 1440px) and (max-width: 2559px) {
+    /* Increased sidebar width for better proportion */
+    :root {
+        --sidebar-width: 320px;
+    }
+    
+    /* Larger content areas */
+    .app-main {
+        padding: var(--spacing-2xl);
+        max-width: 1400px; /* Prevent over-stretching */
+    }
+    
+    /* Multi-panel layouts */
+    .content-panel-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-xl);
+    }
+    
+    /* Four-column card grids */
+    .card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+    
+    /* Complex form layouts */
+    .form-row.large-desktop {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ===================================
+ * Ultra-wide (2560px+)
+ * =================================== */
+
+@media (min-width: 2560px) {
+    /* Constrained content width to prevent over-stretching */
+    .app-main {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: var(--spacing-2xl);
+    }
+    
+    /* Prevent uncomfortable reading widths */
+    .content-text {
+        max-width: 75ch; /* Optimal line length */
+    }
+    
+    /* Multi-column layouts take advantage of space */
+    .ultra-wide-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: var(--spacing-xl);
+    }
+}
+
+/* ===================================
+ * Orientation-Specific Styles
+ * =================================== */
+
+/* Landscape mobile devices */
+@media (max-height: 500px) and (orientation: landscape) {
+    .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    
+    .app-sidebar {
+        display: none; /* Hide sidebar in mobile landscape */
+    }
+    
+    .app-main {
+        padding: var(--spacing-md);
+    }
+}
+
+/* ===================================
+ * Content Reflow Utilities
+ * =================================== */
+
+/* Responsive text sizing */
+.text-responsive {
+    font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-lg));
+}
+
+/* Responsive spacing */
+.spacing-responsive {
+    padding: clamp(var(--spacing-sm), 3vw, var(--spacing-xl));
+}
+
+/* Responsive grid columns */
+.grid-responsive-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: var(--spacing-lg);
+}
+
+/* ===================================
+ * Touch and Mouse Interaction
+ * =================================== */
+
+/* Touch-specific improvements */
+@media (pointer: coarse) {
+    /* Larger touch targets */
+    .btn,
+    .nav-item,
+    [role="button"] {
+        min-height: 48px;
+        padding: var(--spacing-md);
+    }
+    
+    /* Remove hover states on touch */
+    .btn:hover,
+    .nav-item:hover {
+        transform: none;
+    }
+}
+
+/* Mouse-specific improvements */
+@media (pointer: fine) {
+    /* Smaller, more precise elements allowed */
+    .btn-sm {
+        min-height: 32px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+    
+    /* Enable hover animations */
+    .btn,
+    .nav-item,
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+}
+
+/* ===================================
+ * Reduced Motion Support
+ * =================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ===================================
+ * High Contrast Mode Support
+ * =================================== */
+
+@media (prefers-contrast: high) {
+    :root {
+        --primary-color: #0000ff;
+        --secondary-color: #000000;
+        --success-color: #008000;
+        --danger-color: #ff0000;
+        --warning-color: #ff8000;
+    }
+    
+    .btn,
+    .nav-item,
+    .card {
+        border: 2px solid currentColor;
+    }
+}
+
+/* ===================================
+ * Print Styles
+ * =================================== */
+
+@media print {
+    .app-sidebar,
+    .header-actions,
+    .btn:not(.print-visible) {
+        display: none !important;
+    }
+    
+    .app-layout {
+        display: block;
+    }
+    
+    .app-main {
+        padding: 0;
+        max-width: none;
+    }
+    
+    body {
+        font-size: 12pt;
+        line-height: 1.4;
+        color: black;
+        background: white;
+    }
+}

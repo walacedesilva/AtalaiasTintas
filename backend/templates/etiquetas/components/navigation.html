@@ -1,0 +1,212 @@
+<!-- ===================================
+     Navigation Component
+     Feature: 3-modern-web-interface
+     Task: T004 - Navigation Component System
+     =================================== -->
+
+<!-- Mobile Navigation Toggle Button -->
+<button class="mobile-nav-toggle d-lg-none" 
+        type="button" 
+        data-bs-toggle="offcanvas" 
+        data-bs-target="#mobileNavigation" 
+        aria-controls="mobileNavigation"
+        aria-expanded="false"
+        aria-label="Toggle navigation menu">
+    <span class="navbar-toggler-icon">
+        <i class="bi bi-list fs-4"></i>
+    </span>
+</button>
+
+<!-- Desktop Sidebar Navigation -->
+<nav class="desktop-nav d-none d-lg-block" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-nav">
+        <a class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}" 
+           href="{% url 'etiquetas:index' %}"
+           {% if request.resolver_match.url_name == 'index' %}aria-current="page"{% endif %}>
+            <i class="bi bi-house" aria-hidden="true"></i>
+            <span>Início</span>
+        </a>
+        
+        <a class="nav-item {% if request.resolver_match.url_name == 'nova_mistura' %}active{% endif %}" 
+           href="{% url 'etiquetas:nova_mistura' %}"
+           {% if request.resolver_match.url_name == 'nova_mistura' %}aria-current="page"{% endif %}>
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+            <span>Nova Mistura</span>
+        </a>
+        
+        <a class="nav-item {% if request.resolver_match.url_name == 'misturas' %}active{% endif %}" 
+           href="{% url 'etiquetas:misturas' %}"
+           {% if request.resolver_match.url_name == 'misturas' %}aria-current="page"{% endif %}>
+            <i class="bi bi-list-ul" aria-hidden="true"></i>
+            <span>Misturas</span>
+        </a>
+        
+        <a class="nav-item {% if request.resolver_match.url_name == 'historico' %}active{% endif %}" 
+           href="{% url 'etiquetas:historico' %}"
+           {% if request.resolver_match.url_name == 'historico' %}aria-current="page"{% endif %}>
+            <i class="bi bi-tags" aria-hidden="true"></i>
+            <span>Histórico Etiquetas</span>
+        </a>
+        
+        <a class="nav-item {% if request.resolver_match.url_name == 'templates' %}active{% endif %}" 
+           href="{% url 'etiquetas:templates' %}"
+           {% if request.resolver_match.url_name == 'templates' %}aria-current="page"{% endif %}>
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+            <span>Templates</span>
+        </a>
+    </div>
+    
+    <!-- Navigation Separator -->
+    <hr class="nav-separator" aria-hidden="true">
+    
+    <!-- System Status Section -->
+    <div class="nav-section" role="region" aria-labelledby="system-status-heading">
+        <h6 id="system-status-heading" class="nav-section-title">Status do Sistema</h6>
+        <div class="status-indicators">
+            <div class="status-item">
+                <span class="status-indicator bg-success" aria-label="Online"></span>
+                <small>Impressora Online</small>
+            </div>
+            <div class="status-item">
+                <span class="status-indicator bg-success" aria-label="Online"></span>
+                <small>Base de Dados</small>
+            </div>
+            <div class="status-item">
+                <span class="status-indicator bg-warning" aria-label="Atenção"></span>
+                <small>Estoque Pigmentos</small>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Navigation Offcanvas -->
+<div class="offcanvas offcanvas-start mobile-nav-offcanvas" 
+     tabindex="-1" 
+     id="mobileNavigation" 
+     aria-labelledby="mobileNavigationLabel">
+    
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileNavigationLabel">
+            <i class="bi bi-palette text-primary me-2"></i>
+            Menu de Navegação
+        </h5>
+        <button type="button" 
+                class="btn-close" 
+                data-bs-dismiss="offcanvas" 
+                aria-label="Fechar menu de navegação"></button>
+    </div>
+    
+    <div class="offcanvas-body">
+        <nav role="navigation" aria-label="Mobile navigation">
+            <div class="mobile-nav-list">
+                <a class="mobile-nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}" 
+                   href="{% url 'etiquetas:index' %}"
+                   data-bs-dismiss="offcanvas"
+                   {% if request.resolver_match.url_name == 'index' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-house" aria-hidden="true"></i>
+                    <span>Início</span>
+                    <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+                
+                <a class="mobile-nav-item {% if request.resolver_match.url_name == 'nova_mistura' %}active{% endif %}" 
+                   href="{% url 'etiquetas:nova_mistura' %}"
+                   data-bs-dismiss="offcanvas"
+                   {% if request.resolver_match.url_name == 'nova_mistura' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                    <span>Nova Mistura</span>
+                    <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+                
+                <a class="mobile-nav-item {% if request.resolver_match.url_name == 'misturas' %}active{% endif %}" 
+                   href="{% url 'etiquetas:misturas' %}"
+                   data-bs-dismiss="offcanvas"
+                   {% if request.resolver_match.url_name == 'misturas' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-list-ul" aria-hidden="true"></i>
+                    <span>Misturas</span>
+                    <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+                
+                <a class="mobile-nav-item {% if request.resolver_match.url_name == 'historico' %}active{% endif %}" 
+                   href="{% url 'etiquetas:historico' %}"
+                   data-bs-dismiss="offcanvas"
+                   {% if request.resolver_match.url_name == 'historico' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    <span>Histórico Etiquetas</span>
+                    <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+                
+                <a class="mobile-nav-item {% if request.resolver_match.url_name == 'templates' %}active{% endif %}" 
+                   href="{% url 'etiquetas:templates' %}"
+                   data-bs-dismiss="offcanvas"
+                   {% if request.resolver_match.url_name == 'templates' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <span>Templates</span>
+                    <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+            </div>
+            
+            <!-- Mobile System Status -->
+            <div class="mobile-status-section mt-4">
+                <h6 class="mobile-section-title">Status do Sistema</h6>
+                <div class="mobile-status-list">
+                    <div class="mobile-status-item">
+                        <span class="status-indicator bg-success"></span>
+                        <small>Impressora Online</small>
+                    </div>
+                    <div class="mobile-status-item">
+                        <span class="status-indicator bg-success"></span>
+                        <small>Base de Dados</small>
+                    </div>
+                    <div class="mobile-status-item">
+                        <span class="status-indicator bg-warning"></span>
+                        <small>Estoque Pigmentos</small>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<!-- Keyboard Navigation Enhancement Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced keyboard navigation
+    const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item');
+    
+    navItems.forEach(item => {
+        // Add keyboard support
+        item.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
+        
+        // Ensure items are focusable
+        if (!item.hasAttribute('tabindex')) {
+            item.setAttribute('tabindex', '0');
+        }
+    });
+    
+    // Mobile nav keyboard handling
+    const mobileToggle = document.querySelector('.mobile-nav-toggle');
+    const mobileOffcanvas = document.getElementById('mobileNavigation');
+    
+    if (mobileToggle && mobileOffcanvas) {
+        // Trap focus in mobile navigation when open
+        mobileOffcanvas.addEventListener('shown.bs.offcanvas', function() {
+            const firstFocusable = this.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            }
+        });
+        
+        // Handle Escape key to close mobile nav
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mobileOffcanvas.classList.contains('show')) {
+                bootstrap.Offcanvas.getInstance(mobileOffcanvas).hide();
+            }
+        });
+    }
+});
+</script>

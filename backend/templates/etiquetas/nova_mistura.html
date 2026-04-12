@@ -1,0 +1,751 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Nova Mistura - Sistema de Etiquetas{% endblock %}
+{% block nav_nova_mistura %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formula-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .formula-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+    
+    .formula-card.selected {
+        border-color: var(--primary-color);
+        background: #f0f9ff;
+    }
+    
+    .color-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+    
+    .step {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        position: relative;
+    }
+    
+    .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 25px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #e2e8f0;
+        z-index: -1;
+    }
+    
+    .step.active::after {
+        background: var(--primary-color);
+    }
+    
+    .step.completed::after {
+        background: var(--success-color);
+    }
+    
+    .step-number {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step.active .step-number {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .step.completed .step-number {
+        background: var(--success-color);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Title for Screen Readers -->
+<h1 id="page-title" class="visually-hidden">Formulário para Nova Mistura de Tinta</h1>
+
+<header class="d-flex justify-content-between align-items-center mb-4">
+    <h2 id="main-heading">
+        <i class="bi bi-plus-circle" aria-hidden="true"></i> Nova Mistura de Tinta
+    </h2>
+    <nav aria-label="Navegação de retorno">
+        <a href="{% url 'etiquetas:misturas' %}" 
+           class="btn btn-outline-secondary"
+           aria-label="Voltar para lista de misturas">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> 
+            <span>Voltar</span>
+        </a>
+    </nav>
+</header>
+
+<!-- Indicador de Passos -->
+<nav class="step-indicator" 
+     role="progressbar" 
+     aria-labelledby="steps-heading" 
+     aria-valuenow="1" 
+     aria-valuemin="1" 
+     aria-valuemax="3" 
+     aria-describedby="steps-desc">
+    <h3 id="steps-heading" class="visually-hidden">Progresso do formulário</h3>
+    <div id="steps-desc" class="visually-hidden">
+        Formulário de criação de mistura em 3 etapas: seleção de cor, dados do cliente e confirmação
+    </div>
+    
+    <div class="step active" 
+         id="step1" 
+         role="tab" 
+         aria-selected="true" 
+         aria-controls="stepContent1" 
+         tabindex="0">
+        <div class="step-number" aria-label="Etapa 1">1</div>
+        <div class="step-title">Selecionar Cor</div>
+    </div>
+    <div class="step" 
+         id="step2" 
+         role="tab" 
+         aria-selected="false" 
+         aria-controls="stepContent2" 
+         tabindex="-1">
+        <div class="step-number" aria-label="Etapa 2">2</div>
+        <div class="step-title">Dados do Cliente</div>
+    </div>
+    <div class="step" 
+         id="step3" 
+         role="tab" 
+         aria-selected="false" 
+         aria-controls="stepContent3" 
+         tabindex="-1">
+        <div class="step-number" aria-label="Etapa 3">3</div>
+        <div class="step-title">Volume & Confirmação</div>
+    </div>
+</nav>
+
+<main role="main">
+<form id="misturaForm" 
+      method="post" 
+      data-preserve-state 
+      class="preserve-state"
+      role="form"
+      aria-labelledby="main-heading"
+      aria-describedby="steps-desc">
+    {% csrf_token %}
+    
+    <!-- Form State Controls -->
+    <section class="form-state-controls mb-4" 
+             role="region" 
+             aria-labelledby="state-controls-heading">
+        <h3 id="state-controls-heading" class="visually-hidden">Controles de estado do formulário</h3>
+        
+        <div class="auto-save-status" 
+             id="autoSaveStatusMistura" 
+             role="status" 
+             aria-live="polite">
+            <i class="bi bi-circle-fill" aria-hidden="true"></i>
+            <span>Rascunho salvo automaticamente</span>
+        </div>
+        
+        <button type="button" 
+                class="btn btn-outline-primary manual-save-btn" 
+                onclick="saveFormState('misturaForm')"
+                aria-describedby="save-help">
+            <i class="bi bi-floppy" aria-hidden="true"></i> 
+            <span>Salvar Rascunho</span>
+        </button>
+        <div id="save-help" class="visually-hidden">
+            Salva o progresso atual do formulário para continuar depois
+        </div>
+        
+        <button type="button" 
+                class="btn clear-state-btn" 
+                onclick="clearFormState('misturaForm')"
+                aria-describedby="clear-help">
+            <i class="bi bi-trash3" aria-hidden="true"></i> 
+            <span>Limpar Rascunho</span>
+        </button>
+        <div id="clear-help" class="visually-hidden">
+            Remove todos os dados salvos do formulário
+        </div>
+    </section>
+    
+    <!-- Passo 1: Selecionar Fórmula/Cor -->
+    <section class="step-content" 
+             id="stepContent1" 
+             role="tabpanel" 
+             aria-labelledby="step1-heading" 
+             aria-describedby="step1-desc">
+        <article class="card">
+            <div class="card-header">
+                <h3 id="step1-heading" class="card-title h5 mb-0">
+                    <i class="bi bi-palette" aria-hidden="true"></i> Selecionar Cor e Fórmula
+                </h3>
+                <div id="step1-desc" class="visually-hidden">
+                    Escolha a cor desejada dentre as fórmulas disponíveis no sistema
+                </div>
+            </div>
+            <div class="card-body">
+                <fieldset>
+                    <legend class="visually-hidden">Filtros de busca de fórmulas</legend>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="searchCor" class="form-label">Buscar por Cor:</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="searchCor" 
+                                   placeholder="Digite o nome da cor..."
+                                   aria-describedby="search-help">
+                            <div id="search-help" class="visually-hidden">
+                                Digite parte do nome da cor para filtrar as opções
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterFamilia" class="form-label">Família:</label>
+                            <select class="form-select" 
+                                    id="filterFamilia" 
+                                    aria-describedby="familia-help">
+                                <option value="">Todas as Famílias</option>
+                                <option value="AZUIS">Azuis</option>
+                                <option value="VERMELHOS">Vermelhos</option>
+                                <option value="VERDES">Verdes</option>
+                                <option value="AMARELOS">Amarelos</option>
+                                <option value="PRETOS">Pretos</option>
+                                <option value="BRANCOS">Brancos</option>
+                            </select>
+                            <div id="familia-help" class="visually-hidden">
+                                Filtre por família de cores
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterLinha" class="form-label">Linha:</label>
+                            <select class="form-select" 
+                                    id="filterLinha" 
+                                    aria-describedby="linha-help">
+                                <option value="">Todas as Linhas</option>
+                                <option value="STANDARD">Standard</option>
+                                <option value="PREMIUM">Premium</option>
+                                <option value="ECONÔMICA">Econômica</option>
+                            </select>
+                            <div id="linha-help" class="visually-hidden">
+                                Filtre por linha de produto
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <fieldset>
+                    <legend class="form-label">Fórmulas disponíveis:</legend>
+                    <div id="formulasContainer" 
+                         class="row" 
+                         role="radiogroup" 
+                         aria-labelledby="formulas-heading" 
+                         aria-describedby="formulas-help">
+                        <div id="formulas-heading" class="visually-hidden">Selecione uma fórmula</div>
+                        <div id="formulas-help" class="visually-hidden">
+                            Grade de fórmulas disponíveis. Use as setas ou clique para navegar e selecionar.
+                        </div>
+                        
+                        {% for formula in formulas %}
+                            <div class="col-lg-4 col-md-6 mb-3 formula-item" 
+                                 data-familia="{{ formula.cor_definida.familia_cor }}"
+                                 data-linha="{{ formula.cor_definida.linha_produto }}"
+                                 data-nome="{{ formula.cor_definida.nome_cor|lower }}">
+                                <article class="card formula-card" 
+                                         data-formula-id="{{ formula.id }}"
+                                         role="radio" 
+                                         aria-checked="false" 
+                                         aria-labelledby="formula-{{ formula.id }}-title" 
+                                         aria-describedby="formula-{{ formula.id }}-desc"
+                                         tabindex="{% if forloop.first %}-1{% else %}-1{% endif %}">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="color-preview me-3" 
+                                                 style="background-color: {{ formula.cor_definida.cor_hex }};"
+                                                 aria-label="Amostra da cor {{ formula.cor_definida.nome_cor }}"></div>
+                                            <div>
+                                                <h4 id="formula-{{ formula.id }}-title" class="card-title h6 mb-1">
+                                                    {{ formula.cor_definida.nome_cor }}
+                                                </h4>
+                                                <small class="text-muted">{{ formula.codigo_formula }}</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row text-center" 
+                                             id="formula-{{ formula.id }}-desc" 
+                                             aria-label="Detalhes da fórmula">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Volume Base</small>
+                                                <strong aria-label="{{ formula.volume_base }} litros">
+                                                    {{ formula.volume_base }}L
+                                                </strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Pigmentos</small>
+                                                <strong aria-label="{{ formula.itens.count }} pigmentos">
+                                                    {{ formula.itens.count }}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if formula.aprovada and formula.testada %}
+                                            <div class="text-center mt-2">
+                                                <span class="badge bg-success" 
+                                                      aria-label="Fórmula aprovada e testada">
+                                                    <i class="bi bi-check-circle" aria-hidden="true"></i> 
+                                                    <span>Aprovada</span>
+                                                </span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            </div>
+                        {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-warning text-center" 
+                                     role="alert" 
+                                     aria-live="polite">
+                                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                    Nenhuma fórmula encontrada. Entre em contato com o administrador.
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <input type="hidden" 
+                           name="formula" 
+                           id="selectedFormula" 
+                           required 
+                           aria-describedby="formula-error">
+                    <div id="formula-error" class="invalid-feedback">
+                        Por favor, selecione uma fórmula.
+                    </div>
+                </fieldset>
+            </div>
+        </article>
+        
+        <nav class="d-flex justify-content-end mt-3" aria-label="Navegação do passo 1">
+            <button type="button" 
+                    class="btn btn-primary" 
+                    id="nextStep1" 
+                    disabled 
+                    aria-describedby="next-step1-help">
+                <span>Próximo</span> 
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </button>
+            <div id="next-step1-help" class="visually-hidden">
+                Avançar para o passo 2: dados do cliente
+            </div>
+        </nav>
+    </section>
+    
+    <!-- Passo 2: Dados do Cliente -->
+    <section class="step-content" 
+             id="stepContent2" 
+             role="tabpanel" 
+             aria-labelledby="step2-heading" 
+             aria-describedby="step2-desc" 
+             style="display: none;">
+        <article class="card">
+            <div class="card-header">
+                <h3 id="step2-heading" class="card-title h5 mb-0">
+                    <i class="bi bi-person" aria-hidden="true"></i> Dados do Cliente
+                </h3>
+                <div id="step2-desc" class="visually-hidden">
+                    Informe os dados do cliente para identificação da mistura
+                </div>
+            </div>
+            <div class="card-body">
+                <fieldset>
+                    <legend class="visually-hidden">Informações do cliente</legend>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="cliente_nome" class="form-label">
+                                Nome do Cliente 
+                                <span class="text-danger" aria-label="campo obrigatório">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="cliente_nome" 
+                                   id="cliente_nome" 
+                                   required 
+                                   placeholder="Nome completo do cliente"
+                                   aria-describedby="nome-help">
+                            <div id="nome-help" class="form-text">
+                                Nome completo ou razão social do cliente
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="cliente_telefone" class="form-label">Telefone</label>
+                            <input type="tel" 
+                                   class="form-control" 
+                                   name="cliente_telefone" 
+                                   id="cliente_telefone" 
+                                   placeholder="(11) 99999-9999"
+                                   aria-describedby="telefone-help">
+                            <div id="telefone-help" class="form-text">
+                                Telefone para contato (opcional)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="cliente_documento" class="form-label">CPF/CNPJ</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="cliente_documento" 
+                                   id="cliente_documento" 
+                                   placeholder="000.000.000-00"
+                                   aria-describedby="documento-help">
+                            <div id="documento-help" class="form-text">
+                                Documento de identificação (opcional)
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cliente_email" class="form-label">E-mail</label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   name="cliente_email" 
+                                   id="cliente_email" 
+                                   placeholder="cliente@email.com"
+                                   aria-describedby="email-help">
+                            <div id="email-help" class="form-text">
+                                E-mail para contato (opcional)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="observacoes_cliente" class="form-label">
+                            Observações do Cliente
+                        </label>
+                        <textarea class="form-control" 
+                                  name="observacoes_cliente" 
+                                  id="observacoes_cliente" 
+                                  rows="3"
+                                  placeholder="Observações especiais sobre a cor ou aplicação..."
+                                  aria-describedby="obs-cliente-help"></textarea>
+                        <div id="obs-cliente-help" class="form-text">
+                            Observações especiais do cliente sobre a cor ou aplicação
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </article>
+        
+        <nav class="d-flex justify-content-between mt-3" aria-label="Navegação do passo 2">
+            <button type="button" 
+                    class="btn btn-outline-secondary" 
+                    id="prevStep2"
+                    aria-describedby="prev-step2-help">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> 
+                <span>Anterior</span>
+            </button>
+            <div id="prev-step2-help" class="visually-hidden">
+                Voltar para o passo 1: seleção de cor
+            </div>
+            
+            <button type="button" 
+                    class="btn btn-primary" 
+                    id="nextStep2"
+                    aria-describedby="next-step2-help">
+                <span>Próximo</span> 
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </button>
+            <div id="next-step2-help" class="visually-hidden">
+                Avançar para o passo 3: volume e confirmação
+            </div>
+        </nav>
+    </section>
+    
+    <!-- Passo 3: Volume e Confirmação -->
+    <section class="step-content" 
+             id="stepContent3" 
+             role="tabpanel" 
+             aria-labelledby="step3-heading" 
+             aria-describedby="step3-desc" 
+             style="display: none;">
+        <div id="step3-desc" class="visually-hidden">
+            Defina o volume desejado e confirme os dados da mistura
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <article class="card">
+                    <div class="card-header">
+                        <h3 id="step3-heading" class="card-title h5 mb-0">
+                            <i class="bi bi-calculator" aria-hidden="true"></i> Volume e Cálculos
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <fieldset>
+                            <legend class="visually-hidden">Configurações de volume e custo</legend>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="volumeInput" class="form-label">
+                                        Volume Solicitado (Litros) 
+                                        <span class="text-danger" aria-label="campo obrigatório">*</span>
+                                    </label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="volume_solicitado" 
+                                           id="volumeInput" 
+                                           required 
+                                           min="0.1" 
+                                           max="20" 
+                                           step="0.1" 
+                                           value="3.6" 
+                                           aria-describedby="volume-help">
+                                    <small id="volume-help" class="form-text text-muted">
+                                        Volume mínimo: 0.1L | Volume máximo: 20L
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="custoEstimado" class="form-label">Custo Estimado</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" aria-hidden="true">R$</span>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="custoEstimado" 
+                                               readonly 
+                                               aria-describedby="custo-help">
+                                    </div>
+                                    <small id="custo-help" class="form-text text-muted">
+                                        Cálculo automático baseado na fórmula
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <label for="observacoes_internas" class="form-label">
+                                    Observações Internas
+                                </label>
+                                <textarea class="form-control" 
+                                          name="observacoes_internas" 
+                                          id="observacoes_internas" 
+                                          rows="2"
+                                          placeholder="Observações para a produção..."
+                                          aria-describedby="obs-internas-help"></textarea>
+                                <div id="obs-internas-help" class="form-text">
+                                    Observações internas para a equipe de produção
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </article>
+            </div>
+            
+            <div class="col-lg-4">
+                <aside class="card" 
+                       role="complementary" 
+                       aria-labelledby="summary-heading">
+                    <div class="card-header">
+                        <h3 id="summary-heading" class="card-title h5 mb-0">
+                            <i class="bi bi-eye" aria-hidden="true"></i> Resumo da Mistura
+                        </h3>
+                    </div>
+                    <div class="card-body" 
+                         id="resumoMistura" 
+                         role="status" 
+                         aria-live="polite" 
+                         aria-describedby="summary-desc">
+                        <div id="summary-desc" class="visually-hidden">
+                            Resumo dinâmico dos dados da mistura configurada
+                        </div>
+                        <div class="text-center text-muted">
+                            <i class="bi bi-hourglass" aria-hidden="true"></i>
+                            <p>Aguardando dados...</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+        
+        <nav class="d-flex justify-content-between mt-3" aria-label="Navegação do passo 3">
+            <button type="button" 
+                    class="btn btn-outline-secondary" 
+                    id="prevStep3"
+                    aria-describedby="prev-step3-help">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> 
+                <span>Anterior</span>
+            </button>
+            <div id="prev-step3-help" class="visually-hidden">
+                Voltar para o passo 2: dados do cliente
+            </div>
+            
+            <button type="submit" 
+                    class="btn btn-success btn-lg"
+                    aria-describedby="submit-help">
+                <i class="bi bi-check-circle" aria-hidden="true"></i> 
+                <span>Criar Mistura</span>
+            </button>
+            <div id="submit-help" class="visually-hidden">
+                Finalizar e criar a nova mistura com os dados configurados
+            </div>
+        </nav>
+    </section>
+</form>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+    let selectedFormula = null;
+    
+    // Navegação entre passos
+    function showStep(step) {
+        // Esconder todos os passos
+        for (let i = 1; i <= 3; i++) {
+            document.getElementById(`stepContent${i}`).style.display = 'none';
+            document.getElementById(`step${i}`).classList.remove('active', 'completed');
+        }
+        
+        // Mostrar passo atual
+        document.getElementById(`stepContent${step}`).style.display = 'block';
+        document.getElementById(`step${step}`).classList.add('active');
+        
+        // Marcar passos anteriores como completados
+        for (let i = 1; i < step; i++) {
+            document.getElementById(`step${i}`).classList.add('completed');
+        }
+        
+        currentStep = step;
+        
+        // Atualizar resumo se estiver no passo 3
+        if (step === 3) {
+            updateResumo();
+        }
+    }
+    
+    // Seleção de fórmula
+    document.querySelectorAll('.formula-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Remover seleção anterior
+            document.querySelectorAll('.formula-card').forEach(c => c.classList.remove('selected'));
+            
+            // Selecionar nova fórmula
+            this.classList.add('selected');
+            selectedFormula = this.dataset.formulaId;
+            document.getElementById('selectedFormula').value = selectedFormula;
+            document.getElementById('nextStep1').disabled = false;
+        });
+    });
+    
+    // Filtros de busca
+    document.getElementById('searchCor').addEventListener('input', filterFormulas);
+    document.getElementById('filterFamilia').addEventListener('change', filterFormulas);
+    document.getElementById('filterLinha').addEventListener('change', filterFormulas);
+    
+    function filterFormulas() {
+        const searchTerm = document.getElementById('searchCor').value.toLowerCase();
+        const familia = document.getElementById('filterFamilia').value;
+        const linha = document.getElementById('filterLinha').value;
+        
+        document.querySelectorAll('.formula-item').forEach(item => {
+            const nome = item.dataset.nome;
+            const itemFamilia = item.dataset.familia;
+            const itemLinha = item.dataset.linha;
+            
+            const matchSearch = !searchTerm || nome.includes(searchTerm);
+            const matchFamilia = !familia || itemFamilia === familia;
+            const matchLinha = !linha || itemLinha === linha;
+            
+            if (matchSearch && matchFamilia && matchLinha) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    // Navegação
+    document.getElementById('nextStep1').addEventListener('click', () => showStep(2));
+    document.getElementById('nextStep2').addEventListener('click', () => showStep(3));
+    document.getElementById('prevStep2').addEventListener('click', () => showStep(1));
+    document.getElementById('prevStep3').addEventListener('click', () => showStep(2));
+    
+    // Cálculo de custo em tempo real
+    document.getElementById('volumeInput').addEventListener('input', calculateCost);
+    
+    function calculateCost() {
+        const volume = parseFloat(document.getElementById('volumeInput').value) || 0;
+        // Simulação de cálculo - em produção viria do backend
+        const custoBase = 25.50;
+        const custoPigmentos = 18.75;
+        const custoTotal = (custoBase + custoPigmentos) * volume / 3.6; // Proporção baseada em 3.6L
+        
+        document.getElementById('custoEstimado').value = custoTotal.toFixed(2);
+        document.getElementById('custoDetalhes').textContent = 
+            `Base: R$ ${(custoBase * volume / 3.6).toFixed(2)} | Pigmentos: R$ ${(custoPigmentos * volume / 3.6).toFixed(2)}`;
+    }
+    
+    function updateResumo() {
+        if (!selectedFormula) return;
+        
+        const selectedCard = document.querySelector(`[data-formula-id="${selectedFormula}"]`);
+        const corNome = selectedCard.querySelector('.card-title').textContent;
+        const corHex = selectedCard.querySelector('.color-preview').style.backgroundColor;
+        
+        const cliente = document.querySelector('input[name="cliente_nome"]').value || 'Não informado';
+        const volume = document.getElementById('volumeInput').value || '0';
+        const custo = document.getElementById('custoEstimado').value || '0.00';
+        
+        document.getElementById('resumoMistura').innerHTML = `
+            <div class="text-center mb-3">
+                <div class="color-preview mx-auto mb-2" style="background-color: ${corHex};"></div>
+                <h6>${corNome}</h6>
+            </div>
+            
+            <div class="small">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Cliente:</span>
+                    <span>${cliente}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Volume:</span>
+                    <span>${volume}L</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Custo:</span>
+                    <span class="fw-bold">R$ ${custo}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Máscaras para campos
+    document.querySelector('input[name="cliente_telefone"]').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        e.target.value = value;
+    });
+    
+    // Inicializar cálculo
+    calculateCost();
+</script>
+{% endblock %}

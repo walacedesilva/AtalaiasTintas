@@ -1,0 +1,429 @@
+{% extends 'etiquetas/base.html' %}
+{% load static %}
+
+{% block title %}Progressive Enhancement Test - Sistema de Etiquetas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom" id="page-title">
+        <h1 class="h2">
+            <i class="bi bi-lightning-charge text-primary" aria-hidden="true"></i>
+            Progressive Enhancement Test
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-outline-secondary" onclick="testFeatureDetection()">
+                    <i class="bi bi-cpu"></i> Test Feature Detection
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="testEnhancements()">
+                    <i class="bi bi-magic"></i> Test Enhancements
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results Panel -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="bi bi-info-circle"></i> Progressive Enhancement Layer Test</h4>
+                <p>Esta página testa os recursos de progressive enhancement implementados no T014. Os recursos devem funcionar mesmo com JavaScript desabilitado (graceful degradation).</p>
+                <hr>
+                <p class="mb-0">
+                    <strong>Status:</strong> 
+                    <span class="js-only badge bg-success">JavaScript Habilitado</span>
+                    <span class="no-js-only badge bg-warning">JavaScript Desabilitado</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Detection Results -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-search"></i> Feature Detection</h5>
+                </div>
+                <div class="card-body">
+                    <div id="feature-detection-results">
+                        <div class="js-only">
+                            <p class="text-muted">Carregando detecção de recursos...</p>
+                        </div>
+                        <div class="no-js-only">
+                            <p class="text-warning">JavaScript desabilitado - recursos limitados disponíveis</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Enhancement Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="enhancement-status">
+                        <div class="js-only">
+                            <p class="text-muted">Verificando status dos aprimoramentos...</p>
+                        </div>
+                        <div class="no-js-only">
+                            <p class="text-warning">Aprimoramentos JavaScript não disponíveis</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Enhancement Test -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-ui-checks"></i> Form Enhancement Test</h5>
+                </div>
+                <div class="card-body">
+                    <form class="ajax-form" id="enhancement-test-form" method="post" action="#">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="test-name" class="form-label">Nome de Teste</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="test-name" 
+                                       name="test_name" 
+                                       required 
+                                       pattern="[a-zA-Z\s]+" 
+                                       minlength="2" 
+                                       title="Apenas letras e espaços, mínimo 2 caracteres">
+                                <div class="invalid-feedback">Por favor, insira um nome válido.</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="test-email" class="form-label">E-mail de Teste</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="test-email" 
+                                       name="test_email" 
+                                       required>
+                                <div class="invalid-feedback">Por favor, insira um e-mail válido.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="test-message" class="form-label">Mensagem de Teste</label>
+                            <textarea class="form-control" 
+                                      id="test-message" 
+                                      name="test_message" 
+                                      rows="3" 
+                                      placeholder="Digite uma mensagem para testar o salvamento automático..."></textarea>
+                            <div class="form-text">
+                                <span class="js-only">✨ Auto-save habilitado - suas alterações serão salvas automaticamente</span>
+                                <span class="no-js-only">⚠️ Auto-save não disponível sem JavaScript</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="test-terms" name="test_terms" required>
+                                <label class="form-check-label" for="test-terms">
+                                    Eu concordo com os termos de teste
+                                </label>
+                                <div class="invalid-feedback">Você deve concordar com os termos.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary" data-loading="auto">
+                                <i class="bi bi-check-circle"></i> Testar Envio
+                            </button>
+                            
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                                <i class="bi bi-arrow-clockwise"></i> Limpar Formulário
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Test -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-keyboard"></i> Keyboard Shortcuts Test</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light" role="alert">
+                        <h6>Atalhos de Teclado Disponíveis:</h6>
+                        <ul class="mb-0">
+                            <li><kbd>Ctrl</kbd> + <kbd>K</kbd> - Focar no campo de busca</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>S</kbd> - Salvar formulário atual</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>H</kbd> - Ir para página inicial</li>
+                            <li><kbd>Alt</kbd> + <kbd>1</kbd> - Pular para conteúdo principal</li>
+                            <li><kbd>Shift</kbd> + <kbd>?</kbd> - Mostrar ajuda de atalhos (apenas com JS)</li>
+                        </ul>
+                    </div>
+
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="search" 
+                               class="form-control" 
+                               id="search" 
+                               placeholder="Teste o atalho Ctrl+K para focar aqui..."
+                               aria-label="Campo de busca para teste de atalhos">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accessibility Test -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-universal-access"></i> Accessibility Enhancement Test</h5>
+                </div>
+                <div class="card-body">
+                    <p>Os seguintes recursos de acessibilidade foram implementados:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Navegação por Teclado:</h6>
+                            <ul>
+                                <li>Skip links (topo da página)</li>
+                                <li>Focus management em modals</li>
+                                <li>Navegação com Tab aprimorada</li>
+                                <li>Escape para fechar modals</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Screen Reader Support:</h6>
+                            <ul>
+                                <li>ARIA labels e descriptions</li>
+                                <li>Live regions para anúncios</li>
+                                <li>Semantic HTML structure</li>
+                                <li>Status indicators</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-info" onclick="testScreenReader()">
+                            <i class="bi bi-megaphone"></i> Test Screen Reader Announcement
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll Animation Test -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card scroll-animate">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-arrow-down-up"></i> Scroll Animation Test</h5>
+                </div>
+                <div class="card-body scroll-animate">
+                    <p>Este cartão deve aparecer com animação quando entra na viewport (apenas com JavaScript e IntersectionObserver suportado).</p>
+                    <div class="scroll-animate">
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle"></i> Animation triggered! Progressive enhancement working.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Status Test -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-wifi"></i> Network Status Test</h5>
+                </div>
+                <div class="card-body">
+                    <p>Status da rede: <span id="network-status" class="badge bg-success">Online</span></p>
+                    <p class="text-muted">Tente desconectar a internet para testar a detecção offline (apenas com JavaScript).</p>
+                    
+                    <button type="button" class="btn btn-outline-secondary" onclick="simulateOffline()">
+                        <i class="bi bi-wifi-off"></i> Simular Offline
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Results Modal -->
+<div class="modal fade" id="testResultsModal" tabindex="-1" aria-labelledby="testResultsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testResultsModalLabel">Test Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="testResultsContent">
+                <!-- Test results will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Test Functions
+    function testFeatureDetection() {
+        const results = document.getElementById('feature-detection-results');
+        
+        if (window.UIEnhancements && window.UIEnhancements.FeatureDetection) {
+            const features = window.UIEnhancements.FeatureDetection;
+            let html = '<h6>Recursos Detectados:</h6><ul class="list-group list-group-flush">';
+            
+            Object.keys(features).forEach(feature => {
+                const supported = features[feature];
+                const icon = supported ? 'bi-check-circle text-success' : 'bi-x-circle text-danger';
+                const status = supported ? 'Suportado' : 'Não Suportado';
+                
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi ${icon}"></i> ${feature}</span>
+                        <span class="badge ${supported ? 'bg-success' : 'bg-danger'}">${status}</span>
+                    </li>
+                `;
+            });
+            
+            html += '</ul>';
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = '<p class="text-warning">Feature Detection não disponível</p>';
+        }
+    }
+
+    function testEnhancements() {
+        const status = document.getElementById('enhancement-status');
+        
+        let html = '<h6>Status dos Aprimoramentos:</h6><ul class="list-group list-group-flush">';
+        
+        const enhancements = [
+            { name: 'Form Enhancements', available: !!window.UIEnhancements?.FormEnhancements },
+            { name: 'Keyboard Shortcuts', available: !!window.UIEnhancements?.KeyboardShortcuts },
+            { name: 'Accessibility Enhancements', available: !!window.UIEnhancements?.AccessibilityEnhancer },
+            { name: 'Scroll Animations', available: !!window.UIEnhancements?.ScrollAnimations },
+            { name: 'Interaction Enhancer', available: !!window.UIEnhancements?.InteractionEnhancer },
+            { name: 'Loading Manager', available: !!window.LoadingManager }
+        ];
+        
+        enhancements.forEach(enhancement => {
+            const icon = enhancement.available ? 'bi-check-circle text-success' : 'bi-x-circle text-danger';
+            const status = enhancement.available ? 'Ativo' : 'Inativo';
+            
+            html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi ${icon}"></i> ${enhancement.name}</span>
+                    <span class="badge ${enhancement.available ? 'bg-success' : 'bg-danger'}">${status}</span>
+                </li>
+            `;
+        });
+        
+        html += '</ul>';
+        status.innerHTML = html;
+    }
+
+    function clearForm() {
+        document.getElementById('enhancement-test-form').reset();
+        // Clear any validation classes
+        document.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
+            el.classList.remove('is-valid', 'is-invalid');
+        });
+    }
+
+    function testScreenReader() {
+        if (window.announceToScreenReader) {
+            window.announceToScreenReader('Teste de anúncio para leitores de tela funcionando corretamente!');
+            
+            // Show visual feedback
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i> Announced!';
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+            }, 2000);
+        } else {
+            alert('Screen reader announcements não disponíveis');
+        }
+    }
+
+    function simulateOffline() {
+        // Visual simulation only
+        const status = document.getElementById('network-status');
+        status.textContent = 'Offline (Simulado)';
+        status.className = 'badge bg-danger';
+        
+        // Show offline indicator if available
+        const indicator = document.querySelector('.offline-indicator');
+        if (indicator) {
+            indicator.style.display = 'block';
+        }
+        
+        setTimeout(() => {
+            status.textContent = 'Online';
+            status.className = 'badge bg-success';
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }, 3000);
+    }
+
+    // Auto-run tests on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            testFeatureDetection();
+            testEnhancements();
+        }, 500);
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scroll-animate {
+        opacity: 0.3;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    
+    .scroll-animate.in-view {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .js-enabled .scroll-animate {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    kbd {
+        background-color: #f1f3f4;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.875em;
+    }
+</style>
+{% endblock %}

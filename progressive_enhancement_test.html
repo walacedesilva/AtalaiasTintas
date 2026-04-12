@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="no-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progressive Enhancement Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="backend/static/css/components.css" rel="stylesheet">
+</head>
+<body>
+    <noscript>
+        <div class="alert alert-warning">JavaScript is disabled. Basic functionality will work but enhanced features are unavailable.</div>
+    </noscript>
+
+    <div class="container mt-4">
+        <h1>Progressive Enhancement Test</h1>
+        
+        <!-- Feature Detection Test -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Feature Detection</h3>
+            </div>
+            <div class="card-body">
+                <p>This will show different content based on JavaScript capabilities:</p>
+                <div class="no-js-only">✅ JavaScript is disabled - showing fallback content</div>
+                <div class="js-only">✅ JavaScript is enabled - showing enhanced content</div>
+                <div class="requires-fetch">✅ Fetch API supported - AJAX forms available</div>
+                <div class="requires-storage">✅ LocalStorage supported - preferences will be saved</div>
+            </div>
+        </div>
+
+        <!-- Enhanced Form Test -->
+        <form class="ajax-form card mb-4" data-ajax="true" method="post">
+            <div class="card-header">
+                <h3>AJAX Enhanced Form</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="testInput" class="form-label">Test Input (with auto-save):</label>
+                    <input type="text" class="form-control" id="testInput" name="testInput">
+                    <div class="auto-save-indicator">
+                        <span class="auto-save-status">Ready</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="testPhone" class="form-label">Phone (with formatting):</label>
+                    <input type="tel" class="form-control" id="testPhone" name="testPhone">
+                </div>
+                <div class="mb-3">
+                    <label for="testFile" class="form-label">File Upload (with preview):</label>
+                    <input type="file" class="form-control" id="testFile" name="testFile" accept="image/*">
+                </div>
+                <button type="submit" class="btn btn-primary btn-enhanced">Submit (AJAX)</button>
+                <noscript>
+                    <p class="text-muted">Form will submit normally without JavaScript</p>
+                </noscript>
+            </div>
+        </form>
+
+        <!-- Animation Test -->
+        <div class="card mb-4" data-animate="fadeInUp">
+            <div class="card-header">
+                <h3>Animation Test</h3>
+            </div>
+            <div class="card-body">
+                <p>This card should animate in when JavaScript is enabled.</p>
+                <img data-src="https://via.placeholder.com/300x200" alt="Lazy loaded image" class="lazy img-fluid">
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Test -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Keyboard Shortcuts Test</h3>
+            </div>
+            <div class="card-body">
+                <p>Try these keyboard shortcuts:</p>
+                <ul>
+                    <li><kbd>Ctrl</kbd> + <kbd>K</kbd> - Focus search (if available)</li>
+                    <li><kbd>Alt</kbd> + <kbd>H</kbd> - Go to home</li>
+                    <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>/</kbd> - Show shortcuts help</li>
+                    <li><kbd>Esc</kbd> - Close modal/dropdown</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Smooth Scrolling Test -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Smooth Scrolling Test</h3>
+            </div>
+            <div class="card-body">
+                <a href="#bottom">Scroll to bottom (smooth with JS, instant without)</a>
+            </div>
+        </div>
+
+        <!-- Spacer -->
+        <div style="height: 800px; background: linear-gradient(45deg, #f0f0f0, #e0e0e0);">
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <p>Scroll area to test smooth scrolling</p>
+            </div>
+        </div>
+
+        <div id="bottom" class="card">
+            <div class="card-body">
+                <h4>Bottom Section</h4>
+                <p>You've reached the bottom! <a href="#top">Back to top</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="backend/static/js/ui-interactions.js"></script>
+    <script src="backend/static/js/form-helpers.js"></script>
+
+    <script>
+        // Test progressive enhancement features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Test feature detection display
+            console.log('Progressive Enhancement Test Page Loaded');
+            
+            // Test keyboard shortcut registration
+            if (window.registerKeyboardShortcut) {
+                window.registerKeyboardShortcut('ctrl+t', function() {
+                    alert('Test shortcut worked!');
+                }, 'Test shortcut');
+            }
+            
+            // Test AJAX form enhancement
+            if (window.enhanceFormWithAjax) {
+                const form = document.querySelector('.ajax-form');
+                if (form) {
+                    window.enhanceFormWithAjax(form);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

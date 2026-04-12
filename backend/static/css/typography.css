@@ -1,0 +1,532 @@
+/* ===================================
+ * Typography Scale System
+ * Feature: 3-modern-web-interface
+ * Task: T009 - Typography Scale
+ * =================================== */
+
+/* ===================================
+ * FONT SIZE UTILITIES
+ * =================================== */
+
+/* Font Size Scale (xs to 4xl) */
+.text-xs { 
+    font-size: var(--font-size-xs) !important; 
+    line-height: var(--line-height-tight);
+}
+
+.text-sm { 
+    font-size: var(--font-size-sm) !important; 
+    line-height: var(--line-height-normal);
+}
+
+.text-base { 
+    font-size: var(--font-size-base) !important; 
+    line-height: var(--line-height-normal);
+}
+
+.text-md { 
+    font-size: var(--font-size-md) !important; 
+    line-height: var(--line-height-normal);
+}
+
+.text-lg { 
+    font-size: var(--font-size-lg) !important; 
+    line-height: var(--line-height-snug);
+}
+
+.text-xl { 
+    font-size: var(--font-size-xl) !important; 
+    line-height: var(--line-height-snug);
+}
+
+.text-2xl { 
+    font-size: var(--font-size-2xl) !important; 
+    line-height: var(--line-height-tight);
+}
+
+.text-3xl { 
+    font-size: var(--font-size-3xl) !important; 
+    line-height: var(--line-height-tight);
+}
+
+/* Extended font sizes for display typography */
+.text-4xl { 
+    font-size: 2.25rem !important; /* 36px */
+    line-height: 1.1;
+    letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-5xl { 
+    font-size: 3rem !important; /* 48px */
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-6xl { 
+    font-size: 4rem !important; /* 64px */
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-tighter);
+}
+
+/* ===================================
+ * FONT WEIGHT UTILITIES
+ * =================================== */
+
+.font-thin { font-weight: 100 !important; }
+.font-extralight { font-weight: 200 !important; }
+.font-light { font-weight: var(--font-weight-light) !important; }
+.font-normal { font-weight: var(--font-weight-normal) !important; }
+.font-medium { font-weight: var(--font-weight-medium) !important; }
+.font-semibold { font-weight: var(--font-weight-semibold) !important; }
+.font-bold { font-weight: var(--font-weight-bold) !important; }
+.font-extrabold { font-weight: var(--font-weight-extrabold) !important; }
+.font-black { font-weight: 900 !important; }
+
+/* ===================================
+ * LINE HEIGHT UTILITIES
+ * =================================== */
+
+.leading-none { line-height: 1 !important; }
+.leading-tight { line-height: var(--line-height-tight) !important; }
+.leading-snug { line-height: var(--line-height-snug) !important; }
+.leading-normal { line-height: var(--line-height-normal) !important; }
+.leading-relaxed { line-height: var(--line-height-relaxed) !important; }
+.leading-loose { line-height: var(--line-height-loose) !important; }
+
+/* Custom line heights */
+.leading-3 { line-height: 0.75rem !important; } /* 12px */
+.leading-4 { line-height: 1rem !important; } /* 16px */
+.leading-5 { line-height: 1.25rem !important; } /* 20px */
+.leading-6 { line-height: 1.5rem !important; } /* 24px */
+.leading-7 { line-height: 1.75rem !important; } /* 28px */
+.leading-8 { line-height: 2rem !important; } /* 32px */
+.leading-9 { line-height: 2.25rem !important; } /* 36px */
+.leading-10 { line-height: 2.5rem !important; } /* 40px */
+
+/* ===================================
+ * LETTER SPACING UTILITIES
+ * =================================== */
+
+.tracking-tighter { letter-spacing: var(--letter-spacing-tighter) !important; }
+.tracking-tight { letter-spacing: var(--letter-spacing-tight) !important; }
+.tracking-normal { letter-spacing: var(--letter-spacing-normal) !important; }
+.tracking-wide { letter-spacing: var(--letter-spacing-wide) !important; }
+.tracking-wider { letter-spacing: var(--letter-spacing-wider) !important; }
+.tracking-widest { letter-spacing: var(--letter-spacing-widest) !important; }
+
+/* ===================================
+ * FONT FAMILY UTILITIES
+ * =================================== */
+
+.font-sans { font-family: var(--font-family-sans) !important; }
+.font-mono { font-family: var(--font-family-mono) !important; }
+
+/* ===================================
+ * TEXT ALIGNMENT UTILITIES
+ * =================================== */
+
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+.text-justify { text-align: justify !important; }
+
+/* Responsive text alignment */
+@media (min-width: 576px) {
+    .text-sm-left { text-align: left !important; }
+    .text-sm-center { text-align: center !important; }
+    .text-sm-right { text-align: right !important; }
+}
+
+@media (min-width: 768px) {
+    .text-md-left { text-align: left !important; }
+    .text-md-center { text-align: center !important; }
+    .text-md-right { text-align: right !important; }
+}
+
+@media (min-width: 992px) {
+    .text-lg-left { text-align: left !important; }
+    .text-lg-center { text-align: center !important; }
+    .text-lg-right { text-align: right !important; }
+}
+
+/* ===================================
+ * TEXT TRANSFORM UTILITIES
+ * =================================== */
+
+.uppercase { text-transform: uppercase !important; }
+.lowercase { text-transform: lowercase !important; }
+.capitalize { text-transform: capitalize !important; }
+.normal-case { text-transform: none !important; }
+
+/* ===================================
+ * TEXT DECORATION UTILITIES
+ * =================================== */
+
+.underline { text-decoration: underline !important; }
+.line-through { text-decoration: line-through !important; }
+.no-underline { text-decoration: none !important; }
+
+/* Underline styles */
+.underline-solid { text-decoration-style: solid !important; }
+.underline-dashed { text-decoration-style: dashed !important; }
+.underline-dotted { text-decoration-style: dotted !important; }
+
+/* Underline colors */
+.underline-primary { text-decoration-color: var(--primary-500) !important; }
+.underline-secondary { text-decoration-color: var(--secondary-500) !important; }
+.underline-success { text-decoration-color: var(--success-500) !important; }
+.underline-warning { text-decoration-color: var(--warning-500) !important; }
+.underline-danger { text-decoration-color: var(--danger-500) !important; }
+
+/* ===================================
+ * VERTICAL ALIGNMENT UTILITIES
+ * =================================== */
+
+.align-baseline { vertical-align: baseline !important; }
+.align-top { vertical-align: top !important; }
+.align-middle { vertical-align: middle !important; }
+.align-bottom { vertical-align: bottom !important; }
+.align-text-top { vertical-align: text-top !important; }
+.align-text-bottom { vertical-align: text-bottom !important; }
+
+/* ===================================
+ * WHITE SPACE UTILITIES
+ * =================================== */
+
+.whitespace-normal { white-space: normal !important; }
+.whitespace-nowrap { white-space: nowrap !important; }
+.whitespace-pre { white-space: pre !important; }
+.whitespace-pre-line { white-space: pre-line !important; }
+.whitespace-pre-wrap { white-space: pre-wrap !important; }
+
+/* ===================================
+ * WORD BREAK UTILITIES
+ * =================================== */
+
+.break-normal { 
+    overflow-wrap: normal !important; 
+    word-break: normal !important; 
+}
+
+.break-words { overflow-wrap: break-word !important; }
+.break-all { word-break: break-all !important; }
+
+/* ===================================
+ * TEXT OVERFLOW UTILITIES
+ * =================================== */
+
+.truncate {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.text-clip { text-overflow: clip !important; }
+.text-ellipsis { text-overflow: ellipsis !important; }
+
+/* ===================================
+ * SEMANTIC TYPOGRAPHY CLASSES
+ * =================================== */
+
+/* Display typography for headers and hero sections */
+.display-1 {
+    font-size: var(--font-size-6xl, 4rem);
+    font-weight: var(--font-weight-extrabold);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-tighter);
+}
+
+.display-2 {
+    font-size: var(--font-size-5xl, 3rem);
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+    letter-spacing: var(--letter-spacing-tight);
+}
+
+.display-3 {
+    font-size: var(--font-size-4xl, 2.25rem);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.1;
+    letter-spacing: var(--letter-spacing-tight);
+}
+
+.display-4 {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-normal);
+}
+
+/* Body text variations */
+.body-large {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-relaxed);
+    font-weight: var(--font-weight-normal);
+}
+
+.body-default {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-normal);
+}
+
+.body-small {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-normal);
+}
+
+/* Caption and label text */
+.caption {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-normal);
+    color: var(--text-muted);
+}
+
+.label-large {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-medium);
+}
+
+.label-default {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Code and monospace text */
+.code-large {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+}
+
+.code-default {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
+}
+
+.code-small {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+}
+
+/* ===================================
+ * PAINT STORE SPECIFIC TYPOGRAPHY
+ * =================================== */
+
+/* Product labels and paint names */
+.paint-name {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+    color: var(--text-primary);
+    letter-spacing: var(--letter-spacing-normal);
+}
+
+.paint-code {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    background-color: var(--bg-secondary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--rounded-sm);
+    color: var(--text-secondary);
+}
+
+.price-large {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+    color: var(--success-600);
+}
+
+.price-default {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.stock-status {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wider);
+}
+
+.formula-text {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    background-color: var(--bg-tertiary);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--rounded);
+    border-left: 4px solid var(--tint-base);
+}
+
+/* ===================================
+ * TEXT SHADOW UTILITIES
+ * =================================== */
+
+.text-shadow-sm {
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.text-shadow {
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.text-shadow-md {
+    text-shadow: 0 4px 6px rgb(0 0 0 / 0.07), 0 2px 4px rgb(0 0 0 / 0.06);
+}
+
+.text-shadow-lg {
+    text-shadow: 0 10px 15px rgb(0 0 0 / 0.1), 0 4px 6px rgb(0 0 0 / 0.05);
+}
+
+.text-shadow-none {
+    text-shadow: none;
+}
+
+/* ===================================
+ * RESPONSIVE TYPOGRAPHY UTILITIES
+ * =================================== */
+
+/* Mobile adjustments (up to 767px) */
+@media (max-width: 767.98px) {
+    .text-xs { font-size: var(--font-size-xs-mobile) !important; }
+    .text-sm { font-size: var(--font-size-sm-mobile) !important; }
+    .text-base { font-size: var(--font-size-base-mobile) !important; }
+    .text-md { font-size: var(--font-size-md-mobile) !important; }
+    .text-lg { font-size: var(--font-size-lg-mobile) !important; }
+    .text-xl { font-size: var(--font-size-xl-mobile) !important; }
+    .text-2xl { font-size: var(--font-size-2xl-mobile) !important; }
+    .text-3xl { font-size: var(--font-size-3xl-mobile) !important; }
+    
+    .display-1 { font-size: 2.5rem !important; } /* 40px on mobile */
+    .display-2 { font-size: 2rem !important; } /* 32px on mobile */
+    .display-3 { font-size: 1.75rem !important; } /* 28px on mobile */
+    .display-4 { font-size: 1.5rem !important; } /* 24px on mobile */
+    
+    .paint-name { font-size: var(--font-size-md-mobile) !important; }
+    .price-large { font-size: var(--font-size-xl-mobile) !important; }
+}
+
+/* Large screens (1200px and up) */
+@media (min-width: 1200px) {
+    .display-1 { font-size: 4.5rem !important; } /* 72px on large screens */
+    .display-2 { font-size: 3.5rem !important; } /* 56px on large screens */
+    .display-3 { font-size: 2.75rem !important; } /* 44px on large screens */
+}
+
+/* ===================================
+ * ACCESSIBILITY ENHANCEMENTS
+ * =================================== */
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+    .text-muted {
+        color: var(--gray-700) !important;
+    }
+    
+    .caption {
+        color: var(--gray-600) !important;
+    }
+    
+    .paint-code {
+        background-color: var(--white) !important;
+        border: 1px solid var(--gray-600) !important;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .text-shadow,
+    .text-shadow-sm,
+    .text-shadow-md,
+    .text-shadow-lg {
+        text-shadow: none !important;
+    }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] {
+    .paint-code {
+        background-color: var(--gray-100);
+        color: var(--text-primary);
+    }
+    
+    .formula-text {
+        background-color: var(--gray-200);
+        border-left-color: var(--tint-base);
+    }
+    
+    .price-large {
+        color: var(--success);
+    }
+}
+
+/* ===================================
+ * FOCUS STYLES FOR TYPOGRAPHY
+ * =================================== */
+
+/* Focusable typography elements */
+.display-1:focus,
+.display-2:focus,
+.display-3:focus,
+.display-4:focus,
+.paint-name:focus {
+    outline: 2px solid var(--primary-500) !important;
+    outline-offset: 2px !important;
+    border-radius: var(--rounded-sm) !important;
+}
+
+/* ===================================
+ * PRINT STYLES
+ * =================================== */
+
+@media print {
+    /* Ensure good typography in print */
+    body {
+        font-size: 12pt !important;
+        line-height: 1.5 !important;
+        color: black !important;
+    }
+    
+    h1, .h1, .display-1, .display-2 {
+        font-size: 18pt !important;
+        page-break-after: avoid;
+    }
+    
+    h2, .h2, .display-3, .display-4 {
+        font-size: 16pt !important;
+        page-break-after: avoid;
+    }
+    
+    h3, .h3 {
+        font-size: 14pt !important;
+        page-break-after: avoid;
+    }
+    
+    h4, .h4, h5, .h5, h6, .h6 {
+        font-size: 12pt !important;
+        page-break-after: avoid;
+    }
+    
+    .text-shadow,
+    .text-shadow-sm,
+    .text-shadow-md,
+    .text-shadow-lg {
+        text-shadow: none !important;
+    }
+    
+    .paint-code,
+    .formula-text {
+        background-color: #f5f5f5 !important;
+        border: 1px solid #ccc !important;
+    }
+}

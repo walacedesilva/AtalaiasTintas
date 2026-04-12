@@ -1,0 +1,337 @@
+/* ===================================
+ * Color Palette Utilities
+ * Feature: 3-modern-web-interface
+ * Task: T008 - Color Palette System  
+ * =================================== */
+
+/* ===================================
+ * TEXT COLOR UTILITIES
+ * =================================== */
+
+/* Primary Text Colors */
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-inverse { color: var(--text-inverse) !important; }
+
+/* Semantic Text Colors */
+.text-success { color: var(--success-600) !important; }
+.text-warning { color: var(--warning-600) !important; }
+.text-danger { color: var(--danger-600) !important; }
+.text-info { color: var(--primary-600) !important; }
+
+/* Paint Store Brand Text Colors */
+.text-paint-red { color: var(--paint-red-600) !important; }
+.text-paint-blue { color: var(--paint-blue-600) !important; }
+.text-paint-yellow { color: var(--paint-yellow-600) !important; }
+.text-paint-green { color: var(--paint-green-600) !important; }
+.text-paint-purple { color: var(--paint-purple-600) !important; }
+.text-paint-orange { color: var(--paint-orange-600) !important; }
+
+/* Functional Text Colors */
+.text-tint { color: var(--tint-base) !important; }
+.text-mixing { color: var(--mixing-active) !important; }
+.text-stock-high { color: var(--stock-high) !important; }
+.text-stock-low { color: var(--stock-low) !important; }
+.text-stock-out { color: var(--stock-out) !important; }
+.text-revenue-positive { color: var(--revenue-positive) !important; }
+.text-revenue-negative { color: var(--revenue-negative) !important; }
+
+/* Gray Scale Text Colors */
+.text-gray-50 { color: var(--gray-50) !important; }
+.text-gray-100 { color: var(--gray-100) !important; }
+.text-gray-200 { color: var(--gray-200) !important; }
+.text-gray-300 { color: var(--gray-300) !important; }
+.text-gray-400 { color: var(--gray-400) !important; }
+.text-gray-500 { color: var(--gray-500) !important; }
+.text-gray-600 { color: var(--gray-600) !important; }
+.text-gray-700 { color: var(--gray-700) !important; }
+.text-gray-800 { color: var(--gray-800) !important; }
+.text-gray-900 { color: var(--gray-900) !important; }
+
+/* ===================================
+ * BACKGROUND COLOR UTILITIES  
+ * =================================== */
+
+/* Primary Background Colors */
+.bg-primary { background-color: var(--bg-primary) !important; }
+.bg-secondary { background-color: var(--bg-secondary) !important; }
+.bg-tertiary { background-color: var(--bg-tertiary) !important; }
+
+/* Semantic Background Colors */
+.bg-success { background-color: var(--bg-success) !important; }
+.bg-warning { background-color: var(--bg-warning) !important; }
+.bg-danger { background-color: var(--bg-danger) !important; }
+.bg-info { background-color: var(--bg-info) !important; }
+
+/* Paint Store Brand Background Colors */
+.bg-paint-red { background-color: var(--bg-paint-red) !important; }
+.bg-paint-blue { background-color: var(--bg-paint-blue) !important; }
+.bg-paint-yellow { background-color: var(--bg-paint-yellow) !important; }
+.bg-paint-green { background-color: var(--bg-paint-green) !important; }
+.bg-paint-purple { background-color: var(--bg-paint-purple) !important; }
+.bg-paint-orange { background-color: var(--bg-paint-orange) !important; }
+
+/* Solid Paint Colors (for color swatches) */
+.bg-paint-red-solid { background-color: var(--paint-red-500) !important; }
+.bg-paint-blue-solid { background-color: var(--paint-blue-500) !important; }
+.bg-paint-yellow-solid { background-color: var(--paint-yellow-500) !important; }
+.bg-paint-green-solid { background-color: var(--paint-green-500) !important; }
+.bg-paint-purple-solid { background-color: var(--paint-purple-500) !important; }
+.bg-paint-orange-solid { background-color: var(--paint-orange-500) !important; }
+
+/* Functional Background Colors */
+.bg-tint { background-color: var(--tint-base) !important; color: var(--white) !important; }
+.bg-mixing { background-color: var(--mixing-active) !important; color: var(--white) !important; }
+.bg-mixing-complete { background-color: var(--mixing-complete) !important; color: var(--white) !important; }
+.bg-mixing-error { background-color: var(--mixing-error) !important; color: var(--white) !important; }
+
+/* Stock Status Background Colors */
+.bg-stock-high { background-color: var(--stock-high) !important; color: var(--white) !important; }
+.bg-stock-medium { background-color: var(--stock-medium) !important; color: var(--gray-900) !important; }
+.bg-stock-low { background-color: var(--stock-low) !important; color: var(--white) !important; }
+.bg-stock-out { background-color: var(--stock-out) !important; color: var(--white) !important; }
+.bg-stock-ordered { background-color: var(--stock-ordered) !important; color: var(--white) !important; }
+.bg-stock-reserved { background-color: var(--stock-reserved) !important; color: var(--white) !important; }
+
+/* Gray Scale Background Colors */
+.bg-white { background-color: var(--white) !important; }
+.bg-gray-50 { background-color: var(--gray-50) !important; }
+.bg-gray-100 { background-color: var(--gray-100) !important; }
+.bg-gray-200 { background-color: var(--gray-200) !important; }
+.bg-gray-300 { background-color: var(--gray-300) !important; }
+.bg-gray-400 { background-color: var(--gray-400) !important; }
+.bg-gray-500 { background-color: var(--gray-500) !important; }
+.bg-gray-600 { background-color: var(--gray-600) !important; }
+.bg-gray-700 { background-color: var(--gray-700) !important; }
+.bg-gray-800 { background-color: var(--gray-800) !important; }
+.bg-gray-900 { background-color: var(--gray-900) !important; }
+.bg-black { background-color: var(--black) !important; }
+
+/* ===================================
+ * BORDER COLOR UTILITIES
+ * =================================== */
+
+/* Primary Border Colors */
+.border-primary { border-color: var(--border-primary) !important; }
+.border-secondary { border-color: var(--border-secondary) !important; }
+
+/* Semantic Border Colors */
+.border-success { border-color: var(--border-success) !important; }
+.border-warning { border-color: var(--border-warning) !important; }
+.border-danger { border-color: var(--border-danger) !important; }
+.border-info { border-color: var(--border-info) !important; }
+
+/* Paint Store Border Colors */
+.border-paint { border-color: var(--border-paint) !important; }
+.border-tint { border-color: var(--border-tint) !important; }
+.border-mixing { border-color: var(--border-mixing) !important; }
+
+/* Specific Paint Colors */
+.border-paint-red { border-color: var(--paint-red-300) !important; }
+.border-paint-blue { border-color: var(--paint-blue-300) !important; }
+.border-paint-yellow { border-color: var(--paint-yellow-300) !important; }
+.border-paint-green { border-color: var(--paint-green-300) !important; }
+.border-paint-purple { border-color: var(--paint-purple-300) !important; }
+.border-paint-orange { border-color: var(--paint-orange-300) !important; }
+
+/* Gray Scale Border Colors */
+.border-gray-100 { border-color: var(--gray-100) !important; }
+.border-gray-200 { border-color: var(--gray-200) !important; }
+.border-gray-300 { border-color: var(--gray-300) !important; }
+.border-gray-400 { border-color: var(--gray-400) !important; }
+.border-gray-500 { border-color: var(--gray-500) !important; }
+
+/* ===================================
+ * COLOR SWATCH UTILITIES
+ * =================================== */
+
+/* Paint Color Swatches - Perfect for displaying paint colors */
+.color-swatch {
+    display: inline-block;
+    width: var(--space-8);
+    height: var(--space-8);
+    border-radius: var(--rounded);
+    border: 2px solid var(--border-primary);
+    box-shadow: var(--shadow-sm);
+    vertical-align: middle;
+}
+
+.color-swatch-sm {
+    width: var(--space-6);
+    height: var(--space-6);
+}
+
+.color-swatch-lg {
+    width: var(--space-12);
+    height: var(--space-12);
+}
+
+.color-swatch-xl {
+    width: var(--space-16);
+    height: var(--space-16);
+}
+
+/* Color swatch with label */
+.color-swatch-labeled {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.color-swatch-labeled .color-swatch {
+    flex-shrink: 0;
+}
+
+/* ===================================
+ * OPACITY UTILITIES
+ * =================================== */
+
+.opacity-0 { opacity: var(--opacity-0) !important; }
+.opacity-5 { opacity: var(--opacity-5) !important; }
+.opacity-10 { opacity: var(--opacity-10) !important; }
+.opacity-20 { opacity: var(--opacity-20) !important; }
+.opacity-25 { opacity: var(--opacity-25) !important; }
+.opacity-30 { opacity: var(--opacity-30) !important; }
+.opacity-40 { opacity: var(--opacity-40) !important; }
+.opacity-50 { opacity: var(--opacity-50) !important; }
+.opacity-60 { opacity: var(--opacity-60) !important; }
+.opacity-70 { opacity: var(--opacity-70) !important; }
+.opacity-75 { opacity: var(--opacity-75) !important; }
+.opacity-80 { opacity: var(--opacity-80) !important; }
+.opacity-90 { opacity: var(--opacity-90) !important; }
+.opacity-95 { opacity: var(--opacity-95) !important; }
+.opacity-100 { opacity: var(--opacity-100) !important; }
+
+/* ===================================
+ * GRADIENT UTILITIES
+ * =================================== */
+
+/* Paint Store Gradients */
+.gradient-paint-primary {
+    background: linear-gradient(135deg, var(--paint-blue-400) 0%, var(--paint-purple-500) 100%);
+    color: var(--white);
+}
+
+.gradient-paint-warm {
+    background: linear-gradient(135deg, var(--paint-orange-400) 0%, var(--paint-red-500) 100%);
+    color: var(--white);
+}
+
+.gradient-paint-cool {
+    background: linear-gradient(135deg, var(--paint-blue-400) 0%, var(--paint-green-500) 100%);
+    color: var(--white);
+}
+
+.gradient-paint-sunset {
+    background: linear-gradient(135deg, var(--paint-yellow-400) 0%, var(--paint-orange-500) 50%, var(--paint-red-500) 100%);
+    color: var(--white);
+}
+
+/* Tintometry Gradients */
+.gradient-tint-mixing {
+    background: linear-gradient(90deg, var(--tint-base) 0%, var(--mixing-active) 50%, var(--mixing-complete) 100%);
+    color: var(--white);
+}
+
+.gradient-stock-status {
+    background: linear-gradient(135deg, var(--stock-high) 0%, var(--stock-medium) 50%, var(--stock-low) 100%);
+    color: var(--white);
+}
+
+/* ===================================
+ * HOVER STATE UTILITIES
+ * =================================== */
+
+/* Hover Background Colors */
+.hover-bg-primary:hover { background-color: var(--state-hover) !important; }
+.hover-bg-success:hover { background-color: var(--success-100) !important; }
+.hover-bg-warning:hover { background-color: var(--warning-100) !important; }
+.hover-bg-danger:hover { background-color: var(--danger-100) !important; }
+
+/* Paint Store Hover Colors */
+.hover-bg-paint-red:hover { background-color: var(--paint-red-100) !important; }
+.hover-bg-paint-blue:hover { background-color: var(--paint-blue-100) !important; }
+.hover-bg-paint-yellow:hover { background-color: var(--paint-yellow-100) !important; }
+.hover-bg-paint-green:hover { background-color: var(--paint-green-100) !important; }
+.hover-bg-paint-purple:hover { background-color: var(--paint-purple-100) !important; }
+.hover-bg-paint-orange:hover { background-color: var(--paint-orange-100) !important; }
+
+/* Hover Text Colors */
+.hover-text-primary:hover { color: var(--primary-600) !important; }
+.hover-text-paint:hover { color: var(--paint-blue-600) !important; }
+
+/* ===================================
+ * FOCUS STATE UTILITIES
+ * =================================== */
+
+.focus-ring-primary:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+.focus-ring-paint:focus {
+    outline: 2px solid var(--paint-blue-500);
+    outline-offset: 2px;
+}
+
+.focus-ring-success:focus {
+    outline: 2px solid var(--success-500);
+    outline-offset: 2px;
+}
+
+.focus-ring-danger:focus {
+    outline: 2px solid var(--danger-500);
+    outline-offset: 2px;
+}
+
+/* ===================================
+ * ACCESSIBILITY UTILITIES
+ * =================================== */
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+    .text-muted {
+        color: var(--gray-700) !important;
+    }
+    
+    .border-primary {
+        border-color: var(--gray-600) !important;
+    }
+    
+    .color-swatch {
+        border-width: 3px;
+        border-color: var(--gray-800) !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .gradient-paint-primary,
+    .gradient-paint-warm,
+    .gradient-paint-cool,
+    .gradient-paint-sunset,
+    .gradient-tint-mixing,
+    .gradient-stock-status {
+        background: var(--primary-500);
+    }
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] {
+    .color-swatch {
+        border-color: var(--border-primary);
+    }
+    
+    .gradient-paint-primary {
+        background: linear-gradient(135deg, var(--paint-blue) 0%, var(--paint-purple) 100%);
+    }
+    
+    .gradient-paint-warm {
+        background: linear-gradient(135deg, var(--paint-orange) 0%, var(--paint-red) 100%);
+    }
+    
+    .gradient-paint-cool {
+        background: linear-gradient(135deg, var(--paint-blue) 0%, var(--paint-green) 100%);
+    }
+}

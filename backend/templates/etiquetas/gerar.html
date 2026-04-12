@@ -1,0 +1,990 @@
+{% extends 'etiquetas/base.html' %}
+
+{% block title %}Gerar Etiquetas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .etiqueta-generator {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .template-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .template-card {
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .template-card:hover {
+        border-color: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.2);
+    }
+    
+    .template-card.selected {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+    
+    .template-preview {
+        width: 100%;
+        height: 150px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .template-preview.default {
+        background: linear-gradient(45deg, #f8fafc 25%, #e2e8f0 25%, #e2e8f0 50%, #f8fafc 50%, #f8fafc 75%, #e2e8f0 75%);
+        background-size: 20px 20px;
+    }
+    
+    .template-preview.compact {
+        background: #fafafa;
+        font-size: 0.8em;
+    }
+    
+    .template-preview.premium {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+    }
+    
+    .template-preview.eco {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .template-info h5 {
+        margin-bottom: 8px;
+        color: #1f2937;
+    }
+    
+    .template-description {
+        color: #6b7280;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .template-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .template-features li {
+        font-size: 12px;
+        color: #059669;
+        margin-bottom: 4px;
+    }
+    
+    .template-features li:before {
+        content: "✓";
+        margin-right: 8px;
+        font-weight: bold;
+    }
+    
+    .config-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .print-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .selected-items {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .item-preview {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    
+    .item-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .color-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 10px;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .generation-progress {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .progress-steps {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    
+    .progress-step {
+        display: flex;
+        align-items: center;
+        margin: 0 10px;
+        color: #6b7280;
+    }
+    
+    .progress-step.active {
+        color: #2563eb;
+        font-weight: bold;
+    }
+    
+    .progress-step.completed {
+        color: #059669;
+    }
+    
+    .step-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+        font-size: 14px;
+    }
+    
+    .progress-step.active .step-icon {
+        background: #2563eb;
+        animation: pulse 2s infinite;
+    }
+    
+    .progress-step.completed .step-icon {
+        background: #059669;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .generation-result {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .result-success {
+        color: #059669;
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    
+    .result-error {
+        color: #dc2626;
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    
+    .download-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Title for Screen Readers -->
+<h1 id="page-title" class="visually-hidden">Gerador de Etiquetas</h1>
+
+<!-- Quick Actions Component -->
+{% include "etiquetas/components/quick-actions.html" with section="jobs" %}
+
+<main class="etiqueta-generator" role="main" aria-labelledby="main-heading">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-center mb-4">
+        <h2 id="main-heading">
+            <i class="bi bi-printer" aria-hidden="true"></i> Gerar Etiquetas
+            {% if mistura_id %}
+                <small class="text-muted" aria-label="Para mistura {{ mistura.codigo_mistura }}">- Mistura {{ mistura.codigo_mistura }}</small>
+            {% endif %}
+        </h2>
+        <nav aria-label="Ações de navegação">
+            <a href="{% url 'etiquetas:misturas' %}" 
+               class="btn btn-outline-secondary"
+               aria-label="Voltar para lista de misturas">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> 
+                <span>Voltar</span>
+            </a>
+        </nav>
+    </header>
+    
+    <!-- Seleção de Template -->
+    <section class="config-panel" 
+             role="region" 
+             aria-labelledby="template-heading" 
+             aria-describedby="template-desc">
+        <h3 id="template-heading" class="h4 mb-3">
+            <i class="bi bi-palette" aria-hidden="true"></i> Escolha o Template
+        </h3>
+        <div id="template-desc" class="visually-hidden">
+            Selecione um dos templates disponíveis para gerar suas etiquetas. Cada template tem características únicas.
+        </div>
+        <div class="template-options" 
+             id="templateOptions" 
+             role="radiogroup" 
+             aria-labelledby="template-heading" 
+             aria-describedby="template-desc">
+            <div class="template-card" 
+                 data-template="default" 
+                 role="radio" 
+                 aria-checked="false" 
+                 aria-labelledby="default-title" 
+                 aria-describedby="default-desc"
+                 tabindex="0">
+                <div class="template-preview default" aria-hidden="true">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                        <div style="font-weight: bold; font-size: 14px;">PADRÃO</div>
+                        <div style="font-size: 10px; color: #666;">Layout clássico</div>
+                    </div>
+                </div>
+                <div class="template-info">
+                    <h4 id="default-title" class="h5">Template Padrão</h4>
+                    <p id="default-desc" class="template-description">Layout tradicional com todas as informações essenciais</p>
+                    <ul class="template-features" aria-label="Características do template padrão">
+                        <li>QR Code e código de barras</li>
+                        <li>Informações completas do cliente</li>
+                        <li>Lista detalhada de pigmentos</li>
+                        <li>Ideal para uso geral</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="template-card" 
+                 data-template="compact" 
+                 role="radio" 
+                 aria-checked="false" 
+                 aria-labelledby="compact-title" 
+                 aria-describedby="compact-desc"
+                 tabindex="-1">
+                <div class="template-preview compact" aria-hidden="true">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                        <div style="font-weight: bold; font-size: 12px;">COMPACTO</div>
+                        <div style="font-size: 9px; color: #666;">Espaço reduzido</div>
+                    </div>
+                </div>
+                <div class="template-info">
+                    <h4 id="compact-title" class="h5">Template Compacto</h4>
+                    <p id="compact-desc" class="template-description">Versão condensada para economizar papel</p>
+                    <ul class="template-features" aria-label="Características do template compacto">
+                        <li>Tamanho reduzido</li>
+                        <li>Informações essenciais apenas</li>
+                        <li>Ideal para volumes grandes</li>
+                        <li>Economia de papel</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="template-card" 
+                 data-template="premium" 
+                 role="radio" 
+                 aria-checked="false" 
+                 aria-labelledby="premium-title" 
+                 aria-describedby="premium-desc"
+                 tabindex="-1">
+                <div class="template-preview premium" aria-hidden="true">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                        <div style="font-weight: bold; font-size: 14px;">PREMIUM</div>
+                        <div style="font-size: 10px;">Design elegante</div>
+                    </div>
+                </div>
+                <div class="template-info">
+                    <h4 id="premium-title" class="h5">Template Premium</h4>
+                    <p id="premium-desc" class="template-description">Design sofisticado para clientes especiais</p>
+                    <ul class="template-features" aria-label="Características do template premium">
+                        <li>Design diferenciado</li>
+                        <li>Logo da loja destacada</li>
+                        <li>Cores premium</li>
+                        <li>Ideal para produtos especiais</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="template-card" 
+                 data-template="eco" 
+                 role="radio" 
+                 aria-checked="false" 
+                 aria-labelledby="eco-title" 
+                 aria-describedby="eco-desc"
+                 tabindex="-1">
+                <div class="template-preview eco" aria-hidden="true">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                        <div style="font-weight: bold; font-size: 14px;">ECO</div>
+                        <div style="font-size: 10px;">Sustentável</div>
+                    </div>
+                </div>
+                <div class="template-info">
+                    <h4 id="eco-title" class="h5">Template Eco</h4>
+                    <p id="eco-desc" class="template-description">Versão sustentável com informações principais</p>
+                    <ul class="template-features" aria-label="Características do template eco">
+                        <li>Foco em sustentabilidade</li>
+                        <li>Uso mínimo de tinta</li>
+                        <li>Informações otimizadas</li>
+                        <li>Responsável ambientalmente</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Configurações de Impressão -->
+    <section class="config-panel" 
+             role="region" 
+             aria-labelledby="print-heading" 
+             aria-describedby="print-desc">
+        <h3 id="print-heading" class="h4 mb-3">
+            <i class="bi bi-gear" aria-hidden="true"></i> Configurações de Impressão
+        </h3>
+        <div id="print-desc" class="visually-hidden">
+            Configure as opções de impressão como quantidade, formato do papel, qualidade e outras preferências.
+        </div>
+        
+        <form id="printConfigForm" 
+              role="form" 
+              aria-labelledby="print-heading" 
+              aria-describedby="print-desc">
+            <div class="row">
+                <div class="col-md-6">
+                    <fieldset class="mb-3">
+                        <legend class="form-label visually-hidden">Quantidade de cópias</legend>
+                        <label for="copiesCount" class="form-label">
+                            Quantidade de Cópias:
+                        </label>
+                        <div class="input-group" role="group" aria-labelledby="copies-label" aria-describedby="copies-help">
+                            <button type="button" 
+                                    class="btn btn-outline-secondary" 
+                                    onclick="adjustCopies(-1)"
+                                    aria-label="Diminuir quantidade de cópias">
+                                -
+                            </button>
+                            <input type="number" 
+                                   class="form-control text-center" 
+                                   id="copiesCount" 
+                                   value="1" 
+                                   min="1" 
+                                   max="10"
+                                   aria-label="Número de cópias"
+                                   aria-describedby="copies-help">
+                            <button type="button" 
+                                    class="btn btn-outline-secondary" 
+                                    onclick="adjustCopies(1)"
+                                    aria-label="Aumentar quantidade de cópias">
+                                +
+                            </button>
+                        </div>
+                        <small id="copies-help" class="text-muted">Máximo 10 cópias por vez</small>
+                    </fieldset>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="paperSize" class="form-label">
+                            Formato do Papel:
+                        </label>
+                        <select class="form-select" 
+                                id="paperSize" 
+                                aria-describedby="paper-help">
+                            <option value="a4">A4 (210 x 297mm)</option>
+                            <option value="a5">A5 (148 x 210mm)</option>
+                            <option value="label">Etiqueta (100 x 150mm)</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        <small id="paper-help" class="visually-hidden">
+                            Selecione o formato de papel para impressão
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <fieldset>
+                <legend class="visually-hidden">Opções avançadas de impressão</legend>
+                <div class="print-options" role="group" aria-label="Opções de impressão">
+                    <div>
+                        <label for="printQuality" class="form-label">Qualidade:</label>
+                        <select class="form-select" 
+                                id="printQuality" 
+                                aria-describedby="quality-help">
+                            <option value="high">Alta (600 DPI)</option>
+                            <option value="medium" selected>Média (300 DPI)</option>
+                            <option value="low">Baixa (150 DPI)</option>
+                        </select>
+                        <small id="quality-help" class="visually-hidden">
+                            Maior qualidade resulta em melhor definição, mas tamanho de arquivo maior
+                        </small>
+                    </div>
+                    
+                    <div>
+                        <label for="colorMode" class="form-label">Cor:</label>
+                        <select class="form-select" 
+                                id="colorMode" 
+                                aria-describedby="color-help">
+                            <option value="color">Colorido</option>
+                            <option value="grayscale">Escala de Cinza</option>
+                            <option value="bw">Preto e Branco</option>
+                        </select>
+                        <small id="color-help" class="visually-hidden">
+                            Modo de cor para impressão das etiquetas
+                        </small>
+                    </div>
+                    
+                    <div>
+                        <label for="printerSelect" class="form-label">Impressora:</label>
+                        <select class="form-select" 
+                                id="printerSelect" 
+                                aria-describedby="printer-help">
+                            <option value="default">Impressora Padrão</option>
+                            <option value="etiquetas">Impressora de Etiquetas</option>
+                            <option value="laser">Impressora Laser</option>
+                        </select>
+                        <small id="printer-help" class="visually-hidden">
+                            Selecione a impressora a ser utilizada
+                        </small>
+                    </div>
+                    
+                    <div>
+                        <label for="margins" class="form-label">Margens:</label>
+                        <select class="form-select" 
+                                id="margins" 
+                                aria-describedby="margins-help">
+                            <option value="normal">Normal (10mm)</option>
+                            <option value="narrow">Estreita (5mm)</option>
+                            <option value="wide">Larga (15mm)</option>
+                            <option value="none">Sem margens</option>
+                        </select>
+                        <small id="margins-help" class="visually-hidden">
+                            Tamanho das margens da página
+                        </small>
+                    </div>
+                </div>
+            </fieldset>
+                    </select>
+                </div>
+            </div>
+            
+            <fieldset class="mt-4">
+                <legend class="form-label">Opções de conteúdo:</legend>
+                <div role="group" aria-labelledby="content-options">
+                    <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="includeQR" 
+                               checked 
+                               aria-describedby="qr-help">
+                        <label class="form-check-label" for="includeQR">
+                            Incluir QR Code
+                        </label>
+                        <small id="qr-help" class="visually-hidden">
+                            Código QR para identificação rápida da mistura
+                        </small>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="includeBarcode" 
+                               checked 
+                               aria-describedby="barcode-help">
+                        <label class="form-check-label" for="includeBarcode">
+                            Incluir Código de Barras
+                        </label>
+                        <small id="barcode-help" class="visually-hidden">
+                            Código de barras para leitura óptica
+                        </small>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="includeFormula" 
+                               aria-describedby="formula-help">
+                        <label class="form-check-label" for="includeFormula">
+                            Incluir Fórmula Detalhada
+                        </label>
+                        <small id="formula-help" class="visually-hidden">
+                            Fórmula completa com proporções de pigmentos
+                        </small>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="includeLogo" 
+                               checked 
+                               aria-describedby="logo-help">
+                        <label class="form-check-label" for="includeLogo">
+                            Incluir Logo da Loja
+                        </label>
+                        <small id="logo-help" class="visually-hidden">
+                            Logo da empresa na etiqueta
+                        </small>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    </section>
+    
+    <!-- Itens Selecionados -->
+    {% if not mistura_id %}
+    <div class="config-panel">
+        <h4 class="mb-3">
+            <i class="bi bi-list-check"></i> Misturas Selecionadas
+            <span class="badge bg-primary ms-2" id="selectedCount">0</span>
+        </h4>
+        
+        <div class="selected-items" id="selectedItems">
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                <p>Nenhuma mistura selecionada</p>
+                <a href="{% url 'etiquetas:misturas' %}" class="btn btn-outline-primary">
+                    Selecionar Misturas
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="config-panel">
+        <h4 class="mb-3">
+            <i class="bi bi-flask"></i> Mistura Selecionada
+        </h4>
+        
+        <div class="item-preview">
+            <div class="item-info">
+                <div class="color-dot" style="background-color: {{ mistura.formula.cor_definida.cor_hex }};"></div>
+                <div>
+                    <div class="fw-bold">{{ mistura.codigo_mistura }}</div>
+                    <small class="text-muted">{{ mistura.formula.cor_definida.nome_cor }} - {{ mistura.cliente_nome }}</small>
+                </div>
+            </div>
+            <div>
+                <span class="badge bg-info">{{ mistura.volume_solicitado }}L</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Botões de Ação -->
+    <section class="text-center mb-4" 
+             role="region" 
+             aria-labelledby="action-heading">
+        <h3 id="action-heading" class="visually-hidden">Ações de geração</h3>
+        <div role="group" aria-label="Ações primárias de geração">
+            <button type="button" 
+                    class="btn btn-outline-primary me-2" 
+                    onclick="previewLabels()"
+                    aria-describedby="preview-help">
+                <i class="bi bi-eye" aria-hidden="true"></i> 
+                <span>Visualizar</span>
+            </button>
+            <div id="preview-help" class="visually-hidden">
+                Visualizar as etiquetas antes de gerar o PDF final
+            </div>
+            
+            <button type="button" 
+                    class="btn btn-primary me-2" 
+                    onclick="generateLabels()"
+                    aria-describedby="generate-help">
+                <i class="bi bi-printer" aria-hidden="true"></i> 
+                <span>Gerar PDF</span>
+            </button>
+            <div id="generate-help" class="visually-hidden">
+                Gerar arquivo PDF das etiquetas para download
+            </div>
+            
+            <button type="button" 
+                    class="btn btn-success" 
+                    onclick="printDirectly()"
+                    aria-describedby="print-help">
+                <i class="bi bi-printer-fill" aria-hidden="true"></i> 
+                <span>Imprimir Diretamente</span>
+            </button>
+            <div id="print-help" class="visually-hidden">
+                Enviar diretamente para a impressora selecionada
+            </div>
+        </div>
+    </section>
+    
+    <!-- Progress de Geração -->
+    <section class="generation-progress" 
+             id="generationProgress" 
+             role="status" 
+             aria-live="polite" 
+             aria-labelledby="progress-heading" 
+             style="display: none;">
+        <h3 id="progress-heading">Gerando Etiquetas...</h3>
+        <div class="progress-steps" 
+             role="progressbar" 
+             aria-valuenow="0" 
+             aria-valuemin="0" 
+             aria-valuemax="4" 
+             aria-describedby="progress-desc">
+            <div id="progress-desc" class="visually-hidden">
+                Progresso da geração de etiquetas em 4 etapas
+            </div>
+            
+            <div class="progress-step" 
+                 id="step1" 
+                 role="img" 
+                 aria-label="Etapa 1: Processando dados">
+                <div class="step-icon">1</div>
+                <span>Processando dados</span>
+            </div>
+            <div class="progress-step" 
+                 id="step2" 
+                 role="img" 
+                 aria-label="Etapa 2: Gerando QR Codes">
+                <div class="step-icon">2</div>
+                <span>Gerando QR Codes</span>
+            </div>
+            <div class="progress-step" 
+                 id="step3" 
+                 role="img" 
+                 aria-label="Etapa 3: Criando PDF">
+                <div class="step-icon">3</div>
+                <span>Criando PDF</span>
+            </div>
+            <div class="progress-step" 
+                 id="step4" 
+                 role="img" 
+                 aria-label="Etapa 4: Finalizando">
+                <div class="step-icon">4</div>
+                <span>Finalizando</span>
+            </div>
+        </div>
+        <div class="progress mt-3" 
+             style="max-width: 400px; margin: 0 auto;" 
+             role="progressbar" 
+             aria-labelledby="progress-bar-label">
+            <div id="progress-bar-label" class="visually-hidden">Barra de progresso da geração</div>
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 id="progressBar" 
+                 style="width: 0%" 
+                 aria-valuenow="0" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+                <span class="visually-hidden">0% completo</span>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Resultado da Geração -->
+    <section class="generation-result" 
+             id="generationResult" 
+             role="status" 
+             aria-live="assertive" 
+             aria-labelledby="result-heading" 
+             style="display: none;">
+        <div id="resultIcon" aria-hidden="true"></div>
+        <h3 id="result-heading">
+            <span id="resultTitle"></span>
+        </h3>
+        <p id="resultMessage" aria-describedby="result-details"></p>
+        <div id="result-details" class="visually-hidden">
+            Resultado da operação de geração de etiquetas
+        </div>
+        <div class="download-actions" 
+             id="downloadActions" 
+             role="group" 
+             aria-label="Ações de download">
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedTemplate = 'default';
+    let selectedMixtures = {% if mistura_id %}[{{ mistura.id }}]{% else %}[]{% endif %};
+    
+    // Template selection
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove previous selection
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+            
+            // Select current
+            this.classList.add('selected');
+            selectedTemplate = this.dataset.template;
+        });
+    });
+    
+    // Set default template
+    document.querySelector('[data-template="default"]').classList.add('selected');
+    
+    // Adjust copies count
+    function adjustCopies(delta) {
+        const input = document.getElementById('copiesCount');
+        let value = parseInt(input.value) + delta;
+        value = Math.max(1, Math.min(10, value));
+        input.value = value;
+    }
+    
+    // Preview labels
+    function previewLabels() {
+        if (selectedMixtures.length === 0) {
+            alert('Selecione pelo menos uma mistura para visualizar.');
+            return;
+        }
+        
+        const config = getFormConfig();
+        const url = `/api/v1/tintometry/etiquetas/preview/?mixtures=${selectedMixtures.join(',')}&template=${selectedTemplate}`;
+        window.open(url, '_blank');
+    }
+    
+    // Generate PDF
+    function generateLabels() {
+        if (selectedMixtures.length === 0) {
+            alert('Selecione pelo menos uma mistura para gerar etiquetas.');
+            return;
+        }
+        
+        startGeneration('pdf');
+    }
+    
+    // Print directly
+    function printDirectly() {
+        if (selectedMixtures.length === 0) {
+            alert('Selecione pelo menos uma mistura para imprimir.');
+            return;
+        }
+        
+        startGeneration('print');
+    }
+    
+    // Get form configuration
+    function getFormConfig() {
+        return {
+            template: selectedTemplate,
+            copies: parseInt(document.getElementById('copiesCount').value),
+            paper_size: document.getElementById('paperSize').value,
+            quality: document.getElementById('printQuality').value,
+            color_mode: document.getElementById('colorMode').value,
+            printer: document.getElementById('printerSelect').value,
+            margins: document.getElementById('margins').value,
+            include_qr: document.getElementById('includeQR').checked,
+            include_barcode: document.getElementById('includeBarcode').checked,
+            include_formula: document.getElementById('includeFormula').checked,
+            include_logo: document.getElementById('includeLogo').checked,
+            mixtures: selectedMixtures
+        };
+    }
+    
+    // Start generation process
+    function startGeneration(type) {
+        const config = getFormConfig();
+        
+        // Hide form and show progress
+        document.querySelector('.etiqueta-generator > *:not(#generationProgress):not(#generationResult)').style.display = 'none';
+        document.getElementById('generationProgress').style.display = 'block';
+        
+        // Simulate progress
+        simulateProgress(config, type);
+    }
+    
+    // Simulate generation progress
+    function simulateProgress(config, type) {
+        const steps = ['step1', 'step2', 'step3', 'step4'];
+        const progressBar = document.getElementById('progressBar');
+        let currentStep = 0;
+        
+        const interval = setInterval(() => {
+            // Update step
+            if (currentStep > 0) {
+                document.getElementById(steps[currentStep - 1]).classList.remove('active');
+                document.getElementById(steps[currentStep - 1]).classList.add('completed');
+            }
+            
+            if (currentStep < steps.length) {
+                document.getElementById(steps[currentStep]).classList.add('active');
+                currentStep++;
+                
+                // Update progress bar
+                const progress = (currentStep / steps.length) * 100;
+                progressBar.style.width = progress + '%';
+            } else {
+                clearInterval(interval);
+                
+                // Complete generation
+                setTimeout(() => {
+                    completeGeneration(config, type);
+                }, 1000);
+            }
+        }, 1500);
+    }
+    
+    // Complete generation
+    function completeGeneration(config, type) {
+        document.getElementById('generationProgress').style.display = 'none';
+        document.getElementById('generationResult').style.display = 'block';
+        
+        // Simulate success
+        const success = Math.random() > 0.1; // 90% success rate
+        
+        if (success) {
+            document.getElementById('resultIcon').innerHTML = 
+                '<i class="bi bi-check-circle-fill result-success"></i>';
+            document.getElementById('resultTitle').textContent = 
+                type === 'pdf' ? 'PDF Gerado com Sucesso!' : 'Impressão Enviada!';
+            document.getElementById('resultMessage').textContent = 
+                type === 'pdf' 
+                    ? `${selectedMixtures.length} etiqueta(s) gerada(s) com o template ${selectedTemplate}.`
+                    : `${selectedMixtures.length} etiqueta(s) enviada(s) para impressão.`;
+            
+            // Add download/print actions
+            const actions = document.getElementById('downloadActions');
+            actions.innerHTML = `
+                ${type === 'pdf' ? `
+                    <button class="btn btn-success" onclick="downloadPDF()">
+                        <i class="bi bi-download"></i> Baixar PDF
+                    </button>
+                    <button class="btn btn-primary" onclick="openPDF()">
+                        <i class="bi bi-eye"></i> Visualizar PDF
+                    </button>
+                ` : `
+                    <button class="btn btn-info" onclick="checkPrintStatus()">
+                        <i class="bi bi-printer"></i> Status da Impressão
+                    </button>
+                `}
+                <button class="btn btn-outline-secondary" onclick="resetGenerator()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+            `;
+        } else {
+            document.getElementById('resultIcon').innerHTML = 
+                '<i class="bi bi-x-circle-fill result-error"></i>';
+            document.getElementById('resultTitle').textContent = 'Erro na Geração';
+            document.getElementById('resultMessage').textContent = 
+                'Ocorreu um erro ao processar as etiquetas. Tente novamente.';
+            
+            const actions = document.getElementById('downloadActions');
+            actions.innerHTML = `
+                <button class="btn btn-primary" onclick="startGeneration('${type}')">
+                    <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
+                </button>
+                <button class="btn btn-outline-secondary" onclick="resetGenerator()">
+                    <i class="bi bi-arrow-left"></i> Voltar
+                </button>
+            `;
+        }
+    }
+    
+    // Action functions
+    function downloadPDF() {
+        const config = getFormConfig();
+        const url = '/api/v1/tintometry/etiquetas/generate/';
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = url + '?' + new URLSearchParams(config).toString();
+        link.download = `etiquetas_${new Date().getTime()}.pdf`;
+        link.click();
+    }
+    
+    function openPDF() {
+        const config = getFormConfig();
+        const url = '/api/v1/tintometry/etiquetas/generate/';
+        window.open(url + '?' + new URLSearchParams(config).toString(), '_blank');
+    }
+    
+    function checkPrintStatus() {
+        alert('Status da impressão: Em processamento na fila de impressão.');
+    }
+    
+    function resetGenerator() {
+        document.getElementById('generationProgress').style.display = 'none';
+        document.getElementById('generationResult').style.display = 'none';
+        document.querySelector('.etiqueta-generator > *:not(#generationProgress):not(#generationResult)').style.display = 'block';
+    }
+    
+    // Load selected mixtures from session storage if coming from list
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedMixtures = sessionStorage.getItem('selectedMixtures');
+        if (savedMixtures && !{% if mistura_id %}true{% else %}false{% endif %}) {
+            selectedMixtures = JSON.parse(savedMixtures);
+            updateSelectedItems();
+        }
+    });
+    
+    function updateSelectedItems() {
+        const container = document.getElementById('selectedItems');
+        const counter = document.getElementById('selectedCount');
+        
+        if (selectedMixtures.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    <p>Nenhuma mistura selecionada</p>
+                    <a href="{% url 'etiquetas:misturas' %}" class="btn btn-outline-primary">
+                        Selecionar Misturas
+                    </a>
+                </div>
+            `;
+        } else {
+            // This would be populated by the backend with actual mixture data
+            container.innerHTML = selectedMixtures.map(id => `
+                <div class="item-preview">
+                    <div class="item-info">
+                        <div class="color-dot" style="background-color: #2563eb;"></div>
+                        <div>
+                            <div class="fw-bold">Mistura #${id}</div>
+                            <small class="text-muted">Carregando informações...</small>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="removeMixture(${id})">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        counter.textContent = selectedMixtures.length;
+    }
+    
+    function removeMixture(id) {
+        selectedMixtures = selectedMixtures.filter(mixId => mixId !== id);
+        updateSelectedItems();
+    }
+</script>
+{% endblock %}

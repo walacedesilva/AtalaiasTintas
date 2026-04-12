@@ -1,0 +1,753 @@
+{% extends "etiquetas/base.html" %}
+{% load static %}
+
+{% block title %}Form Components Demo - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="display-4 mb-1">Form Components System</h1>
+                    <p class="text-muted">Feature: 3-modern-web-interface | Task: T010 - Form Components Styling</p>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleTheme()">
+                        <i class="bi bi-moon"></i> Toggle Theme
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleValidation()">
+                        <i class="bi bi-check-circle"></i> Toggle Validation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Input Fields -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Input Fields & Focus States</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Basic Input Types</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="textInput" class="form-label">Text Input</label>
+                                <input type="text" class="form-control" id="textInput" placeholder="Enter text here">
+                                <div class="form-text">Helper text for additional guidance</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="emailInput" class="form-label required">Email Address</label>
+                                <input type="email" class="form-control" id="emailInput" placeholder="email@example.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="passwordInput" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="passwordInput" placeholder="Enter password">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="numberInput" class="form-label">Number Input</label>
+                                <input type="number" class="form-control" id="numberInput" placeholder="0" min="0" step="0.01">
+                            </div>
+                            
+                            <div class="form-group mb-0">
+                                <label for="dateInput" class="form-label">Date Input</label>
+                                <input type="date" class="form-control" id="dateInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Select & Textarea</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="selectInput" class="form-label">Select Dropdown</label>
+                                <select class="form-select" id="selectInput">
+                                    <option selected>Choose an option</option>
+                                    <option value="1">Option One</option>
+                                    <option value="2">Option Two</option>
+                                    <option value="3">Option Three</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="multiSelect" class="form-label">Multiple Select</label>
+                                <select class="form-select" id="multiSelect" multiple size="4">
+                                    <option value="paint1">Sherwin Williams ProClassic</option>
+                                    <option value="paint2">Benjamin Moore Advance</option>
+                                    <option value="paint3">Behr Premium Plus</option>
+                                    <option value="paint4">Valspar Reserve</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-0">
+                                <label for="textareaInput" class="form-label">Textarea</label>
+                                <textarea class="form-control" id="textareaInput" rows="4" placeholder="Enter detailed description here"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Validation States -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Validation States & Error Handling</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <h6 class="text-success">✓ Valid State</h6>
+                            <div class="form-group">
+                                <label for="validInput" class="form-label">Valid Input</label>
+                                <input type="text" class="form-control is-valid" id="validInput" value="john@example.com">
+                                <div class="valid-feedback">
+                                    Email format is correct!
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6 class="text-danger">✗ Invalid State</h6>
+                            <div class="form-group">
+                                <label for="invalidInput" class="form-label required">Invalid Input</label>
+                                <input type="text" class="form-control is-invalid" id="invalidInput" value="invalid-email">
+                                <div class="invalid-feedback">
+                                    Please provide a valid email address.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6 class="text-secondary">◯ Default State</h6>
+                            <div class="form-group">
+                                <label for="defaultInput" class="form-label">Default Input</label>
+                                <input type="text" class="form-control" id="defaultInput" placeholder="Normal input state">
+                                <div class="form-text">
+                                    This is the default state with helper text.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Button Hierarchy -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Button Hierarchy & States</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Button Types</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" class="btn btn-primary">Primary</button>
+                                <button type="button" class="btn btn-secondary">Secondary</button>
+                                <button type="button" class="btn btn-success">Success</button>
+                                <button type="button" class="btn btn-warning">Warning</button>
+                                <button type="button" class="btn btn-danger">Danger</button>
+                            </div>
+                            
+                            <h6>Outline Buttons</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" class="btn btn-outline-primary">Primary</button>
+                                <button type="button" class="btn btn-outline-secondary">Secondary</button>
+                                <button type="button" class="btn btn-outline-success">Success</button>
+                            </div>
+                            
+                            <h6>Button Sizes</h6>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button type="button" class="btn btn-primary btn-sm">Small</button>
+                                <button type="button" class="btn btn-primary">Default</button>
+                                <button type="button" class="btn btn-primary btn-lg">Large</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Loading & Disabled States</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Loading States</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" class="btn btn-primary btn-loading">Loading</button>
+                                <button type="button" class="btn btn-success" onclick="simulateLoading(this)">Start Process</button>
+                                <button type="button" class="btn btn-warning" onclick="simulateLoading(this, 3000)">Long Process</button>
+                            </div>
+                            
+                            <h6>Disabled States</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" class="btn btn-primary" disabled>Disabled Primary</button>
+                                <button type="button" class="btn btn-outline-secondary" disabled>Disabled Outline</button>
+                            </div>
+                            
+                            <h6>Button Group</h6>
+                            <div class="btn-group" role="group" aria-label="Button group">
+                                <button type="button" class="btn btn-outline-primary active">Active</button>
+                                <button type="button" class="btn btn-outline-primary">Middle</button>
+                                <button type="button" class="btn btn-outline-primary">Right</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paint Store Specific Forms -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Paint Store Specific Forms</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-palette2 me-2"></i>
+                                Formula Creation Form
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="formulaForm">
+                                <div class="form-group">
+                                    <label for="paintName" class="form-label required">Paint Product</label>
+                                    <select class="form-select" id="paintName" required>
+                                        <option value="">Select paint product</option>
+                                        <option value="sw-proclassic">Sherwin Williams ProClassic</option>
+                                        <option value="bm-advance">Benjamin Moore Advance</option>
+                                        <option value="behr-premium">Behr Premium Plus</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="paintCode" class="form-label">Paint Code</label>
+                                    <input type="text" class="form-control paint-code" id="paintCode" placeholder="SW-7005" pattern="[A-Z]{2,3}-[0-9]{4,5}">
+                                    <div class="form-text">Format: SW-7005 or BM-12345</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="baseColor" class="form-label required">Base Color</label>
+                                    <select class="form-select" id="baseColor" required>
+                                        <option value="">Select base color</option>
+                                        <option value="ultra-white">Ultra White Base</option>
+                                        <option value="neutral-base">Neutral Base</option>
+                                        <option value="deep-base">Deep Base</option>
+                                        <option value="extra-white">Extra White Base</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label for="colorant1" class="form-label">Magenta (oz)</label>
+                                        <input type="number" class="form-control" id="colorant1" placeholder="0.00" step="0.01" min="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="colorant2" class="form-label">Yellow (oz)</label>
+                                        <input type="number" class="form-control" id="colorant2" placeholder="0.00" step="0.01" min="0">
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label for="colorant3" class="form-label">Blue (oz)</label>
+                                        <input type="number" class="form-control" id="colorant3" placeholder="0.00" step="0.01" min="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="colorant4" class="form-label">Black (oz)</label>
+                                        <input type="number" class="form-control" id="colorant4" placeholder="0.00" step="0.01" min="0">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="notes" class="form-label">Formula Notes</label>
+                                    <textarea class="form-control" id="notes" rows="3" placeholder="Special mixing instructions or notes"></textarea>
+                                </div>
+                                
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-outline-secondary">Save Draft</button>
+                                    <button type="submit" class="btn btn-primary">Create Formula</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-search me-2"></i>
+                                Customer Search Form
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="customerSearchForm">
+                                <div class="form-group">
+                                    <label for="searchType" class="form-label">Search By</label>
+                                    <select class="form-select" id="searchType" onchange="updateSearchPlaceholder()">
+                                        <option value="name">Customer Name</option>
+                                        <option value="phone">Phone Number</option>
+                                        <option value="email">Email Address</option>
+                                        <option value="order">Order Number</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="searchValue" class="form-label">Search Value</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="searchValue" placeholder="Enter customer name">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="activeOnly" checked>
+                                        <label class="form-check-label" for="activeOnly">
+                                            Active customers only
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="recentOrders">
+                                        <label class="form-check-label" for="recentOrders">
+                                            Has recent orders (last 90 days)
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-search me-2"></i>
+                                    Search Customers
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Enhancement Features -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Form Enhancement Features</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">File Upload & Progress</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="fileUpload" class="form-label">Upload Paint Color Sample</label>
+                                <input class="form-control" type="file" id="fileUpload" accept="image/*" onchange="handleFileUpload(this)">
+                                <div class="form-text">Supported formats: JPG, PNG, WebP (Max 5MB)</div>
+                            </div>
+                            
+                            <div id="uploadProgress" class="d-none">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Uploading...</small>
+                            </div>
+                            
+                            <div id="filePreview" class="file-preview d-none">
+                                <!-- File preview will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Real-time Validation</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group field-validation-enhanced">
+                                <label for="emailValidation" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="emailValidation" placeholder="Enter email">
+                                <div class="invalid-feedback">Please enter a valid email address</div>
+                                <div class="valid-feedback">Email format is correct</div>
+                            </div>
+                            
+                            <div class="form-group field-validation-enhanced">
+                                <label for="phoneValidation" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phoneValidation" placeholder="(555) 123-4567">
+                                <div class="invalid-feedback">Please enter a valid phone number</div>
+                                <div class="valid-feedback">Phone number is valid</div>
+                            </div>
+                            
+                            <div class="form-group field-validation-enhanced mb-0">
+                                <label for="passwordStrength" class="form-label">Create Password</label>
+                                <input type="password" class="form-control" id="passwordStrength" placeholder="Enter strong password">
+                                <div class="form-text">
+                                    <div id="passwordStrengthIndicator" class="d-flex gap-1 mt-1">
+                                        <div class="password-strength-bar"></div>
+                                        <div class="password-strength-bar"></div>
+                                        <div class="password-strength-bar"></div>
+                                        <div class="password-strength-bar"></div>
+                                    </div>
+                                    <small id="passwordStrengthText" class="text-muted">Enter at least 8 characters</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Accessibility -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h3 mb-3">Accessibility & Keyboard Navigation</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ WCAG Compliant</h5>
+                            <ul class="list-unstyled">
+                                <li>• Proper label associations</li>
+                                <li>• Focus indicators (2px outline)</li>
+                                <li>• Minimum 44px touch targets</li>
+                                <li>• High contrast ratios (4.5:1+)</li>
+                                <li>• Screen reader support</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ Keyboard Navigation</h5>
+                            <ul class="list-unstyled">
+                                <li>• Tab order follows logical flow</li>
+                                <li>• Enter/Space activates buttons</li>
+                                <li>• Arrow keys for radio groups</li>
+                                <li>• Escape closes modal dialogs</li>
+                                <li>• Focus trap in modal forms</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="h6 text-success">✓ Error Prevention</h5>
+                            <ul class="list-unstyled">
+                                <li>• Real-time validation feedback</li>
+                                <li>• Clear error descriptions</li>
+                                <li>• Success confirmations</li>
+                                <li>• Input format hints</li>
+                                <li>• Auto-save for long forms</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <strong>Accessibility Test:</strong> Try navigating this form using only the Tab key and Enter/Space to activate buttons. 
+                        All form elements should be reachable and usable via keyboard alone.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Demo-specific styles */
+.paint-code {
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+}
+
+.password-strength-bar {
+    height: 4px;
+    flex: 1;
+    background-color: var(--gray-300);
+    border-radius: 2px;
+    transition: background-color 0.3s ease;
+}
+
+.password-strength-bar.weak { background-color: #dc3545; }
+.password-strength-bar.fair { background-color: #ffc107; }
+.password-strength-bar.good { background-color: #17a2b8; }
+.password-strength-bar.strong { background-color: #28a745; }
+
+.file-preview {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--border-radius);
+    text-align: center;
+    background-color: var(--gray-50);
+}
+
+.file-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+</style>
+
+<script>
+let currentTheme = 'light';
+let validationEnabled = true;
+
+// Theme toggling
+function toggleTheme() {
+    const html = document.documentElement;
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', currentTheme);
+    
+    const btn = event.target.closest('button');
+    const icon = btn.querySelector('i');
+    icon.className = currentTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
+    
+    localStorage.setItem('theme', currentTheme);
+}
+
+// Validation toggling
+function toggleValidation() {
+    validationEnabled = !validationEnabled;
+    const btn = event.target.closest('button');
+    const icon = btn.querySelector('i');
+    
+    if (validationEnabled) {
+        icon.className = 'bi bi-check-circle';
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Validation On';
+        enableValidation();
+    } else {
+        icon.className = 'bi bi-x-circle';
+        btn.innerHTML = '<i class="bi bi-x-circle"></i> Validation Off';
+        disableValidation();
+    }
+}
+
+// Button loading simulation
+function simulateLoading(button, duration = 2000) {
+    const originalText = button.innerHTML;
+    button.classList.add('btn-loading');
+    button.disabled = true;
+    
+    setTimeout(() => {
+        button.classList.remove('btn-loading');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }, duration);
+}
+
+// Search placeholder update
+function updateSearchPlaceholder() {
+    const searchType = document.getElementById('searchType').value;
+    const searchInput = document.getElementById('searchValue');
+    
+    const placeholders = {
+        'name': 'Enter customer name',
+        'phone': 'Enter phone number',
+        'email': 'Enter email address',
+        'order': 'Enter order number'
+    };
+    
+    searchInput.placeholder = placeholders[searchType];
+}
+
+// File upload handling
+function handleFileUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const progressContainer = document.getElementById('uploadProgress');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+    const previewContainer = document.getElementById('filePreview');
+    
+    // Show progress
+    progressContainer.classList.remove('d-none');
+    previewContainer.classList.add('d-none');
+    
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 30;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            
+            // Hide progress and show preview
+            setTimeout(() => {
+                progressContainer.classList.add('d-none');
+                showFilePreview(file);
+            }, 500);
+        }
+        progressBar.style.width = progress + '%';
+    }, 200);
+}
+
+function showFilePreview(file) {
+    const previewContainer = document.getElementById('filePreview');
+    
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.innerHTML = `
+                <img src="${e.target.result}" alt="File preview" class="img-fluid">
+                <div class="mt-2">
+                    <strong>${file.name}</strong><br>
+                    <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                </div>
+            `;
+            previewContainer.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Real-time validation
+function setupRealTimeValidation() {
+    // Email validation
+    const emailInput = document.getElementById('emailValidation');
+    emailInput.addEventListener('input', function() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isValid = emailRegex.test(this.value) && this.value.length > 0;
+        
+        this.classList.remove('is-valid', 'is-invalid');
+        if (this.value.length > 0) {
+            this.classList.add(isValid ? 'is-valid' : 'is-invalid');
+        }
+    });
+    
+    // Phone validation
+    const phoneInput = document.getElementById('phoneValidation');
+    phoneInput.addEventListener('input', function() {
+        // Auto-format phone number
+        let value = this.value.replace(/\D/g, '');
+        if (value.length >= 6) {
+            value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+        } else if (value.length >= 3) {
+            value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+        }
+        this.value = value;
+        
+        const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+        const isValid = phoneRegex.test(this.value);
+        
+        this.classList.remove('is-valid', 'is-invalid');
+        if (this.value.length > 0) {
+            this.classList.add(isValid ? 'is-valid' : 'is-invalid');
+        }
+    });
+    
+    // Password strength
+    const passwordInput = document.getElementById('passwordStrength');
+    passwordInput.addEventListener('input', function() {
+        updatePasswordStrength(this.value);
+    });
+}
+
+function updatePasswordStrength(password) {
+    const bars = document.querySelectorAll('.password-strength-bar');
+    const text = document.getElementById('passwordStrengthText');
+    
+    let strength = 0;
+    let strengthText = '';
+    
+    // Reset bars
+    bars.forEach(bar => bar.className = 'password-strength-bar');
+    
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    const strengthLevels = ['', 'weak', 'fair', 'good', 'strong'];
+    const strengthTexts = [
+        'Enter at least 8 characters',
+        'Weak password',
+        'Fair password',
+        'Good password',
+        'Strong password'
+    ];
+    
+    for (let i = 0; i < Math.min(strength, bars.length); i++) {
+        bars[i].classList.add(strengthLevels[Math.min(strength, 4)]);
+    }
+    
+    text.textContent = strengthTexts[Math.min(strength, 4)];
+    text.className = `text-${strength >= 3 ? 'success' : strength >= 2 ? 'warning' : 'muted'}`;
+}
+
+function enableValidation() {
+    setupRealTimeValidation();
+}
+
+function disableValidation() {
+    const inputs = document.querySelectorAll('.is-valid, .is-invalid');
+    inputs.forEach(input => {
+        input.classList.remove('is-valid', 'is-invalid');
+    });
+}
+
+// Form submission handlers
+document.getElementById('formulaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    simulateLoading(e.target.querySelector('button[type="submit"]'), 1500);
+    
+    setTimeout(() => {
+        alert('Formula created successfully!');
+    }, 1500);
+});
+
+document.getElementById('customerSearchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    simulateLoading(e.target.querySelector('button[type="submit"]'), 1000);
+    
+    setTimeout(() => {
+        alert('Search completed! Found 3 customers.');
+    }, 1000);
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        currentTheme = savedTheme;
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    }
+    
+    enableValidation();
+});
+
+// Keyboard navigation demo
+document.addEventListener('keydown', function(e) {
+    // Add keyboard navigation indicators
+    if (e.key === 'Tab') {
+        document.body.classList.add('keyboard-navigation');
+    }
+});
+
+document.addEventListener('click', function(e) {
+    document.body.classList.remove('keyboard-navigation');
+});
+</script>
+{% endblock %}

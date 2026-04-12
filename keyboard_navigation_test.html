@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="no-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Navigation Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="backend/static/css/components.css" rel="stylesheet">
+</head>
+<body>
+    <noscript>
+        <div class="alert alert-warning">JavaScript is disabled. Keyboard navigation features will not work.</div>
+    </noscript>
+
+    <div class="container mt-4" id="main-content">
+        <h1 id="page-title">Keyboard Navigation Test</h1>
+        
+        <!-- Test Quick Actions with Roving Tabindex -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Quick Actions (Roving Tabindex)</h3>
+                <p class="mb-0 text-muted">Use arrow keys to navigate, Enter/Space to activate</p>
+            </div>
+            <div class="card-body">
+                <div class="quick-actions-grid" role="toolbar" aria-label="Test actions">
+                    <button type="button" class="btn btn-outline-primary quick-action-btn" data-quick-action="1" tabindex="0">
+                        <i class="bi bi-house" aria-hidden="true"></i>
+                        <span>Home</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-success quick-action-btn" data-quick-action="2" tabindex="-1">
+                        <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                        <span>Create</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-warning quick-action-btn" data-quick-action="3" tabindex="-1">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-info quick-action-btn" data-quick-action="4" tabindex="-1">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Form Accessibility -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Form Accessibility Test</h3>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="testName" class="form-label required">Nome *</label>
+                        <input type="text" class="form-control" id="testName" name="testName" required aria-describedby="testName-help">
+                        <div id="testName-help" class="form-text">Este campo é obrigatório</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="testEmail" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="testEmail" name="testEmail">
+                    </div>
+                    
+                    <fieldset class="mb-3">
+                        <legend class="form-label">Tipo de usuário</legend>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="userType" id="userTypeAdmin" value="admin">
+                            <label class="form-check-label" for="userTypeAdmin">Administrador</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="userType" id="userTypeUser" value="user" checked>
+                            <label class="form-check-label" for="userTypeUser">Usuário</label>
+                        </div>
+                    </fieldset>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="acceptTerms" name="acceptTerms">
+                            <label class="form-check-label" for="acceptTerms">
+                                Aceito os termos e condições
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Enviar</button>
+                    <button type="button" class="btn btn-secondary ms-2">Cancelar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Test Modal Focus Trap -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Modal Focus Trap Test</h3>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#testModal">
+                    Open Modal (Test Focus Trap)
+                </button>
+            </div>
+        </div>
+
+        <!-- Test Navigation Landmarks -->
+        <nav aria-label="Test navigation" class="card mb-4">
+            <div class="card-header">
+                <h3>Navigation Test</h3>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-pills" role="tablist">
+                    <li class="nav-item" role="none">
+                        <a class="nav-link active" id="tab1" data-bs-toggle="pill" href="#panel1" role="tab" aria-controls="panel1" aria-selected="true" tabindex="0">Tab 1</a>
+                    </li>
+                    <li class="nav-item" role="none">
+                        <a class="nav-link" id="tab2" data-bs-toggle="pill" href="#panel2" role="tab" aria-controls="panel2" aria-selected="false" tabindex="-1">Tab 2</a>
+                    </li>
+                    <li class="nav-item" role="none">
+                        <a class="nav-link" id="tab3" data-bs-toggle="pill" href="#panel3" role="tab" aria-controls="panel3" aria-selected="false" tabindex="-1">Tab 3</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="panel1" role="tabpanel" aria-labelledby="tab1">
+                        <p>This is tab panel 1 content. It should be accessible via keyboard navigation.</p>
+                    </div>
+                    <div class="tab-pane fade" id="panel2" role="tabpanel" aria-labelledby="tab2">
+                        <p>This is tab panel 2 content.</p>
+                    </div>
+                    <div class="tab-pane fade" id="panel3" role="tabpanel" aria-labelledby="tab3">
+                        <p>This is tab panel 3 content.</p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Keyboard Shortcuts Help -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Keyboard Shortcuts</h3>
+            </div>
+            <div class="card-body">
+                <p>Try these keyboard shortcuts:</p>
+                <ul>
+                    <li><kbd>Alt</kbd> + <kbd>H</kbd> - Go to Home</li>
+                    <li><kbd>Alt</kbd> + <kbd>D</kbd> - Go to Dashboard</li>
+                    <li><kbd>Ctrl</kbd> + <kbd>K</kbd> - Focus Search</li>
+                    <li><kbd>Alt</kbd> + <kbd>Q</kbd> - Open Quick Actions</li>
+                    <li><kbd>Alt</kbd> + <kbd>1-4</kbd> - Trigger Quick Actions</li>
+                    <li><kbd>Escape</kbd> - Close Modal</li>
+                    <li><kbd>Shift</kbd> + <kbd>?</kbd> - Show Help</li>
+                    <li><kbd>F1</kbd> - Show Help</li>
+                </ul>
+                <p>Use <kbd>Tab</kbd> and <kbd>Shift</kbd> + <kbd>Tab</kbd> to navigate between elements.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div class="modal fade" id="testModal" tabindex="-1" aria-labelledby="testModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="testModalLabel">Focus Trap Test</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This modal should trap focus. Try pressing Tab to navigate within the modal.</p>
+                    <div class="mb-3">
+                        <label for="modalInput" class="form-label">Test Input</label>
+                        <input type="text" class="form-control" id="modalInput">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalSelect" class="form-label">Test Select</label>
+                        <select class="form-control" id="modalSelect">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="backend/static/js/accessibility.js"></script>
+
+    <script>
+        // Test keyboard navigation initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Keyboard navigation test page loaded');
+            
+            // Add test search input for Ctrl+K shortcut
+            const searchInput = document.createElement('input');
+            searchInput.type = 'search';
+            searchInput.id = 'search';
+            searchInput.placeholder = 'Search...';
+            searchInput.className = 'form-control';
+            searchInput.style.position = 'absolute';
+            searchInput.style.top = '-50px';
+            document.body.appendChild(searchInput);
+            
+            // Test announcement
+            setTimeout(() => {
+                if (window.keyboardNavigation) {
+                    console.log('✅ Keyboard Navigation System is active');
+                    
+                    // Test shortcut registration
+                    window.registerKeyboardShortcut('t', () => {
+                        alert('Test shortcut works!');
+                    }, 'Test shortcut');
+                } else {
+                    console.warn('❌ Keyboard Navigation System not found');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
