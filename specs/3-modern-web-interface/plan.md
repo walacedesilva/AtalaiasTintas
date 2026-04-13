@@ -1,103 +1,184 @@
-# Technical Implementation Plan: Modern Web Interface
+# Implementation Plan: Modern Web Interface
 
-## Architecture Overview
+**Branch**: `3-modern-web-interface` | **Date**: 2026-04-12 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/specs/3-modern-web-interface/spec.md`
 
-### Technology Stack
-- **Frontend Framework**: Bootstrap 5.3.2 (already in use) + Custom CSS
-- **Backend**: Existing Django views (no changes required)
-- **JavaScript**: Vanilla JS with progressive enhancement
-- **Build Process**: Django's static file handling + CSS/JS minification
+## Summary
 
-### Implementation Strategy
-**Progressive Enhancement**: Start with working Django templates, enhance with modern styling and interactions without breaking existing functionality.
+Create a modern, responsive web interface for the paint store tintometric system with full business data model support (pigments, formulas, mixtures, inventory, customers), guided workflow validation, role-based access control, and core business systems integration. The interface will provide progressive enhancement over existing Django templates while ensuring WCAG 2.1 AA compliance and balanced performance targets (3s page load, 300ms transitions, 2s complex operations).
 
-## Assumptions Made (Due to Missing Clarifications)
+## Architectural Vision *(mandatory)*
 
-### Color Palette Assumption
-**Assumption**: Using Bootstrap 5's default color system with custom CSS variables for brand consistency
-- Primary: #0d6efd (Bootstrap blue)
-- Secondary: #6c757d (Bootstrap gray)
-- Success: #198754 (Bootstrap green)  
-- Warning: #ffc107 (Bootstrap amber)
-- Danger: #dc3545 (Bootstrap red)
+1. **Frontend Architecture**: React 18 with TypeScript for type-safe component development, leveraging existing infrastructure established in the codebase with comprehensive state management via React Query for server state and Zustand for client state.
 
-*Note: This can be easily updated once specific brand colors are provided*
+2. **Progressive Enhancement Strategy**: Maintain backward compatibility with existing Django views while gradually replacing with React components, ensuring zero-downtime deployment and graceful fallback capabilities.
 
-### Frequent Operations Assumption
-**Assumption**: Based on tintometry business process, most frequent operations per section:
-- Dashboard: View Recent Jobs, Quick Mix, Generate Label
-- Templates: Search Templates, Create Template, Edit Template  
-- Mixing: Select Formula, Calculate Quantity, Generate Mix
-- Jobs: View Status, Download Label, Mark Complete
+3. **Component-Driven Development**: Implement atomic design methodology with reusable components (atoms, molecules, organisms) to ensure consistency across the tintometric interface while supporting role-based UI adaptations.
 
-*Note: Should be validated with actual usage analytics*
+4. **API-First Integration**: Utilize existing Django REST Framework APIs with enhanced endpoints for tintometric operations, maintaining contract stability for backward compatibility while adding new capabilities.
 
-### Information Density Assumption
-**Assumption**: Two density levels implemented:
-- **Compact**: More items per screen, smaller spacing (default for desktop)
-- **Comfortable**: Larger spacing, fewer items (default for mobile)
+5. **Security by Design**: Implement role-based access control (Staff/Manager/Admin hierarchy) with frontend UI hiding and backend authorization, ensuring defense in depth for sensitive paint formulas and pricing data.
 
-*Note: Additional density levels can be added based on user feedback*
+## Technical Context
 
-## Technical Architecture
+**Language/Version**: TypeScript 5.0+ / Python 3.12 (Django 6.0.4)  
+**Primary Dependencies**: React 18, Vite, React Query, Tailwind CSS, React Hook Form, Django REST Framework  
+**Storage**: PostgreSQL (existing Django models) + Redis (caching/sessions)  
+**Testing**: Vitest + React Testing Library (frontend), pytest + Django Test Client (backend)  
+**Target Platform**: Modern web browsers (Chrome 90+, Firefox 88+, Safari 14+, Edge 90+)  
+**Project Type**: Web application (React SPA + Django API)  
+**Performance Goals**: 3s page load, 300ms UI transitions, 2s complex tintometric operations, 90+ Lighthouse score  
+**Constraints**: WCAG 2.1 AA compliance, 320px-2560px responsive breakpoints, offline-capable for basic operations  
+**Scale/Scope**: 50+ concurrent users, 10k+ color formulas, 1k+ daily mixing operations, 5 user roles
 
-### Component Structure
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+✅ **Test-First Development (TDD)**: Plan includes comprehensive test strategy with unit tests (React Testing Library), integration tests (Playwright), and contract tests for API endpoints. Test coverage target: ≥90% overall, 100% for security-critical components.
+
+✅ **SOLID Architecture**: Component architecture follows single responsibility (atomic components), dependency inversion (service abstractions), and interface segregation (focused hooks and services). Repository pattern for API calls via React Query.
+
+✅ **Security-First Design**: Role-based access control with JWT authentication, secure handling of sensitive formulas/pricing data, input validation with Zod schemas, and rate limiting for tintometric operations.
+
+✅ **Compliance by Design**: WCAG 2.1 AA compliance through semantic HTML, proper ARIA labels, keyboard navigation, and automated accessibility testing. Audit trail for all user actions via existing Django audit system.
+
+✅ **API Versioning & Stability**: Utilizes existing versioned Django REST APIs (`/api/v1/`) with backward compatibility. New endpoints follow semantic versioning and include deprecation handling.
+
+✅ **Observability & Monitoring**: Error boundary components for graceful error handling, structured logging via existing Django system, real-time monitoring with health checks and performance metrics.
+
+⚠️ **Graceful Degradation**: MUST implement fallback strategies for:
+- **API Failure**: Local storage cache for critical data, offline mode with sync queue
+- **Authentication Service**: Cached JWT validation with 5-minute timeout fallback
+- **Real-time Features**: WebSocket connection failure → polling fallback
+- **Complex Operations**: Tintometric calculations timeout → simplified heuristic mode
+
+✅ **Code Quality Standards**: ESLint strict mode, Prettier formatting, TypeScript strict configuration, automated testing in CI/CD pipeline.
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/3-modern-web-interface/
+├── plan.md              # This file 
+├── research.md          # Phase 0: Technology research and best practices
+├── data-model.md        # Phase 1: Frontend state management and API contracts  
+├── quickstart.md        # Phase 1: Development environment setup
+├── contracts/           # Phase 1: Enhanced API specifications for tintometric operations
+└── tasks.md             # Implementation tasks (created separately)
 ```
-static/
-├── css/
-│   ├── modern-ui.css         # Main modern styling
-│   ├── responsive.css        # Media queries & breakpoints
-│   └── components.css        # Reusable UI components
-├── js/
-│   ├── ui-interactions.js    # Progressive enhancements
-│   ├── form-helpers.js       # Form validation & state
-│   └── accessibility.js     # A11y enhancements
-└── images/
-    └── icons/               # Custom SVG icons
+
+### Source Code (repository root)
+
+```text
+frontend/                 # React SPA (already established)
+├── src/
+│   ├── components/      # Atomic design components
+│   │   ├── atoms/       # Basic UI elements (Button, Input, Badge)
+│   │   ├── molecules/   # Component combinations (FormField, SearchBox, ColorPicker)
+│   │   ├── organisms/   # Complex components (NavigationBar, TintometricCalculator)
+│   │   └── templates/   # Page layouts (DashboardLayout, FormLayout)
+│   ├── pages/           # Route components (Dashboard, Pigments, Mixtures, Labels)
+│   ├── services/        # API abstraction layer
+│   │   ├── api/         # HTTP client configuration
+│   │   ├── hooks/       # React Query hooks for server state
+│   │   └── stores/      # Zustand stores for client state
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Helper functions and constants
+│   └── styles/          # Tailwind CSS configurations and custom styles
+├── tests/               # Frontend testing
+│   ├── components/      # Component unit tests
+│   ├── integration/     # End-to-end tests (Playwright)
+│   └── __mocks__/       # Test mocks and fixtures
+└── public/              # Static assets
+
+backend/                 # Django API (existing, enhanced)
+├── apps/
+│   ├── tintometry/      # Enhanced with new API endpoints
+│   │   ├── api/         # DRF viewsets for tintometric operations
+│   │   ├── serializers/ # Enhanced serializers for complex operations
+│   │   └── permissions/ # Role-based permissions (Staff/Manager/Admin)
+│   ├── core/            # Enhanced user management and audit
+│   └── [other apps]/    # Existing apps remain unchanged
+└── tests/               # Backend testing
+    ├── api/             # API endpoint tests
+    ├── integration/     # Cross-app integration tests
+    └── contract/        # API contract validation tests
 ```
 
-### Template Updates
-```
-templates/etiquetas/
-├── base.html               # Enhanced with modern meta tags
-├── components/            # New: Reusable template components
-│   ├── navigation.html    # Modern navigation component
-│   ├── breadcrumbs.html   # Breadcrumb component
-│   └── quick-actions.html # Quick action buttons
-├── dashboard.html         # Enhanced with new components
-├── templates.html         # Responsive template management
-├── mixing.html           # Modern mixing interface
-└── jobs.html             # Improved job management
-```
+**Structure Decision**: Web application structure leveraging established React frontend with enhanced Django backend APIs. The frontend follows atomic design principles for component reusability, while backend maintains existing Django app structure with enhanced tintometric API capabilities.
+
+## Complexity Tracking
+
+> **No constitution violations identified** - all requirements align with established principles and can be implemented within the defined constraints.
 
 ## Implementation Phases
 
-### Phase 1: Foundation (P1 - MVP)
-**Responsive Grid System**
-- Update base.html with proper viewport meta tags
-- Implement CSS Grid/Flexbox for main layout
-- Create responsive navigation component
-- Ensure 320px-2560px compatibility
+### Phase 0: Research & Technical Decisions ✅ COMPLETE
+**Deliverables**: 
+- ✅ [research.md](research.md) - Technology stack validation and best practices
+- ✅ Architecture decisions documented with rationale  
+- ✅ Performance optimization strategies defined
+- ✅ Security patterns and accessibility compliance approach
 
-### Phase 2: Modern Styling (P1 - MVP) 
-**Visual Design System**
-- Custom CSS variables for theming
-- Modern typography hierarchy (14px-32px)
-- Updated color palette with high contrast
-- Loading states and micro-interactions
+### Phase 1: Design & Contracts ✅ COMPLETE  
+**Deliverables**:
+- ✅ [data-model.md](data-model.md) - Frontend state management and TypeScript interfaces
+- ✅ [contracts/tintometric-api.yaml](contracts/tintometric-api.yaml) - Enhanced API specifications
+- ✅ [quickstart.md](quickstart.md) - Developer environment setup guide
+- ✅ Component architecture and testing strategy defined
 
-### Phase 3: Enhanced UX (P2 - Important)
-**User Experience Improvements**
-- Breadcrumb navigation
-- Quick action buttons
-- Form state preservation
-- Progress indicators for long operations
+### Phase 2: Implementation Planning 🔄 NEXT
+**Scope**: Create detailed task breakdown and dependency ordering  
+**Command**: `/speckit.tasks` - Generate implementation tasks with test-first approach  
+**Deliverables**: tasks.md with ordered implementation steps
 
-### Phase 4: Accessibility (P1 - MVP)
-**WCAG 2.1 AA Compliance**
-- Keyboard navigation enhancement
-- Screen reader compatibility
-- Focus management
+### Phase 3: Core Foundation 📋 PENDING
+**Focus**: Essential infrastructure and base components
+- Authentication and role-based access control 
+- Core API integration layer with React Query
+- Atomic design system components (atoms, molecules)  
+- Responsive layout system and navigation
+- Error boundaries and offline capabilities
+
+### Phase 4: Business Features 📋 PENDING  
+**Focus**: Tintometric workflow implementation
+- Pigment catalog and search functionality
+- Formula management and calculation engine
+- Guided mixing workflow with validation
+- Inventory integration and stock checking
+- Quality control and approval workflows
+
+### Phase 5: Advanced Features 📋 PENDING
+**Focus**: Performance optimization and user experience
+- Real-time updates via WebSocket integration
+- Advanced color matching and picker components  
+- Label generation and printing integration
+- Analytics dashboard and reporting
+- Progressive Web App (PWA) capabilities
+
+### Phase 6: Quality Assurance 📋 PENDING
+**Focus**: Testing, accessibility, and performance
+- Comprehensive test coverage (≥90%)
+- WCAG 2.1 AA compliance validation
+- Performance optimization and monitoring
+- Security audit and penetration testing
+- User acceptance testing with paint store staff
+
+## Success Metrics
+
+### Technical Metrics
+- **Performance**: <3s page load, <300ms transitions, <2s tintometric operations
+- **Quality**: ≥90% test coverage, 0 critical security vulnerabilities  
+- **Accessibility**: WCAG 2.1 AA compliance, 100% keyboard navigable
+- **Browser Support**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+
+### Business Metrics  
+- **User Experience**: <5 clicks to complete mixing operation
+- **Error Reduction**: <5% mixing errors through guided workflow
+- **Training Time**: <2 hours for new staff to become proficient
+- **System Adoption**: >95% of paint store operations using new interface
 - High contrast mode support
 
 ### Phase 5: Performance (P2 - Important)

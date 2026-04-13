@@ -1,544 +1,1055 @@
 # Implementation Tasks - Modern Web Interface
 
 ## Task Overview
-**Total Tasks**: 47  
-**Priority Distribution**: P1 (MVP): 28 tasks | P2 (Important): 15 tasks | P3 (Enhancement): 4 tasks  
-**Estimated Timeline**: 3-4 weeks for complete implementation
+**Total Tasks**: 112  
+**Priority Distribution**: P1 (MVP): 68 tasks | P2 (Important): 32 tasks | P3 (Enhancement): 12 tasks  
+**Estimated Timeline**: 6 weeks for complete implementation (MVP in 3-4 weeks)
 
-## Phase 1: Foundation (P1 - MVP)
-*Responsive grid system and core infrastructure*
+## Implementation Strategy
+- **MVP Approach**: Focus on P1 tasks for core functionality  
+- **Incremental Delivery**: 10 phases with clear milestones
+- **Parallel Processing**: 70+ tasks can run in parallel across teams
+- **Test-Driven Development**: Each task includes quality gates and acceptance criteria
+- **Progressive Enhancement**: Graceful degradation ensures accessibility
 
-### [T001] Update Base Template Meta Tags [P1] ✅ COMPLETED
-**Files**: `templates/etiquetas/base.html`  
+## Phase 1: Project Setup & Foundation (P1 - MVP Core)
+*Essential infrastructure and development environment*
+
+### [F001] Environment Setup & Configuration [P1] [P]
+**Files**: Development environment, package.json, requirements.txt  
 **Dependencies**: None  
 **User Story**: [US-1] Multi-device compatibility  
-**Description**: Add proper viewport meta tags, mobile-friendly configuration  
+**Description**: Set up modern development environment with build tools  
 **Acceptance Criteria**:
-- [✅] Viewport meta tag with proper device-width scaling
-- [✅] Mobile-friendly meta tags added
-- [✅] Performance hints (dns-prefetch) for external resources
-- [✅] Responsive design meta tags validated
-**Quality Gates**: Responsive Design Checklist items 1-5  
-**Estimated Effort**: 0.5 days
+- [ ] Node.js 18+ and npm/yarn package management configured
+- [ ] Vite build system for CSS/JS bundling and hot reload
+- [ ] TypeScript setup for type safety in JavaScript components
+- [ ] PostCSS with autoprefixer for vendor prefix management
+- [ ] Development and production build configurations
+- [ ] Environment variable management for different deployment stages
+- [ ] Git hooks for code quality enforcement (pre-commit linting)
+- [ ] VS Code workspace configuration with recommended extensions
+**Quality Gates**: Development Environment Checklist completed  
+**Estimated Effort**: 1 day
 
-### [T002] Create CSS Grid Main Layout System [P1] ✅ COMPLETED
-**Files**: `static/css/modern-ui.css` (new), `templates/etiquetas/base.html`  
-**Dependencies**: [T001]  
+### [F002] Base Template Architecture Overhaul [P1] [P]
+**Files**: templates/etiquetas/base.html, static/css/reset.css (new)  
+**Dependencies**: [F001]  
 **User Story**: [US-1] Multi-device compatibility  
-**Description**: Implement CSS Grid for main page layout structure  
+**Description**: Modernize base HTML template with semantic structure  
 **Acceptance Criteria**:
-- [✅] CSS Grid layout for header, main, aside, footer areas
-- [✅] Flexbox for component-level layouts
-- [✅] Grid areas adapt across all 5 breakpoints (320px-2560px)
-- [✅] No horizontal scrolling at any supported width
-**Quality Gates**: Responsive Design Checklist items 15-25  
+- [ ] HTML5 semantic elements (header, nav, main, aside, footer)
+- [ ] Proper document head with meta tags for SEO and performance
+- [ ] Viewport meta tag with device-width scaling for mobile
+- [ ] CSS reset/normalize for consistent cross-browser rendering
+- [ ] Preload hints for critical resources (fonts, key CSS files)
+- [ ] Progressive enhancement base structure
+- [ ] Accessibility landmarks properly defined
+- [ ] Content Security Policy headers preparation
+**Quality Gates**: HTML5 semantic validation + mobile viewport testing  
 **Estimated Effort**: 1.5 days
 
-### [T003] Implement Responsive Breakpoint System [P1] [P] ✅ COMPLETED
-**Files**: `static/css/responsive.css` (new)  
-**Dependencies**: [T001]  
-**User Story**: [US-1] Multi-device compatibility  
-**Description**: Create comprehensive responsive breakpoint system  
+### [F003] Modern CSS Architecture Setup [P1] [P]
+**Files**: static/css/main.css, static/css/abstracts/ (variables, mixins)  
+**Dependencies**: [F001], [F002]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Implement scalable CSS architecture with design tokens  
 **Acceptance Criteria**:
-- [✅] Breakpoints: 320px, 768px, 1024px, 1440px, 2560px defined
-- [✅] Mobile-first CSS media queries implemented
-- [✅] Content reflows naturally at all breakpoints
-- [✅] Touch targets minimum 44px on mobile devices
-**Quality Gates**: Responsive Design Checklist items 6-14  
-**Estimated Effort**: 1 day
-
-### [T004] Create Navigation Component System [P1] ✅ COMPLETED
-**Files**: `templates/etiquetas/components/navigation.html` (new), `static/css/components.css` (new)  
-**Dependencies**: [T002]  
-**User Story**: [US-2] Intuitive navigation  
-**Description**: Build responsive navigation component with mobile hamburger  
-**Acceptance Criteria**:
-- [✅] Desktop horizontal navigation bar
-- [✅] Mobile hamburger menu with smooth animation
-- [✅] Keyboard navigation support (Tab, Enter, Escape)
-- [✅] Active page indication clearly visible
-- [✅] ARIA attributes for accessibility compliance
-**Quality Gates**: Accessibility Checklist items 45-55, UX Checklist items 1-10  
+- [ ] CSS custom properties (variables) for colors, typography, spacing
+- [ ] SCSS/PostCSS setup with component-based structure
+- [ ] Design token system aligned with accessibility requirements
+- [ ] CSS containment for performance optimization
+- [ ] Critical CSS extraction for above-the-fold content
+- [ ] CSS purging for production builds (remove unused styles)
+- [ ] Browser compatibility layer for CSS Grid and Flexbox fallbacks
+- [ ] Print stylesheet for offline document generation
+**Quality Gates**: CSS validation + design system consistency check  
 **Estimated Effort**: 2 days
 
-### [T005] Implement Breadcrumb Navigation [P1]
-**Files**: `templates/etiquetas/components/breadcrumbs.html` (new)  
-**Dependencies**: [T004]  
-**User Story**: [US-2] Intuitive navigation  
-**Description**: Create breadcrumb component for user orientation  
+### [F004] Responsive Grid System Implementation [P1] [P]
+**Files**: static/css/layout.css, templates/etiquetas/base.html  
+**Dependencies**: [F003]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: CSS Grid-based responsive layout system  
 **Acceptance Criteria**:
-- [ ] Breadcrumbs on all pages except dashboard
-- [ ] Hierarchical structure reflects navigation flow
-- [ ] Breadcrumb links functional and accurate
-- [ ] Mobile-optimized display (collapse on small screens)
-- [ ] Screen reader accessible with proper ARIA labels
-**Quality Gates**: Accessibility Checklist items 25-30, UX Checklist items 11-15  
-**Estimated Effort**: 1 day
+- [ ] 12-column CSS Grid system with flexible gutters
+- [ ] 5 responsive breakpoints: 320px, 768px, 1024px, 1440px, 2560px
+- [ ] Container queries for component-level responsiveness
+- [ ] Subgrid support for nested layout components
+- [ ] Aspect ratio containers for media content
+- [ ] Layout shift prevention techniques (CLS optimization)
+- [ ] Print layout optimization for paper formats
+- [ ] Performance monitoring for layout rendering
+**Quality Gates**: Cross-device layout testing + CLS measurement  
+**Estimated Effort**: 2 days
 
-### [T006] Create User Preferences Model [P1]
-**Files**: `apps/core/models.py`, `apps/core/migrations/` (new migration)  
-**Dependencies**: None  
-**User Story**: [US-7] Customizable interface  
-**Description**: Add database model for storing user interface preferences  
-**Acceptance Criteria**:
-- [ ] UserPreferences model with user OneToOne relationship
-- [ ] Fields: theme, density, quick_actions (JSON), timestamps
-- [ ] Migration file created and tested
-- [ ] Model admin interface configured
-- [ ] Default values properly set
-**Quality Gates**: Security Checklist items 25-30  
-**Estimated Effort**: 1 day
-
-## Phase 2: Modern Styling (P1 - MVP)
-*Visual design system and theming*
-
-### [T007] Implement CSS Custom Properties System [P1] [P] ✅
-**Files**: `static/css/modern-ui.css` ✅  
-**Dependencies**: [T002] ✅  
+### [F005] Component Library Foundation [P1] [P]  
+**Files**: static/css/components/, templates/etiquetas/components/  
+**Dependencies**: [F004]  
 **User Story**: [US-3] Modern visual design  
-**Description**: Create CSS variable system for consistent theming  
+**Description**: Atomic design component library setup  
 **Acceptance Criteria**:
-- [✅] CSS custom properties for 5 primary colors (Bootstrap-based)
-- [✅] Typography scale variables (14px-32px hierarchy)
-- [✅] Spacing scale variables for consistent margins/padding
-- [✅] Component-level CSS variables (button, form, card)
-- [✅] Dark/light theme support prepared
-**Quality Gates**: Browser Compatibility Checklist items 15-25 ✅  
-**Estimated Effort**: 1 day ✅
+- [ ] Component directory structure (atoms, molecules, organisms)
+- [ ] Base component styles with BEM methodology
+- [ ] Component documentation template system
+- [ ] Storybook-like component preview system
+- [ ] Component testing framework setup
+- [ ] CSS-in-JS alternative evaluation for Django templates
+- [ ] Component performance budgets definition
+- [ ] Design system integration testing
+**Quality Gates**: Component library documentation + performance budgets  
+**Estimated Effort**: 2 days
 
-### [T008] Design Modern Typography System [P1] [P] ✅
-**Files**: `static/css/modern-ui.css` ✅  
-**Dependencies**: [T007] ✅  
-**User Story**: [US-3] Modern visual design  
-**Description**: Implement hierarchical typography with modern font stack  
-**Acceptance Criteria**:
-- [✅] Maximum 2 font families (system fonts + Google Fonts)
-- [✅] Heading hierarchy (h1-h6) with proper size scaling
-- [✅] Line height optimization for readability (1.5x minimum)
-- [✅] Text contrast ratio ≥ 4.5:1 for WCAG AA compliance
-- [✅] Responsive typography scaling across breakpoints
-**Quality Gates**: Accessibility Checklist items 10-20, Performance Checklist items 15-20 ✅  
-**Estimated Effort**: 1.5 days ✅
-
-### [T009] Create Loading State Components [P1] ✅
-**Files**: `static/css/components.css` ✅, `static/js/ui-interactions.js` (new) ✅  
-**Dependencies**: [T007] ✅  
-**User Story**: [US-5] Visual feedback  
-**Description**: Design loading indicators and progress components  
-**Acceptance Criteria**:
-- [✅] Skeleton screens for content loading areas
-- [✅] Spinning indicators for operations > 2 seconds
-- [✅] Progress bars for file uploads and form processing
-- [✅] Loading states don't block other user interactions
-- [✅] Smooth CSS animations < 300ms duration
-**Quality Gates**: Performance Checklist items 45-50, UX Checklist items 25-35 ✅  
-**Estimated Effort**: 1.5 days ✅
-
-### [T010] Style Form Components [P1] ✅
-**Files**: `static/css/components.css` ✅  
-**Dependencies**: [T008] ✅  
-**User Story**: [US-4] Accessible forms  
-**Description**: Create consistent, accessible form styling  
-**Acceptance Criteria**:
-- [✅] Input fields with proper focus states and borders
-- [✅] Label styling with clear association to inputs
-- [✅] Error state styling with high contrast indicators
-- [✅] Success state styling for completed forms
-- [✅] Button hierarchy (primary, secondary, destructive)
-**Quality Gates**: Accessibility Checklist items 35-45, UX Checklist items 40-55 ✅  
-**Estimated Effort**: 2 days ✅
-
-### [T011] Implement Card and List Components [P1] ✅
-**Files**: `static/css/components.css` ✅  
-**Dependencies**: [T008] ✅  
-**User Story**: [US-6] Information display  
-**Description**: Create reusable card and list component styles  
-**Acceptance Criteria**:
-- [✅] Card component with header, body, footer sections
-- [✅] List item styling with proper spacing and hierarchy
-- [✅] Hover and focus states for interactive elements
-- [✅] Mobile-optimized card layouts (stack on small screens)
-- [✅] Consistent shadow and border radius system
-**Quality Gates**: Responsive Design Checklist items 45-55 ✅  
-**Estimated Effort**: 1 day ✅
-
-## Phase 3: Enhanced UX (P2 - Important)
-*User experience improvements and workflow optimization*
-
-### [T012] Build Quick Actions System [P2] ✅
-**Files**: `templates/etiquetas/components/quick-actions.html` (new) ✅, `apps/tintometry/views.py` ✅  
-**Dependencies**: [T006] ✅, [T011] ✅  
-**User Story**: [US-9] Quick actions  
-**Description**: Implement configurable quick action buttons per section  
-**Acceptance Criteria**:
-- [✅] Dashboard: View Recent Jobs, Quick Mix, Generate Label
-- [✅] Templates: Search Templates, Create Template, Edit Template
-- [✅] Mixing: Select Formula, Calculate Quantity, Generate Mix
-- [✅] Jobs: View Status, Download Label, Mark Complete
-- [✅] User-customizable quick actions saved to preferences
-**Quality Gates**: UX Checklist items 55-70 ✅  
-**Estimated Effort**: 2.5 days ✅
-
-### [T013] Implement Form State Preservation [P2] ✅
-**Files**: `static/js/form-helpers.js` (new) ✅  
-**Dependencies**: [T010] ✅  
-**User Story**: [US-4] Accessible forms  
-**Description**: Add client-side form state management and recovery  
-**Acceptance Criteria**:
-- [✅] Auto-save form data to localStorage every 30 seconds
-- [✅] Confirmation dialog before leaving page with unsaved changes
-- [✅] Form state restoration after accidental navigation
-- [✅] Clear indication of unsaved changes in UI
-- [✅] Data cleanup after successful form submission
-**Quality Gates**: UX Checklist items 40-50 ✅  
-**Estimated Effort**: 2 days ✅
-
-### [T014] Create Progressive Enhancement Layer [P2]
-**Files**: `static/js/ui-interactions.js`  
-**Dependencies**: [T009]  
+### [F006] JavaScript Module System Setup [P1] [P]
+**Files**: static/js/modules/, static/js/main.js  
+**Dependencies**: [F001]  
 **User Story**: [US-8] Progressive enhancement  
-**Description**: Add JavaScript enhancements without breaking core functionality  
+**Description**: Modern JavaScript architecture with ES6 modules  
 **Acceptance Criteria**:
-- [ ] Feature detection for JavaScript capabilities
-- [ ] Enhanced interactions (smooth scrolling, animations)
-- [ ] AJAX form submissions with fallback to standard POST
-- [ ] Keyboard shortcut management system
-- [ ] Graceful degradation when JavaScript unavailable
-**Quality Gates**: Browser Compatibility Checklist items 35-45  
+- [ ] ES6 module system with import/export syntax
+- [ ] Utility modules for DOM manipulation and form handling
+- [ ] Progressive enhancement detection and graceful degradation
+- [ ] Event delegation system for dynamic content
+- [ ] Service worker setup for offline functionality (PWA preparation)
+- [ ] JavaScript error tracking and logging system
+- [ ] Performance monitoring for JavaScript execution
+- [ ] Code splitting strategy for large applications
+**Quality Gates**: JavaScript performance testing + offline functionality  
 **Estimated Effort**: 2 days
 
-### [T015] Implement Smart Search Enhancement [P2]
-**Files**: `static/js/ui-interactions.js`, existing search templates  
-**Dependencies**: [T014]  
-**User Story**: [US-6] Information display  
-**Description**: Enhance existing search with real-time filtering and suggestions  
-**Acceptance Criteria**:
-- [ ] Debounced real-time search (300ms delay)
-- [ ] Search result highlighting of matched terms
-- [ ] Recent searches stored and suggested
-- [ ] Keyboard navigation through search results
-- [ ] Search analytics for improving relevance
-**Quality Gates**: Performance Checklist items 30-35  
-**Estimated Effort**: 2 days
-
-### [T016] Build Notification System [P2]
-**Files**: `static/js/ui-interactions.js`, `static/css/components.css`  
-**Dependencies**: [T009]  
-**User Story**: [US-5] Visual feedback  
-**Description**: Create non-intrusive notification system for user feedback  
-**Acceptance Criteria**:
-- [ ] Toast notifications for success/error/info messages
-- [ ] Notifications auto-dismiss after appropriate timeout
-- [ ] Manual dismiss option with clear close button
-- [ ] Stack multiple notifications without overlap
-- [ ] Screen reader announcement integration
-**Quality Gates**: Accessibility Checklist items 55-65  
-**Estimated Effort**: 1.5 days
-
-## Phase 4: Accessibility (P1 - MVP)
-*WCAG 2.1 AA compliance and inclusive design*
-
-### [T017] Implement Keyboard Navigation System [P1]
-**Files**: `static/js/accessibility.js` (new), existing templates  
-**Dependencies**: [T004], [T005]  
+### [F007] Accessibility Foundation [P1] [P]
+**Files**: static/css/accessibility.css, static/js/a11y.js  
+**Dependencies**: [F002], [F005]  
 **User Story**: [US-4] Accessible forms  
-**Description**: Ensure complete keyboard navigation throughout interface  
+**Description**: WCAG 2.1 AA compliance foundation  
 **Acceptance Criteria**:
-- [ ] Logical tab order for all interactive elements
-- [ ] Skip links to main content areas
-- [ ] Focus trap management for modal dialogs
-- [ ] Keyboard shortcuts for frequent actions
-- [ ] No keyboard traps anywhere in interface
-**Quality Gates**: Accessibility Checklist items 20-35  
-**Estimated Effort**: 2 days
-
-### [T018] Add ARIA Labels and Semantics [P1]
-**Files**: All template files, `static/js/accessibility.js`  
-**Dependencies**: [T017]  
-**User Story**: [US-4] Accessible forms  
-**Description**: Implement comprehensive ARIA labeling for screen readers  
-**Acceptance Criteria**:
-- [ ] ARIA labels for all interactive elements
-- [ ] ARIA roles for complex UI components
-- [ ] ARIA live regions for dynamic content updates
-- [ ] ARIA states updated during user interactions
-- [ ] Semantic HTML elements used appropriately
-**Quality Gates**: Accessibility Checklist items 65-85  
+- [ ] Screen reader optimization with proper ARIA implementation
+- [ ] Keyboard navigation system with focus management
+- [ ] High contrast mode support for visual accessibility
+- [ ] Reduced motion preferences respect for animations
+- [ ] Color contrast verification system (4.5:1 minimum ratio)
+- [ ] Skip links and landmark navigation
+- [ ] Focus visible indicators for all interactive elements
+- [ ] Accessibility testing automation setup
+**Quality Gates**: WCAG 2.1 AA compliance audit + screen reader testing  
 **Estimated Effort**: 2.5 days
 
-### [T019] Ensure Color Accessibility [P1] [P]
-**Files**: `static/css/modern-ui.css`, `static/css/components.css`  
-**Dependencies**: [T008]  
-**User Story**: [US-3] Modern visual design  
-**Description**: Validate and enhance color contrast throughout interface  
+### [F008] Performance Monitoring Setup [P1] [P]
+**Files**: static/js/performance.js, monitoring configuration  
+**Dependencies**: [F006]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Real-time performance monitoring and optimization  
 **Acceptance Criteria**:
-- [ ] Text contrast ratio ≥ 4.5:1 for normal text
-- [ ] Large text contrast ratio ≥ 3:1
-- [ ] Focus indicators with ≥ 3:1 contrast ratio
-- [ ] Color not sole means of conveying information
-- [ ] High contrast mode support tested
-**Quality Gates**: Accessibility Checklist items 1-15  
+- [ ] Core Web Vitals measurement (LCP, FID, CLS) implementation
+- [ ] Real User Monitoring (RUM) data collection
+- [ ] Performance budgets with automated alerts
+- [ ] Bundle analysis and optimization recommendations  
+- [ ] Critical rendering path optimization
+- [ ] Resource loading optimization (preload, prefetch strategies)
+- [ ] Performance regression testing automation
+- [ ] CDN integration for static asset delivery
+**Quality Gates**: Core Web Vitals thresholds met + performance budgets  
+**Estimated Effort**: 1.5 days
+
+## Phase 2: Navigation & Layout System (P1 - MVP Core)
+*User interface navigation and responsive layout*
+
+### [N001] Main Navigation Component [P1] [P]
+**Files**: templates/etiquetas/components/nav-main.html, static/css/nav.css  
+**Dependencies**: [F005], [F007]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Responsive main navigation with mobile-first approach  
+**Acceptance Criteria**:
+- [ ] Horizontal desktop navigation with dropdown submenus
+- [ ] Mobile hamburger menu with slide-out drawer animation
+- [ ] Active page highlighting with breadcrumb integration
+- [ ] Keyboard navigation with proper focus management
+- [ ] Touch-friendly targets (44px minimum) for mobile devices
+- [ ] ARIA navigation landmarks and labels
+- [ ] Search integration within navigation bar
+- [ ] Quick action shortcuts accessible via navigation
+**Quality Gates**: Mobile usability testing + keyboard navigation audit  
+**Estimated Effort**: 2 days
+
+### [N002] Breadcrumb Navigation System [P1] [P]
+**Files**: templates/etiquetas/components/breadcrumbs.html, apps/core/context_processors.py  
+**Dependencies**: [N001]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Dynamic breadcrumb system with context awareness  
+**Acceptance Criteria**:
+- [ ] Automatic breadcrumb generation based on URL structure
+- [ ] Context-aware links (job ID, template name in breadcrumbs)
+- [ ] Mobile-responsive breadcrumb collapse and expansion
+- [ ] Structured data markup for SEO enhancement
+- [ ] Accessibility compliance with proper ARIA labeling
+- [ ] Custom breadcrumb override system for complex workflows
+- [ ] Print-friendly breadcrumb rendering
+- [ ] Performance optimization for large navigation hierarchies
+**Quality Gates**: Navigation hierarchy testing + SEO validation  
+**Estimated Effort**: 1.5 days
+
+### [N003] Sidebar Navigation Component [P1] [P]
+**Files**: templates/etiquetas/components/sidebar.html, static/css/sidebar.css  
+**Dependencies**: [N001], [F004]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Contextual sidebar navigation for section-specific actions  
+**Acceptance Criteria**:
+- [ ] Collapsible sidebar with persistent state management
+- [ ] Section-specific navigation items (templates, mixing, jobs)
+- [ ] Quick filters and action shortcuts within sidebar
+- [ ] Responsive behavior (overlay on mobile, persistent on desktop)
+- [ ] Smooth animation transitions with performance optimization
+- [ ] Accessibility support for screen readers and keyboard users
+- [ ] Theme integration with light/dark mode support
+- [ ] Integration with user preferences for default visibility
+**Quality Gates**: Cross-device sidebar testing + accessibility audit  
+**Estimated Effort**: 2 days
+
+### [N004] Footer Component System [P1] [P]
+**Files**: templates/etiquetas/components/footer.html, static/css/footer.css  
+**Dependencies**: [F005]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Responsive footer with system information and quick links  
+**Acceptance Criteria**:
+- [ ] System status indicators (online/offline, last sync)
+- [ ] Quick access links (help, settings, logout)
+- [ ] Copyright and version information display
+- [ ] Responsive layout adaptation across all breakpoints
+- [ ] Print-friendly footer rendering for documents
+- [ ] Legal compliance links (privacy policy, terms of service)
+- [ ] Accessibility compliance with proper landmark roles
+- [ ] Performance optimization for minimal render blocking
+**Quality Gates**: Legal compliance review + responsive design testing  
 **Estimated Effort**: 1 day
 
-### [T020] Validate Screen Reader Compatibility [P1]
-**Files**: All template files (validation and fixes)  
-**Dependencies**: [T018]  
-**User Story**: [US-4] Accessible forms  
-**Description**: Test and optimize interface for screen reader users  
+### [N005] Layout Grid System Enhancement [P1] [P]
+**Files**: static/css/grid.css, templates/etiquetas/layouts/  
+**Dependencies**: [F004], [N001]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Advanced layout system with component-aware grids  
 **Acceptance Criteria**:
-- [ ] NVDA screen reader navigation tested
-- [ ] JAWS compatibility verified
-- [ ] Content reading order logical and clear
-- [ ] Form labels properly associated with inputs
-- [ ] Dynamic content changes announced appropriately
-**Quality Gates**: Accessibility Checklist items 75-85  
-**Estimated Effort**: 2 days
-
-## Phase 5: Performance Optimization (P2 - Important)
-*Speed and efficiency enhancements*
-
-### [T021] Optimize CSS Delivery [P2] [P]
-**Files**: `tintas_system/settings.py`, build configuration  
-**Dependencies**: [T008], [T011]  
-**User Story**: [US-8] Progressive enhancement  
-**Description**: Implement CSS optimization and delivery strategy  
-**Acceptance Criteria**:
-- [ ] Critical CSS inlined for above-the-fold content
-- [ ] Non-critical CSS loaded asynchronously
-- [ ] CSS minification and compression enabled
-- [ ] Unused CSS removed from production builds
-- [ ] CSS caching headers properly configured
-**Quality Gates**: Performance Checklist items 1-15  
-**Estimated Effort**: 1.5 days
-
-### [T022] Implement JavaScript Optimization [P2] [P]
-**Files**: `static/js/` files, build configuration  
-**Dependencies**: [T014]  
-**User Story**: [US-8] Progressive enhancement  
-**Description**: Optimize JavaScript loading and execution  
-**Acceptance Criteria**:
-- [ ] JavaScript files minified and compressed
-- [ ] Scripts loaded with appropriate defer/async attributes
-- [ ] Code splitting for large JavaScript modules
-- [ ] Polyfills loaded conditionally based on browser support
-- [ ] JavaScript execution doesn't block main thread
-**Quality Gates**: Performance Checklist items 25-40  
-**Estimated Effort**: 1.5 days
-
-### [T023] Add Performance Monitoring [P2]
-**Files**: `templates/etiquetas/base.html`, `static/js/performance-monitor.js` (new)  
-**Dependencies**: [T021], [T022]  
-**User Story**: [US-8] Progressive enhancement  
-**Description**: Implement client-side performance monitoring  
-**Acceptance Criteria**:
-- [ ] Core Web Vitals measurement (LCP, FID, CLS)
-- [ ] Page load time tracking
-- [ ] User interaction performance monitoring
-- [ ] Performance data reported to analytics
-- [ ] Performance budgets monitored and alerted
-**Quality Gates**: Performance Checklist items 60-70  
-**Estimated Effort**: 2 days
-
-## Integration Tasks (P1 - MVP)
-
-### [T024] Update Dashboard Template [P1]
-**Files**: `templates/etiquetas/dashboard.html`  
-**Dependencies**: [T004], [T005], [T012]  
-**User Story**: [US-1] Multi-device compatibility, [US-9] Quick actions  
-**Description**: Integrate modern components into existing dashboard  
-**Acceptance Criteria**:
-- [ ] New navigation component integrated
-- [ ] Breadcrumb component added
-- [ ] Quick actions component embedded
-- [ ] Responsive layout applied
-- [ ] Loading states for dashboard data
-**Quality Gates**: All phase 1-3 checklist items verified  
-**Estimated Effort**: 1.5 days
-
-### [T025] Update Templates Management Page [P1]
-**Files**: `templates/etiquetas/templates.html`  
-**Dependencies**: [T024]  
-**User Story**: [US-6] Information display  
-**Description**: Apply modern interface to templates management  
-**Acceptance Criteria**:
-- [ ] Card-based template display layout
-- [ ] Enhanced search functionality
-- [ ] Responsive table for template details
-- [ ] Quick actions for template operations
-- [ ] Form improvements for template creation/editing
-**Quality Gates**: UX Checklist items 70-85  
-**Estimated Effort**: 2 days
-
-### [T026] Update Mixing Interface [P1]
-**Files**: `templates/etiquetas/mixing.html`  
-**Dependencies**: [T024]  
-**User Story**: [US-1] Multi-device compatibility, [US-6] Information display  
-**Description**: Modernize mixing calculation and display interface  
-**Acceptance Criteria**:
-- [ ] Mobile-optimized mixing calculator layout
-- [ ] Real-time calculation with loading states
-- [ ] Formula selection with enhanced search
-- [ ] Progress indicators for mixing process
-- [ ] Responsive ingredient list display
-**Quality Gates**: Responsive Design Checklist items 30-55  
+- [ ] Container queries for component-responsive design
+- [ ] CSS Subgrid implementation for nested component layouts
+- [ ] Auto-placement algorithms for dynamic content
+- [ ] Layout shift prevention with aspect ratio containers
+- [ ] Print layout optimization with page break management
+- [ ] Performance monitoring for layout rendering metrics
+- [ ] Fallback layout system for older browser compatibility
+- [ ] Documentation and examples for layout pattern usage
+**Quality Gates**: Layout performance testing + browser compatibility audit  
 **Estimated Effort**: 2.5 days
 
-### [T027] Update Jobs Management Interface [P1]
-**Files**: `templates/etiquetas/jobs.html`  
-**Dependencies**: [T024]  
-**User Story**: [US-6] Information display, [US-9] Quick actions  
-**Description**: Enhance job tracking and management interface  
+### [N006] Page Header Component [P1] [P]
+**Files**: templates/etiquetas/components/page-header.html, static/css/header.css  
+**Dependencies**: [N002], [F005]  
+**User Story**: [US-6] Information display  
+**Description**: Context-aware page header with action integration  
 **Acceptance Criteria**:
-- [ ] Status-based job filtering and sorting
-- [ ] Mobile-friendly job card layout
-- [ ] Quick actions for common job operations
-- [ ] Real-time status updates with notifications
-- [ ] Batch job operations interface
-**Quality Gates**: UX Checklist items 85-95  
-**Estimated Effort**: 2 days
-
-## Testing and Validation Tasks
-
-### [T028] Cross-Browser Compatibility Testing [P1]
-**Files**: Test documentation, bug fixes as needed  
-**Dependencies**: [T024], [T025], [T026], [T027]  
-**User Story**: [US-8] Progressive enhancement  
-**Description**: Comprehensive cross-browser testing and fixes  
-**Acceptance Criteria**:
-- [ ] Chrome 96+, Firefox 94+, Safari 15+, Edge 96+ tested
-- [ ] Mobile browsers (iOS Safari, Chrome Mobile) tested
-- [ ] Core functionality verified in all target browsers
-- [ ] Progressive enhancement fallbacks working
-- [ ] Visual regression testing completed
-**Quality Gates**: Browser Compatibility Checklist 100% completion  
-**Estimated Effort**: 3 days
-
-### [T029] Accessibility Audit and Fixes [P1]
-**Files**: Templates and CSS (accessibility fixes as needed)  
-**Dependencies**: [T017], [T018], [T019], [T020]  
-**User Story**: [US-4] Accessible forms  
-**Description**: Professional accessibility audit and remediation  
-**Acceptance Criteria**:
-- [ ] WCAG 2.1 AA compliance verified
-- [ ] Lighthouse Accessibility score ≥ 90
-- [ ] Screen reader testing completed (NVDA, JAWS)
-- [ ] Keyboard navigation 100% functional
-- [ ] Color contrast validation passed
-**Quality Gates**: Accessibility Checklist 100% completion  
-**Estimated Effort**: 3 days
-
-### [T030] Performance Optimization Validation [P2]
-**Files**: Performance fixes and optimization  
-**Dependencies**: [T021], [T022], [T023]  
-**User Story**: [US-8] Progressive enhancement  
-**Description**: Performance testing and optimization verification  
-**Acceptance Criteria**:
-- [ ] Lighthouse Performance score ≥ 90
-- [ ] Core Web Vitals passing (LCP <2.5s, FID <100ms, CLS <0.1)
-- [ ] Page load times <3s on 3G networks
-- [ ] Transition animations <300ms
-- [ ] Memory usage within acceptable bounds
-**Quality Gates**: Performance Checklist 100% completion  
-**Estimated Effort**: 2 days
-
-## Security and Compliance Tasks
-
-### [T031] Security Implementation and Testing [P1]
-**Files**: Templates, JavaScript, Django settings  
-**Dependencies**: [T006], [T013], [T014]  
-**User Story**: [US-5] Visual feedback, [US-7] Customizable interface  
-**Description**: Implement and validate frontend security measures  
-**Acceptance Criteria**:
-- [ ] XSS protection implemented and tested
-- [ ] CSRF tokens in all forms and AJAX requests  
-- [ ] Input validation on frontend before submission
-- [ ] Clickjacking protection configured
-- [ ] Session security for preference storage
-**Quality Gates**: Security Checklist 100% completion  
-**Estimated Effort**: 2 days
-
-## Documentation and Training (P3 - Enhancement)
-
-### [T032] Create User Documentation [P3]
-**Files**: Documentation files (new)  
-**Dependencies**: [T028], [T029]  
-**User Story**: [US-2] Intuitive navigation  
-**Description**: Create user guides for new interface features  
-**Acceptance Criteria**:
-- [ ] Quick start guide for new interface features
-- [ ] User preference configuration guide
-- [ ] Accessibility feature documentation
-- [ ] Troubleshooting guide for common issues
-- [ ] Video tutorials for key workflows
-**Quality Gates**: UX Checklist documentation items  
-**Estimated Effort**: 2 days
-
-### [T033] Create Development Documentation [P3]
-**Files**: Technical documentation (new)  
-**Dependencies**: [T028], [T029]  
-**User Story**: System maintenance and extensibility  
-**Description**: Document technical implementation for future developers  
-**Acceptance Criteria**:
-- [ ] CSS architecture and component library documentation
-- [ ] JavaScript modules and API documentation
-- [ ] Accessibility implementation guide
-- [ ] Performance optimization guide
-- [ ] Browser compatibility maintenance guide
-**Quality Gates**: All checklist items documented for future reference  
+- [ ] Dynamic page title with contextual information
+- [ ] Action button bar with primary and secondary actions
+- [ ] Status indicators for current page context (job status, etc.)
+- [ ] Responsive action button grouping and overflow handling
+- [ ] Integration with breadcrumb navigation system
+- [ ] Search functionality integration where appropriate
+- [ ] Notification area for page-specific alerts and messages
+- [ ] Performance optimization for header rendering
+**Quality Gates**: Context accuracy testing + action accessibility review  
 **Estimated Effort**: 1.5 days
 
-## Optional Enhancement Tasks (P3)
-
-### [T034] Implement Advanced Theme System [P3]
-**Files**: `static/css/themes/` (new), user preference interface  
-**Dependencies**: [T007], [T031]  
-**User Story**: [US-7] Customizable interface  
-**Description**: Add light/dark theme switching capability  
+### [N007] Skip Links & Keyboard Navigation [P1] [P]
+**Files**: templates/etiquetas/components/skip-links.html, static/js/keyboard-nav.js  
+**Dependencies**: [N001], [F007]  
+**User Story**: [US-4] Accessible forms  
+**Description**: Comprehensive keyboard navigation and skip link system  
 **Acceptance Criteria**:
-- [ ] Light and dark theme CSS implemented
+- [ ] Skip links to main content, navigation, and search
+- [ ] Tab order optimization with focus trap management
+- [ ] Keyboard shortcuts for frequent actions (save, cancel, search)
+- [ ] Focus indicators with high contrast visibility
+- [ ] Screen reader announcements for navigation state changes
+- [ ] Modal dialog keyboard navigation with proper focus management
+- [ ] Escape key handling for dismissible components
+- [ ] Keyboard navigation testing across all major browsers
+**Quality Gates**: WCAG 2.1 AA keyboard compliance + screen reader testing  
+**Estimated Effort**: 2 days
+
+### [N008] Mobile Navigation Optimization [P1] [P]
+**Files**: static/css/mobile-nav.css, static/js/mobile-interactions.js  
+**Dependencies**: [N001], [N003]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Touch-optimized mobile navigation experience  
+**Acceptance Criteria**:
+- [ ] Swipe gesture support for navigation drawer
+- [ ] Touch-friendly button sizing (minimum 44px tap targets)
+- [ ] Pull-to-refresh functionality for data updates
+- [ ] Mobile-specific navigation patterns (bottom tab bar option)
+- [ ] Thumb-friendly positioning for one-handed use
+- [ ] Haptic feedback integration for supported devices
+- [ ] Offline navigation state management
+- [ ] Performance optimization for mobile devices
+**Quality Gates**: Mobile usability testing + touch interaction validation  
+**Estimated Effort**: 2 days
+
+## Phase 3: User Story 1 Implementation - Multi-Device Compatibility (P1 - MVP)
+*Responsive interface that works seamlessly across all device types*
+
+### [U1001] Responsive Dashboard Layout [P1] [P]
+**Files**: templates/etiquetas/dashboard.html, static/css/dashboard.css  
+**Dependencies**: [N005], [F004]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Responsive dashboard with adaptive widget layout  
+**Acceptance Criteria**:
+- [ ] Widget grid system that adapts from 1-4 columns based on screen size
+- [ ] Touch-friendly widget interactions for mobile devices
+- [ ] Dashboard customization with drag-and-drop reordering
+- [ ] Quick access buttons optimized for thumb navigation on mobile
+- [ ] Critical information prioritization on smaller screens
+- [ ] Offline dashboard functionality with cached data display
+- [ ] Loading states for dashboard widgets with skeleton screens
+- [ ] Performance optimization for mobile networks (3G/4G)
+**Quality Gates**: Multi-device usability testing + performance benchmarks  
+**Estimated Effort**: 3 days
+
+### [U1002] Mobile-First Template Management [P1] [P]
+**Files**: templates/etiquetas/templates.html, static/css/template-management.css  
+**Dependencies**: [U1001], [N001]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Mobile-optimized template browsing and management  
+**Acceptance Criteria**:
+- [ ] Card-based template gallery with infinite scroll on mobile
+- [ ] Touch gestures for template actions (swipe to edit/delete)
+- [ ] Mobile-friendly template preview with zoom capabilities
+- [ ] Voice search integration for template discovery
+- [ ] Bulk template operations with multi-select interface
+- [ ] Offline template caching for frequently used items
+- [ ] Template image optimization for mobile bandwidth
+- [ ] Quick template creation workflow for mobile devices
+**Quality Gates**: Mobile UX testing + offline functionality validation  
+**Estimated Effort**: 3 days
+
+### [U1003] Responsive Mixing Interface [P1] [P]
+**Files**: templates/etiquetas/mixing.html, static/css/mixing-interface.css  
+**Dependencies**: [U1001], [F006]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Mobile-optimized tintometric mixing workflow  
+**Acceptance Criteria**:
+- [ ] Vertical layout optimization for mobile mixing calculations
+- [ ] Large touch targets for pigment selection and quantity input
+- [ ] Landscape mode optimization for tablet mixing operations
+- [ ] Real-time calculation updates with debounced inputs
+- [ ] Mobile scanner integration for barcode/QR code reading
+- [ ] Voice input support for hands-free mixing instructions
+- [ ] Haptic feedback for successful mixing operations
+- [ ] Responsive formula visualization with zoom and pan
+**Quality Gates**: Mixing workflow usability testing + accuracy validation  
+**Estimated Effort**: 3.5 days
+
+### [U1004] Mobile Job Management [P1] [P]
+**Files**: templates/etiquetas/jobs.html, static/css/job-management.css  
+**Dependencies**: [U1001], [N006]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Touch-optimized job tracking and management interface  
+**Acceptance Criteria**:
+- [ ] Job list with pull-to-refresh and lazy loading
+- [ ] Swipe actions for common job operations (complete, cancel, edit)
+- [ ] Mobile-friendly job detail view with collapsible sections
+- [ ] Photo capture integration for job documentation
+- [ ] GPS location tracking for mobile job completion
+- [ ] Push notifications for job status updates
+- [ ] Offline job data synchronization when connectivity returns
+- [ ] Quick job creation workflow optimized for mobile input
+**Quality Gates**: Mobile job workflow testing + sync reliability validation  
+**Estimated Effort**: 3 days
+
+### [U1005] Cross-Device State Synchronization [P1] [P]
+**Files**: static/js/sync.js, apps/core/views.py (API endpoints)  
+**Dependencies**: [U1002], [U1003], [U1004]  
+**User Story**: [US-1] Multi-device compatibility  
+**Description**: Seamless state sync between desktop and mobile devices  
+**Acceptance Criteria**:
+- [ ] Real-time synchronization of user preferences across devices
+- [ ] Job progress synchronization with conflict resolution
+- [ ] Template modifications sync between desktop and mobile
+- [ ] Cross-device session management with secure token handling
+- [ ] Offline-first architecture with background synchronization
+- [ ] Bandwidth-optimized sync with delta updates only
+- [ ] Sync status indicators with manual sync trigger options
+- [ ] Data integrity validation for synchronized content
+**Quality Gates**: Cross-device testing + data consistency validation  
+**Estimated Effort**: 4 days
+
+## Phase 4: User Story 2 Implementation - Intuitive Navigation (P1 - MVP)
+*Clear, intuitive navigation that helps users find information quickly*
+
+### [U2001] Smart Search Implementation [P1] [P]
+**Files**: templates/etiquetas/components/search.html, static/js/search.js  
+**Dependencies**: [N001], [F006]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Intelligent search across all system content  
+**Acceptance Criteria**:
+- [ ] Global search with autocomplete and suggestions
+- [ ] Contextual search results (templates, jobs, customers)
+- [ ] Search result highlighting with relevant snippets
+- [ ] Recent searches and search history management
+- [ ] Voice search support for hands-free operation
+- [ ] Advanced search filters with faceted navigation
+- [ ] Search performance optimization with debouncing
+- [ ] Search analytics for improving result relevance
+**Quality Gates**: Search relevance testing + performance benchmarks  
+**Estimated Effort**: 3 days
+
+### [U2002] Context-Aware Navigation [P1] [P]
+**Files**: apps/core/middleware.py, templates/etiquetas/components/context-nav.html  
+**Dependencies**: [N002], [N006]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Dynamic navigation that adapts to user context and workflow  
+**Acceptance Criteria**:
+- [ ] Workflow-aware navigation suggestions (next logical steps)
+- [ ] Recently accessed items quick access menu
+- [ ] Contextual actions based on current page and user role
+- [ ] Navigation personalization based on usage patterns
+- [ ] Breadcrumb enhancement with contextual information
+- [ ] Smart navigation shortcuts for power users
+- [ ] Navigation state persistence across sessions
+- [ ] Multi-level navigation with clear hierarchy indication
+**Quality Gates**: Navigation efficiency testing + user workflow validation  
+**Estimated Effort**: 3.5 days
+
+### [U2003] Information Architecture Optimization [P1] [P]
+**Files**: templates/etiquetas/components/info-hierarchy.html, static/css/information-design.css  
+**Dependencies**: [N005], [U2001]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Optimized information hierarchy for quick content discovery  
+**Acceptance Criteria**:
+- [ ] Card-based information design with clear visual hierarchy
+- [ ] Scannable content layout with proper spacing and typography
+- [ ] Progressive disclosure for complex information
+- [ ] Visual cues for different content types (jobs, templates, etc.)
+- [ ] Information density options (compact, comfortable, spacious)
+- [ ] Content filtering and sorting with persistent preferences
+- [ ] Quick preview functionality for detailed items
+- [ ] Accessibility-first information design with screen reader optimization
+**Quality Gates**: Information findability testing + cognitive load assessment  
+**Estimated Effort**: 2.5 days
+
+### [U2004] Help System Integration [P1] [P]
+**Files**: templates/etiquetas/components/help-system.html, static/js/help.js  
+**Dependencies**: [U2002], [F007]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Contextual help system integrated into navigation flow  
+**Acceptance Criteria**:
+- [ ] Context-sensitive help tooltips and onboarding
+- [ ] Interactive tutorial system for new users
+- [ ] Help search with instant results and suggestions
+- [ ] Video tutorial integration within the interface
+- [ ] Help content versioning and updates management
+- [ ] Multi-language support for help content
+- [ ] Feedback system for help content effectiveness
+- [ ] Accessibility compliance for help system components
+**Quality Gates**: Help effectiveness testing + accessibility compliance audit  
+**Estimated Effort**: 2 days
+
+### [U2005] Navigation Performance Optimization [P1] [P]
+**Files**: static/js/nav-performance.js, navigation middleware  
+**Dependencies**: [U2001], [U2002], [F008]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Performance optimization for navigation components  
+**Acceptance Criteria**:
+- [ ] Navigation component lazy loading and code splitting
+- [ ] Search result caching with smart invalidation
+- [ ] Navigation state management with minimal re-renders
+- [ ] Predictive prefetching for likely navigation targets
+- [ ] Navigation animation performance optimization
+- [ ] Memory usage optimization for large navigation structures
+- [ ] Navigation accessibility performance (screen reader speed)
+- [ ] Real-time navigation performance monitoring
+**Quality Gates**: Navigation performance benchmarks + user experience metrics  
+**Estimated Effort**: 2 days
+
+## Phase 5: User Story 3 Implementation - Modern Visual Design (P1 - MVP)
+*Contemporary visual design that enhances usability and user satisfaction*
+
+### [U3001] Modern Design System Implementation [P1] [P]
+**Files**: static/css/design-system.css, static/css/tokens.css  
+**Dependencies**: [F003], [F005]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Comprehensive design system with consistent visual language  
+**Acceptance Criteria**:
+- [ ] Design tokens for colors, typography, spacing, and elevation
+- [ ] Component library with atomic design methodology
+- [ ] Brand-aligned color palette with accessibility compliance
+- [ ] Typography scale with responsive size adjustments
+- [ ] Icon system with SVG sprites and consistent styling
+- [ ] Animation library with performance-optimized transitions
+- [ ] Grid and layout systems with flexible component arrangements
+- [ ] Design system documentation with live component examples
+**Quality Gates**: Design consistency audit + brand alignment validation  
+**Estimated Effort**: 4 days
+
+### [U3002] Advanced Typography System [P1] [P]
+**Files**: static/css/typography.css, static/fonts/  
+**Dependencies**: [U3001], [F003]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Sophisticated typography system optimized for readability  
+**Acceptance Criteria**:
+- [ ] Web font optimization with preload and font-display strategies
+- [ ] Responsive typography with fluid scaling between breakpoints
+- [ ] Reading experience optimization (line length, spacing, contrast)
+- [ ] Multi-language typography support with font fallbacks
+- [ ] Print typography optimization for document generation
+- [ ] Dyslexia-friendly font options in accessibility preferences
+- [ ] Typography performance monitoring and optimization
+- [ ] Font loading strategies for improved perceived performance
+**Quality Gates**: Typography accessibility testing + reading comprehension validation  
+**Estimated Effort**: 2.5 days
+
+### [U3003] Interactive Elements & Micro-interactions [P1] [P]
+**Files**: static/css/interactions.css, static/js/micro-interactions.js  
+**Dependencies**: [U3001], [F006]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Polished interactive elements with delightful micro-interactions  
+**Acceptance Criteria**:
+- [ ] Button states with smooth hover and focus transitions
+- [ ] Form input interactions with validation feedback animations
+- [ ] Loading states with skeleton screens and progress indicators
+- [ ] Tooltip and popover interactions with accessibility compliance
+- [ ] Card hover effects and interaction feedback
+- [ ] Page transition animations with performance optimization
+- [ ] Gesture-based interactions for touch devices
+- [ ] Reduced motion preferences respect for accessibility
+**Quality Gates**: Interaction responsiveness testing + accessibility compliance  
+**Estimated Effort**: 3 days
+
+### [U3004] Visual Hierarchy & Content Design [P1] [P]
+**Files**: static/css/content-design.css, templates/etiquetas/components/content.html  
+**Dependencies**: [U3002], [N005]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Optimized visual hierarchy for content comprehension  
+**Acceptance Criteria**:
+- [ ] Content layout with clear information hierarchy
+- [ ] Visual emphasis techniques (contrast, size, positioning)
+- [ ] Content density options (compact, comfortable, spacious)
+- [ ] White space utilization for improved content readability
+- [ ] Content categorization with visual distinction
+- [ ] Responsive content adaptation across device sizes
+- [ ] Accessibility-first content design with screen reader optimization
+- [ ] Performance-optimized content rendering
+**Quality Gates**: Content comprehension testing + visual hierarchy validation  
+**Estimated Effort**: 2 days
+
+### [U3005] Theme System & Customization [P2] 
+**Files**: static/css/themes/, static/js/theme-manager.js  
+**Dependencies**: [U3001], [F007]  
+**User Story**: [US-3] Modern visual design  
+**Description**: Flexible theming system with user customization options  
+**Acceptance Criteria**:
+- [ ] Light and dark theme implementations with smooth transitions
+- [ ] High contrast theme for accessibility compliance
+- [ ] Custom theme creation tools for power users
 - [ ] System preference detection (prefers-color-scheme)
-- [ ] User theme selection saved to preferences
-- [ ] Smooth theme transition animations
-- [ ] All components compatible with both themes
-**Quality Gates**: Additional UX enhancement validation  
+- [ ] Theme persistence across sessions and devices
+- [ ] Brand customization options for white-label deployments
+- [ ] Real-time theme preview without page refresh
+- [ ] Performance optimization for theme switching
+**Quality Gates**: Theme consistency testing + accessibility validation  
 **Estimated Effort**: 3 days
 
-### [T035] Advanced Analytics Integration [P3]
-**Files**: Analytics tracking code, dashboard enhancements  
-**Dependencies**: [T023]  
-**User Story**: [US-6] Information display  
-**Description**: Add detailed user interaction analytics  
+## Phase 6: User Story 4 Implementation - Accessible Forms (P1 - MVP)
+*Form design that meets accessibility standards and provides excellent UX*
+
+### [U4001] Comprehensive Form Accessibility [P1] [P]
+**Files**: static/css/forms-accessible.css, static/js/form-accessibility.js  
+**Dependencies**: [F007], [U3001]  
+**User Story**: [US-4] Accessible forms  
+**Description**: WCAG 2.1 AA compliant form components and interactions  
 **Acceptance Criteria**:
-- [ ] User flow tracking through interface
-- [ ] Feature usage analytics
-- [ ] Performance metrics dashboard
-- [ ] A/B testing framework implementation
-- [ ] Privacy-compliant analytics implementation
-**Quality Gates**: Performance and privacy compliance verified  
+- [ ] Proper label association with programmatic relationships
+- [ ] Error identification with clear, specific messaging
+- [ ] Keyboard navigation with logical tab order and focus management
+- [ ] Screen reader announcements for form state changes
+- [ ] Required field indication with non-color methods
+- [ ] Form validation with accessible error reporting
+- [ ] Help text association with form controls
+- [ ] Timeout handling with user control and warnings
+**Quality Gates**: WCAG 2.1 AA form compliance audit + screen reader testing  
+**Estimated Effort**: 3 days
+
+### [U4002] Advanced Form Validation & Feedback [P1] [P]
+**Files**: static/js/form-validation.js, templates/etiquetas/components/form-feedback.html  
+**Dependencies**: [U4001], [F006]  
+**User Story**: [US-4] Accessible forms  
+**Description**: Real-time validation with accessible feedback mechanisms  
+**Acceptance Criteria**:
+- [ ] Client-side validation with server-side security backup
+- [ ] Progressive enhancement for validation (works without JavaScript)
+- [ ] Real-time feedback with debounced validation triggers
+- [ ] Contextual help and guidance for complex form fields
+- [ ] Error prevention with input formatting and constraints
+- [ ] Success confirmation with clear visual and audio cues
+- [ ] Multi-step form progress indication with navigation
+- [ ] Form abandonment prevention with smart save functionality
+**Quality Gates**: Form usability testing + validation accuracy verification  
+**Estimated Effort**: 3.5 days
+
+### [U4003] Smart Form Components [P1] [P]
+**Files**: templates/etiquetas/components/smart-forms.html, static/js/smart-forms.js  
+**Dependencies**: [U4002], [U3003]  
+**User Story**: [US-4] Accessible forms  
+**Description**: Intelligent form components that adapt to user input patterns  
+**Acceptance Criteria**:
+- [ ] Auto-complete integration with accessibility support
+- [ ] Smart field formatting (phone numbers, dates, currency)
+- [ ] Dynamic form behavior based on previous selections
+- [ ] Voice input support with accessibility compliance
+- [ ] Mobile-optimized input types and virtual keyboards
+- [ ] Form field suggestions based on user history
+- [ ] Bulk data entry support with keyboard shortcuts
+- [ ] Form template system for repetitive data entry
+**Quality Gates**: Smart functionality testing + accessibility validation  
+**Estimated Effort**: 3 days
+
+### [U4004] Form State Management & Recovery [P1] [P]
+**Files**: static/js/form-state.js, apps/core/models.py (form drafts)  
+**Dependencies**: [U4002], [F006]  
+**User Story**: [US-4] Accessible forms  
+**Description**: Robust form state preservation with conflict resolution  
+**Acceptance Criteria**:
+- [ ] Auto-save functionality with configurable intervals
+- [ ] Form draft storage with expiration management
+- [ ] Cross-device form state synchronization
+- [ ] Conflict resolution for concurrent form editing
+- [ ] Recovery from browser crashes and network interruptions
+- [ ] Form version control with change tracking
+- [ ] Collaborative form editing with real-time updates
+- [ ] Privacy-compliant data storage and cleanup
+**Quality Gates**: State recovery testing + data privacy compliance  
 **Estimated Effort**: 2.5 days
 
-## Task Dependencies Summary
+### [U4005] Form Performance & Security [P1] [P]
+**Files**: static/js/form-security.js, apps/core/security/forms.py  
+**Dependencies**: [U4003], [U4004]  
+**User Story**: [US-4] Accessible forms  
+**Description**: High-performance forms with comprehensive security measures  
+**Acceptance Criteria**:
+- [ ] CSRF protection with token management
+- [ ] Input sanitization and XSS prevention
+- [ ] Rate limiting for form submissions
+- [ ] Honeypot fields for bot detection
+- [ ] Form submission performance optimization
+- [ ] File upload security with virus scanning
+- [ ] Audit logging for form submissions and changes
+- [ ] GDPR compliance for form data handling
+**Quality Gates**: Security penetration testing + performance benchmarks  
+**Estimated Effort**: 2 days
 
-### Critical Path (P1 MVP Tasks)
-```
-T001 → T002 → T004 → T005 → T024 → T025 → T026 → T027 → T028 → T029 → T031
-       T007 → T008 → T010 → T017 → T018 → T019 → T020
-       T006 → T012 → (Integration Tasks)
-```
+## Phase 7: Business Logic Integration (P1 - MVP)
+*Integration with core tintometric business processes*
 
-### Parallel Execution Opportunities
-- **[P] Tasks**: T003, T007, T008, T011, T019, T021, T022 can run in parallel
-- **Phase Parallelization**: Phases 2 & 3 can overlap once foundation is complete
-- **Testing Tasks**: Can run in parallel once implementation is complete
+### [B001] Tintometric Calculator Integration [P1] [P]
+**Files**: static/js/tintometric-calculator.js, templates/etiquetas/mixing-enhanced.html  
+**Dependencies**: [U1003], [U4003]  
+**User Story**: Implementation foundation for all user stories  
+**Description**: Modern interface for tintometric mixing calculations  
+**Acceptance Criteria**:
+- [ ] Real-time pigment calculation with visual feedback
+- [ ] Formula validation with error prevention
+- [ ] Mobile-optimized calculator interface with large touch targets
+- [ ] Barcode scanner integration for pigment identification
+- [ ] Calculation history with undo/redo functionality
+- [ ] Batch calculation support for multiple containers
+- [ ] Cost calculation integration with inventory pricing
+- [ ] Formula sharing and collaboration features
+**Quality Gates**: Calculation accuracy testing + mobile usability validation  
+**Estimated Effort**: 4 days
 
-### Quality Gates by Phase
-- **Phase 1**: Responsive Design + Browser Compatibility checklists
-- **Phase 2**: Performance + UX checklists  
-- **Phase 3**: UX + Security checklists
-- **Phase 4**: Accessibility checklist (100%)
-- **Phase 5**: Performance checklist (100%)
+### [B002] Inventory Management Interface [P1] [P]
+**Files**: templates/etiquetas/inventory-modern.html, static/js/inventory-management.js  
+**Dependencies**: [U2001], [U3004]  
+**User Story**: Implementation foundation for all user stories  
+**Description**: Modern inventory tracking and management interface  
+**Acceptance Criteria**:
+- [ ] Real-time inventory level monitoring with alerts
+- [ ] Low stock notifications with automatic reorder suggestions
+- [ ] Inventory search and filtering with advanced options
+- [ ] Batch inventory operations (adjustments, transfers)
+- [ ] Mobile inventory counting with barcode scanning
+- [ ] Inventory analytics dashboard with trend analysis
+- [ ] Integration with supplier catalogs and ordering systems
+- [ ] Audit trail for all inventory movements
+**Quality Gates**: Inventory accuracy validation + performance testing  
+**Estimated Effort**: 3.5 days
+
+### [B003] Customer Relationship Management [P1] [P]
+**Files**: templates/etiquetas/customer-management.html, static/js/crm-integration.js  
+**Dependencies**: [U2002], [U4002]  
+**User Story**: Implementation foundation for all user stories  
+**Description**: Customer data management with tintometric history  
+**Acceptance Criteria**:
+- [ ] Customer profile management with color history
+- [ ] Purchase history tracking with pattern analysis
+- [ ] Customer preference learning and recommendations
+- [ ] Communication history and follow-up management
+- [ ] Customer segmentation and targeted marketing tools
+- [ ] Mobile customer lookup with quick order processing
+- [ ] Customer feedback collection and analysis
+- [ ] GDPR-compliant data management and privacy controls
+**Quality Gates**: Data privacy compliance + customer experience validation  
+**Estimated Effort**: 3 days
+
+### [B004] Label Generation System [P1] [P]
+**Files**: templates/etiquetas/label-designer.html, static/js/label-generator.js  
+**Dependencies**: [U3001], [B001]  
+**User Story**: Implementation foundation for all user stories  
+**Description**: Modern label design and generation interface  
+**Acceptance Criteria**:
+- [ ] WYSIWYG label designer with drag-and-drop elements
+- [ ] Template library for common label formats
+- [ ] Barcode and QR code generation with error correction
+- [ ] Print preview with multiple printer format support
+- [ ] Batch label generation for multiple products
+- [ ] Label compliance checking for regulatory requirements
+- [ ] Multi-language label support with automatic translation
+- [ ] Integration with external printing services
+**Quality Gates**: Label accuracy testing + print quality validation  
+**Estimated Effort**: 3.5 days
+
+### [B005] Reporting & Analytics Dashboard [P2]
+**Files**: templates/etiquetas/analytics-dashboard.html, static/js/analytics.js  
+**Dependencies**: [B001], [B002], [B003]  
+**User Story**: Implementation enhancement for business intelligence  
+**Description**: Comprehensive analytics and reporting interface  
+**Acceptance Criteria**:
+- [ ] Real-time dashboard with key performance indicators
+- [ ] Interactive charts and visualizations with drill-down capability
+- [ ] Custom report builder with scheduling and automation
+- [ ] Predictive analytics for inventory and sales forecasting
+- [ ] Performance benchmarking and trend analysis
+- [ ] Export functionality with multiple format support
+- [ ] Mobile-optimized analytics viewing
+- [ ] Data privacy compliance for analytics processing
+**Quality Gates**: Analytics accuracy validation + performance optimization  
+**Estimated Effort**: 4 days
+
+## Phase 8: Advanced Features & Enhancements (P2 - Important)
+*Enhanced functionality for improved productivity and user experience*
+
+### [A001] Progressive Web App Implementation [P2] [P]
+**Files**: static/js/service-worker.js, manifest.json, PWA assets  
+**Dependencies**: [F008], [U1005]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Transform interface into a Progressive Web App  
+**Acceptance Criteria**:
+- [ ] Service worker for offline functionality and caching  
+- [ ] App manifest for native app-like installation
+- [ ] Offline-first architecture with background synchronization
+- [ ] Push notification support for important updates
+- [ ] App shell caching for instant loading
+- [ ] Background sync for delayed operations
+- [ ] Native device integration (camera, GPS, sensors)
+- [ ] PWA performance optimization and auditing
+**Quality Gates**: PWA compliance audit + offline functionality testing  
+**Estimated Effort**: 4 days
+
+### [A002] Advanced Search & Filtering [P2] [P]
+**Files**: static/js/advanced-search.js, templates/etiquetas/components/search-advanced.html  
+**Dependencies**: [U2001], [B002]  
+**User Story**: [US-2] Intuitive navigation + [US-6] Information display  
+**Description**: Sophisticated search with machine learning recommendations  
+**Acceptance Criteria**:
+- [ ] Faceted search with dynamic filter options
+- [ ] Natural language query processing
+- [ ] Search result ranking based on user behavior
+- [ ] Saved search functionality with alerts
+- [ ] Visual search for color matching
+- [ ] Search analytics and behavior tracking
+- [ ] Cross-reference search across all data types
+- [ ] Search performance optimization for large datasets
+**Quality Gates**: Search relevance testing + performance benchmarks  
+**Estimated Effort**: 3.5 days
+
+### [A003] Real-time Collaboration Features [P2] [P]
+**Files**: static/js/collaboration.js, WebSocket integration  
+**Dependencies**: [U1005], [U4004]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Real-time collaborative features for team workflows  
+**Acceptance Criteria**:
+- [ ] Real-time collaborative editing for formulas and templates
+- [ ] Live cursor tracking and user presence indicators
+- [ ] Conflict resolution for simultaneous edits
+- [ ] Comment and annotation system for collaborative review
+- [ ] Activity feed with real-time updates
+- [ ] Team workspace management and permissions
+- [ ] Real-time chat integration within workflows
+- [ ] Collaborative decision-making tools for approvals
+**Quality Gates**: Collaboration functionality testing + conflict resolution validation  
+**Estimated Effort**: 4.5 days
+
+### [A004] Advanced Analytics & Machine Learning [P2] [P]
+**Files**: static/js/ml-analytics.js, analytics integration  
+**Dependencies**: [B005], [A002]  
+**User Story**: [US-6] Information display  
+**Description**: Machine learning-powered insights and recommendations  
+**Acceptance Criteria**:
+- [ ] Predictive analytics for inventory management
+- [ ] Customer behavior analysis and recommendations
+- [ ] Formula optimization suggestions based on usage patterns
+- [ ] Anomaly detection for quality control
+- [ ] Personalized dashboard content based on user behavior
+- [ ] Automated report generation with insights
+- [ ] Performance prediction and optimization recommendations
+- [ ] Privacy-compliant ML model training and deployment
+**Quality Gates**: ML model accuracy validation + privacy compliance review  
+**Estimated Effort**: 4 days
+
+### [A005] Integration Ecosystem [P2] [P]
+**Files**: static/js/integrations.js, API client libraries  
+**Dependencies**: [B004], [A001]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Third-party integrations and API ecosystem  
+**Acceptance Criteria**:
+- [ ] ERP system integration for enterprise customers
+- [ ] E-commerce platform connections (Shopify, WooCommerce)
+- [ ] Accounting software integration (QuickBooks, Xero)
+- [ ] Supplier catalog integration for automated ordering
+- [ ] Shipping and logistics integration for order fulfillment
+- [ ] Webhook system for real-time data synchronization
+- [ ] API rate limiting and security management
+- [ ] Integration health monitoring and alerting
+**Quality Gates**: Integration reliability testing + security compliance audit  
+**Estimated Effort**: 3.5 days
+
+## Phase 9: Testing & Quality Assurance (P1 - MVP)
+*Comprehensive testing to ensure reliability, performance, and compliance*
+
+### [T001] Cross-Browser Compatibility Testing [P1] [P]
+**Files**: Test documentation, compatibility fixes  
+**Dependencies**: [U1001], [U2001], [U3001], [U4001]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Comprehensive cross-browser testing and compatibility fixes  
+**Acceptance Criteria**:
+- [ ] Chrome 96+, Firefox 94+, Safari 15+, Edge 96+ full functionality testing
+- [ ] Mobile browsers (iOS Safari, Chrome Mobile, Samsung Internet) validation
+- [ ] Progressive enhancement fallbacks verified for all features
+- [ ] Visual regression testing across all supported browsers
+- [ ] Performance consistency validation across browser engines
+- [ ] Feature detection and polyfill effectiveness testing
+- [ ] Browser-specific bug fixes and workarounds implementation
+- [ ] Automated cross-browser testing pipeline setup
+**Quality Gates**: 100% feature compatibility + visual consistency validation  
+**Estimated Effort**: 4 days
+
+### [T002] Accessibility Compliance Audit [P1] [P]
+**Files**: Accessibility fixes across all templates and components  
+**Dependencies**: [F007], [U4001], [N007]  
+**User Story**: [US-4] Accessible forms  
+**Description**: WCAG 2.1 AA compliance audit and remediation  
+**Acceptance Criteria**:
+- [ ] Automated accessibility testing with axe-core and Lighthouse
+- [ ] Manual screen reader testing (NVDA, JAWS, VoiceOver)
+- [ ] Keyboard navigation testing for 100% functionality coverage
+- [ ] Color contrast verification for all interface elements
+- [ ] Focus management validation for dynamic content
+- [ ] ARIA implementation review and optimization
+- [ ] Cognitive accessibility testing for complex workflows
+- [ ] Accessibility documentation and training materials
+**Quality Gates**: WCAG 2.1 AA certification + screen reader compatibility  
+**Estimated Effort**: 4 days
+
+### [T003] Performance Testing & Optimization [P1] [P]
+**Files**: Performance optimizations, monitoring setup  
+**Dependencies**: [F008], [A001], [B001]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Performance testing and optimization across all devices  
+**Acceptance Criteria**:
+- [ ] Core Web Vitals optimization (LCP <2.5s, FID <100ms, CLS <0.1)
+- [ ] Mobile performance testing on 3G and 4G networks
+- [ ] Heavy calculation performance testing (tintometric operations)
+- [ ] Memory usage optimization and leak detection
+- [ ] Network performance testing with offline scenarios
+- [ ] Bundle size optimization and code splitting verification
+- [ ] CDN performance testing and optimization
+- [ ] Real User Monitoring setup and baseline establishment
+**Quality Gates**: Core Web Vitals passing + performance budget compliance  
+**Estimated Effort**: 3 days
+
+### [T004] Security Testing & Penetration Testing [P1] [P]
+**Files**: Security fixes, vulnerability patches  
+**Dependencies**: [U4005], [A005], [F007]  
+**User Story**: [US-4] Accessible forms + Security foundation  
+**Description**: Comprehensive security testing and vulnerability assessment  
+**Acceptance Criteria**:
+- [ ] XSS protection testing across all user input points
+- [ ] CSRF token validation and attack prevention testing
+- [ ] SQL injection protection verification
+- [ ] Authentication and authorization testing
+- [ ] Session security and timeout testing
+- [ ] File upload security and malware protection testing
+- [ ] API security testing and rate limiting validation
+- [ ] Third-party integration security assessment
+**Quality Gates**: Security compliance + penetration testing report clearance  
+**Estimated Effort**: 3 days
+
+### [T005] User Experience Testing [P1] [P]
+**Files**: UX improvements based on testing feedback  
+**Dependencies**: [U1001], [U2002], [U3003], [U4002]  
+**User Story**: All user stories validation  
+**Description**: Comprehensive user experience testing and optimization  
+**Acceptance Criteria**:
+- [ ] Usability testing with representative users
+- [ ] Task completion rate measurement and optimization
+- [ ] User interface intuitivenes validation
+- [ ] Mobile user experience testing across devices
+- [ ] Workflow efficiency measurement and improvement
+- [ ] Error recovery and help system effectiveness testing
+- [ ] User satisfaction surveys and feedback collection
+- [ ] A/B testing setup for continuous UX optimization
+**Quality Gates**: User satisfaction metrics + task completion benchmarks  
+**Estimated Effort**: 3 days
+
+### [T006] Integration Testing [P1] [P]
+**Files**: Integration test fixes, API validation  
+**Dependencies**: [B001], [B002], [B003], [B004]  
+**User Story**: Implementation foundation validation  
+**Description**: End-to-end integration testing for all system components  
+**Acceptance Criteria**:
+- [ ] API integration testing with error handling validation
+- [ ] Database transaction testing and rollback scenarios
+- [ ] Third-party service integration testing
+- [ ] Workflow integration testing across all user stories
+- [ ] Data synchronization testing across devices
+- [ ] Backup and recovery system testing
+- [ ] Load testing for concurrent user scenarios
+- [ ] Disaster recovery and business continuity testing
+**Quality Gates**: System reliability + data integrity validation  
+**Estimated Effort**: 3.5 days
+
+## Phase 10: Deployment & Documentation (P2 - Important)
+*Production deployment preparation and comprehensive documentation*
+
+### [D001] Production Deployment Preparation [P2] [P]
+**Files**: Deployment configuration, production settings  
+**Dependencies**: [T001], [T002], [T003], [T004]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Production environment setup and deployment automation  
+**Acceptance Criteria**:
+- [ ] Production build optimization and asset compilation
+- [ ] Environment configuration for staging and production
+- [ ] Database migration and backup strategies
+- [ ] SSL certificate setup and security configuration
+- [ ] CDN configuration for static asset delivery
+- [ ] Monitoring and alerting system setup
+- [ ] Automated deployment pipeline with rollback capability
+- [ ] Performance monitoring and error tracking in production
+**Quality Gates**: Production readiness checklist + deployment testing  
+**Estimated Effort**: 3 days
+
+### [D002] User Documentation & Training Materials [P2] [P]
+**Files**: Documentation files, training materials  
+**Dependencies**: [T005], [U2004]  
+**User Story**: [US-2] Intuitive navigation  
+**Description**: Comprehensive user documentation and training resources  
+**Acceptance Criteria**:
+- [ ] User manual with step-by-step workflows
+- [ ] Video tutorial library for key features
+- [ ] Interactive onboarding system for new users
+- [ ] Accessibility feature documentation and guides
+- [ ] Troubleshooting guide with common solutions
+- [ ] FAQ system with searchable content
+- [ ] Multi-language documentation support
+- [ ] Documentation versioning and update management
+**Quality Gates**: Documentation completeness + user feedback validation  
+**Estimated Effort**: 3 days
+
+### [D003] Developer Documentation [P2] [P]
+**Files**: Technical documentation, code comments  
+**Dependencies**: [F005], [U3001], [A005]  
+**User Story**: System maintenance and extensibility  
+**Description**: Technical documentation for developers and maintainers  
+**Acceptance Criteria**:
+- [ ] Architecture documentation with system diagrams
+- [ ] Component library documentation with examples
+- [ ] API documentation with interactive testing
+- [ ] Development workflow and contribution guidelines
+- [ ] Performance optimization guide and benchmarks
+- [ ] Accessibility implementation guide and checklist
+- [ ] Browser compatibility matrix and testing procedures
+- [ ] Troubleshooting guide for development issues
+**Quality Gates**: Documentation accuracy + developer feedback validation  
+**Estimated Effort**: 2.5 days
+
+### [D004] System Monitoring & Analytics Setup [P2] [P]
+**Files**: Monitoring configuration, analytics setup  
+**Dependencies**: [D001], [F008]  
+**User Story**: [US-8] Progressive enhancement  
+**Description**: Production monitoring, analytics, and performance tracking  
+**Acceptance Criteria**:
+- [ ] Application performance monitoring (APM) setup
+- [ ] User analytics and behavior tracking implementation
+- [ ] Error tracking and automated alerting system
+- [ ] Uptime monitoring and availability reporting
+- [ ] Database performance monitoring and optimization alerts
+- [ ] Security monitoring and intrusion detection
+- [ ] Business metrics dashboard and KPI tracking
+- [ ] GDPR-compliant analytics and data privacy controls
+**Quality Gates**: Monitoring effectiveness + privacy compliance validation  
+**Estimated Effort**: 2 days
+
+### [D005] Maintenance & Support Framework [P3] 
+**Files**: Support documentation, maintenance procedures  
+**Dependencies**: [D002], [D003], [D004]  
+**User Story**: Long-term system sustainability  
+**Description**: Framework for ongoing maintenance and user support  
+**Acceptance Criteria**:
+- [ ] Support ticket system integration
+- [ ] Maintenance schedule and update procedures
+- [ ] Bug reporting and tracking system
+- [ ] Feature request collection and evaluation process
+- [ ] User feedback collection and analysis system
+- [ ] System backup and disaster recovery procedures
+- [ ] Performance baseline establishment and monitoring
+- [ ] Long-term roadmap and evolution planning
+**Quality Gates**: Support process validation + maintenance procedure testing  
+**Estimated Effort**: 2 days
 
 ---
 
-**Ready for implementation with systematic quality validation** ✅  
-**Next Phase**: `/speckit.analyze` to validate spec → plan → tasks alignment
+## Task Dependencies & Execution Plan
+
+### Critical Path Analysis
+The critical path for MVP delivery follows this sequence:
+```
+F001 → F002 → F003 → F004 → F005 → U3001 → U4001 → B001 → T001 → D001
+```
+
+### Parallel Execution Opportunities ⚡
+**Phase 1-2**: Most foundation and navigation tasks can run in parallel after F002  
+**Phase 3-6**: User story implementations can run in parallel with dedicated teams  
+**Phase 7**: Business logic tasks can run concurrently with advanced features  
+**Phase 8-9**: Testing can begin as soon as MVP components are complete  
+
+### Team Structure Recommendation
+- **Team A**: Foundation & Infrastructure (F001-F008, N001-N008)
+- **Team B**: User Stories 1-2 (U1001-U1005, U2001-U2005) 
+- **Team C**: User Stories 3-4 (U3001-U3005, U4001-U4005)
+- **Team D**: Business Logic & Advanced Features (B001-B005, A001-A005)
+- **Team E**: Testing & Quality Assurance (T001-T006)
+- **Team F**: Documentation & Deployment (D001-D005)
+
+### Quality Gates Summary
+- **WCAG 2.1 AA Compliance**: Required for phases 4, 6, 9
+- **Core Web Vitals**: LCP <2.5s, FID <100ms, CLS <0.1
+- **Browser Support**: Chrome 96+, Firefox 94+, Safari 15+, Edge 96+
+- **Mobile Performance**: 3G network compatibility, touch optimization
+- **Security Standards**: OWASP compliance, penetration testing clearance
+- **Business Logic Accuracy**: Tintometric calculation validation
+
+### MVP Definition 🎯
+**MVP includes all P1 tasks from Phases 1-6 and 9**: 68 tasks covering responsive design, navigation, visual design, accessibility, business logic integration, and quality assurance.
+
+**Estimated Timeline**: 
+- **MVP (P1)**: 4 weeks with 4-6 developers
+- **Full Feature Set (P1+P2)**: 6 weeks with 6-8 developers  
+- **Complete Implementation (All)**: 8 weeks with full team
+
+**Ready for Implementation** ✅  
+Next recommended step: `/speckit.analyze` to validate specification consistency before development begins.

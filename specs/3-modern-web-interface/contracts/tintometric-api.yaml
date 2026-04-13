@@ -1,0 +1,917 @@
+openapi: 3.1.0
+info:
+  title: Tintometric System API
+  description: Enhanced API for modern paint store interface with comprehensive tintometric operations
+  version: 1.1.0
+  contact:
+    name: Paint Store System
+    
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.tintas.example.com/api/v1  
+    description: Production server
+
+security:
+  - JWT: []
+
+paths:
+  # Pigments API
+  /pigments/:
+    get:
+      summary: List all available pigments
+      tags: [Pigments]
+      parameters:
+        - $ref: '#/components/parameters/PaginationOffset'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [Organic, Inorganic, Metallic, Pearl, Fluorescent]
+        - name: color_family
+          in: query
+          schema:
+            type: string
+        - name: supplier
+          in: query
+          schema:
+            type: string
+        - name: in_stock_only
+          in: query  
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: Paginated list of pigments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPigmentList'
+    post:
+      summary: Create new pigment (Admin only)
+      tags: [Pigments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PigmentCreate'
+      responses:
+        201:
+          description: Pigment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pigment'
+
+  /pigments/{id}/:
+    get:
+      summary: Get specific pigment details
+      tags: [Pigments]
+      parameters:
+        - $ref: '#/components/parameters/PigmentId'
+      responses:
+        200:
+          description: Pigment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pigment'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /pigments/{id}/reserve/:
+    post:
+      summary: Reserve pigment quantity for mixing operation
+      tags: [Pigments]
+      parameters:
+        - $ref: '#/components/parameters/PigmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PigmentReservation'
+      responses:
+        200:
+          description: Pigment reserved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResult'
+
+  # Formulas API  
+  /formulas/:
+    get:
+      summary: List color formulas with filtering
+      tags: [Formulas]
+      parameters:
+        - $ref: '#/components/parameters/PaginationOffset'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - name: color_code
+          in: query
+          schema:
+            type: string
+          description: Search by color code (RAL, Pantone, etc.)
+        - name: color_family
+          in: query
+          schema:
+            type: string
+        - name: base_type
+          in: query
+          schema:
+            type: string
+            enum: [WaterBased, SolventBased, EpoxyBased]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [Interior, Exterior, Primer, Specialty]
+        - name: is_standard
+          in: query
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Paginated list of formulas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFormulaList'
+
+  /formulas/{id}/:
+    get:
+      summary: Get formula details with ingredients
+      tags: [Formulas]
+      parameters:
+        - $ref: '#/components/parameters/FormulaId'
+      responses:
+        200:
+          description: Complete formula details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorFormula'
+
+  /formulas/{id}/calculate/:
+    post:
+      summary: Calculate ingredient quantities for target volume
+      tags: [Formulas]
+      parameters:
+        - $ref: '#/components/parameters/FormulaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixtureCalculationRequest'
+      responses:
+        200:
+          description: Calculated ingredient quantities and cost estimate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixtureCalculationResponse'
+        400:
+          description: Invalid calculation parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # Mixtures API
+  /mixtures/:
+    get:
+      summary: List mixing operations with status filtering
+      tags: [Mixtures]
+      parameters:
+        - $ref: '#/components/parameters/PaginationOffset'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending, InProgress, QualityCheck, Completed, Failed, Cancelled]
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Paginated list of mixture records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMixtureList'
+    post:
+      summary: Create new mixture operation
+      tags: [Mixtures]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixtureCreate'
+      responses:
+        201:
+          description: Mixture created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixtureRecord'
+
+  /mixtures/{id}/:
+    get:
+      summary: Get mixture details and current status
+      tags: [Mixtures]
+      parameters:
+        - $ref: '#/components/parameters/MixtureId'
+      responses:
+        200:
+          description: Complete mixture details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixtureRecord'
+
+  /mixtures/{id}/execute/:
+    put:
+      summary: Record actual mixing execution with ingredients used
+      tags: [Mixtures]
+      parameters:
+        - $ref: '#/components/parameters/MixtureId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MixtureExecution'
+      responses:
+        200:
+          description: Execution recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixtureRecord'
+
+  /mixtures/{id}/quality-check/:
+    put:
+      summary: Record quality control results
+      tags: [Mixtures]  
+      parameters:
+        - $ref: '#/components/parameters/MixtureId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityCheck'
+      responses:
+        200:
+          description: Quality check recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MixtureRecord'
+
+  # Labels API
+  /mixtures/{id}/labels/:
+    get:
+      summary: Get generated labels for mixture
+      tags: [Labels]
+      parameters:
+        - $ref: '#/components/parameters/MixtureId'
+      responses:
+        200:
+          description: Available label formats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelInfo'
+    post:
+      summary: Generate new label for mixture
+      tags: [Labels]
+      parameters:
+        - $ref: '#/components/parameters/MixtureId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelGeneration'
+      responses:
+        201:
+          description: Label generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelInfo'
+
+  # Inventory API
+  /inventory/:
+    get:
+      summary: Get current inventory levels
+      tags: [Inventory]
+      parameters:
+        - name: low_stock_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: pigment_ids
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        200:
+          description: Current inventory status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryLevel'
+
+  /inventory/movements/:
+    get:
+      summary: Get inventory movement history  
+      tags: [Inventory]
+      parameters:
+        - $ref: '#/components/parameters/PaginationOffset'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - name: pigment_id
+          in: query
+          schema:
+            type: string
+        - name: movement_type
+          in: query
+          schema:
+            type: string
+            enum: [Purchase, Sale, Adjustment, Reservation, Release]
+      responses:
+        200:
+          description: Paginated inventory movements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMovementList'
+
+components:
+  securitySchemes:
+    JWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PaginationOffset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    PaginationLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    PigmentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FormulaId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MixtureId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+  schemas:
+    # Core Business Entities
+    Pigment:
+      type: object
+      required: [id, code, name, color, density, cost_per_unit, category, supplier, stock_level, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 20
+          pattern: '^[A-Z0-9-]+$'
+        name:
+          type: string
+          maxLength: 100
+        color:
+          $ref: '#/components/schemas/ColorSpace'
+        density:
+          type: number
+          minimum: 0.1
+          maximum: 5.0
+          description: Density in g/ml
+        cost_per_unit:
+          type: number
+          minimum: 0
+          description: Cost per unit in local currency
+        category:
+          type: string
+          enum: [Organic, Inorganic, Metallic, Pearl, Fluorescent]
+        supplier:
+          type: string
+          maxLength: 100
+        safety_info:
+          $ref: '#/components/schemas/SafetyInfo'
+        stock_level:
+          $ref: '#/components/schemas/StockInfo'
+        is_active:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ColorSpace:
+      type: object
+      required: [rgb]
+      properties:
+        rgb:
+          $ref: '#/components/schemas/RGBColor'
+        lab:
+          $ref: '#/components/schemas/LABColor'
+        cmyk:
+          $ref: '#/components/schemas/CMYKColor'
+
+    RGBColor:
+      type: object
+      required: [r, g, b]
+      properties:
+        r:
+          type: integer
+          minimum: 0
+          maximum: 255
+        g:
+          type: integer
+          minimum: 0
+          maximum: 255
+        b:
+          type: integer
+          minimum: 0
+          maximum: 255
+
+    LABColor:
+      type: object
+      required: [l, a, b]
+      properties:
+        l:
+          type: number
+          minimum: 0
+          maximum: 100
+        a:
+          type: number
+          minimum: -128
+          maximum: 127
+        b:
+          type: number
+          minimum: -128
+          maximum: 127
+
+    CMYKColor:
+      type: object
+      required: [c, m, y, k]
+      properties:
+        c:
+          type: number
+          minimum: 0
+          maximum: 100
+        m:
+          type: number
+          minimum: 0
+          maximum: 100
+        y:
+          type: number
+          minimum: 0
+          maximum: 100
+        k:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    StockInfo:
+      type: object
+      required: [current_stock, unit, reserved_stock, reorder_level, last_updated]
+      properties:
+        current_stock:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+          enum: [kg, liters, pounds, gallons]
+        reserved_stock:
+          type: number
+          minimum: 0
+        reorder_level:
+          type: number
+          minimum: 0
+        last_updated:
+          type: string
+          format: date-time
+
+    SafetyInfo:
+      type: object
+      properties:
+        msds_url:
+          type: string
+          format: uri
+        hazard_warnings:
+          type: array
+          items:
+            type: string
+        safety_precautions:
+          type: array
+          items:
+            type: string
+
+    ColorFormula:
+      type: object
+      required: [id, code, name, target_color, base_type, category, ingredients, is_standard]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 100
+        target_color:
+          $ref: '#/components/schemas/ColorSpace'
+        base_type:
+          type: string
+          enum: [WaterBased, SolventBased, EpoxyBased]
+        category:
+          type: string
+          enum: [Interior, Exterior, Primer, Specialty]
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+        mixing_instructions:
+          $ref: '#/components/schemas/MixingInstructions'
+        quality_control:
+          $ref: '#/components/schemas/QualityRules'
+        is_standard:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+        last_modified:
+          type: string
+          format: date-time
+        usage_count:
+          type: integer
+          minimum: 0
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Ingredient:
+      type: object
+      required: [pigment_id, proportion, tolerance, is_required]
+      properties:
+        pigment_id:
+          type: string
+          format: uuid
+        proportion:
+          type: number
+          minimum: 0
+          maximum: 100
+        tolerance:
+          type: number
+          minimum: 0
+          maximum: 10
+        is_required:
+          type: boolean
+
+    MixingInstructions:
+      type: object
+      properties:
+        mixing_order:
+          type: array
+          items:
+            type: string
+            format: uuid
+        mixing_time:
+          type: number
+          minimum: 1
+          description: Mixing time in minutes
+        temperature_range:
+          $ref: '#/components/schemas/TemperatureRange'
+        equipment_type:
+          type: string
+          enum: [Manual, MechanicalMixer, HighSpeedMixer]
+        notes:
+          type: string
+          maxLength: 500
+
+    TemperatureRange:
+      type: object
+      properties:
+        min_celsius:
+          type: number
+        max_celsius:
+          type: number
+
+    QualityRules:
+      type: object
+      properties:
+        color_tolerance:
+          type: number
+          minimum: 0
+          maximum: 10
+          description: Delta E tolerance for color matching
+        consistency_requirements:
+          type: array
+          items:
+            type: string
+        approval_required:
+          type: boolean
+
+    MixtureRecord:
+      type: object
+      required: [id, batch_number, formula_id, requested_quantity, status, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        batch_number:
+          type: string
+          maxLength: 50
+        formula_id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+        requested_quantity:
+          $ref: '#/components/schemas/Measurement'
+        actual_ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActualIngredient'
+        mixing_details:
+          $ref: '#/components/schemas/MixingExecution'
+        quality_check:
+          $ref: '#/components/schemas/QualityResult'
+        status:
+          type: string
+          enum: [Pending, InProgress, QualityCheck, Completed, Failed, Cancelled]
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        cost:
+          $ref: '#/components/schemas/CostBreakdown'
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelInfo'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Measurement:
+      type: object
+      required: [value, unit]
+      properties:
+        value:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+          enum: [kg, liters, pounds, gallons, ml, grams]
+
+    ActualIngredient:
+      type: object
+      required: [pigment_id, planned_amount, actual_amount, variance]
+      properties:
+        pigment_id:
+          type: string
+          format: uuid
+        planned_amount:
+          $ref: '#/components/schemas/Measurement'
+        actual_amount:
+          $ref: '#/components/schemas/Measurement'
+        variance:
+          type: number
+          description: Percentage difference from planned amount
+        batch_info:
+          $ref: '#/components/schemas/PigmentBatch'
+
+    PigmentBatch:
+      type: object
+      properties:
+        lot_number:
+          type: string
+        expiration_date:
+          type: string
+          format: date
+        supplier_batch:
+          type: string
+
+    # Request/Response Schemas
+    PigmentReservation:
+      type: object
+      required: [quantity, reservation_id]
+      properties:
+        quantity:
+          type: number
+          minimum: 0.001
+        reservation_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+
+    ReservationResult:
+      type: object
+      required: [success, reservation_id]
+      properties:
+        success:
+          type: boolean
+        reservation_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        available_quantity:
+          type: number
+
+    MixtureCalculationRequest:
+      type: object
+      required: [target_quantity]
+      properties:
+        target_quantity:
+          $ref: '#/components/schemas/Measurement'
+        adjustments:
+          type: object
+          additionalProperties:
+            type: number
+          description: Pigment ID to adjustment percentage mapping
+
+    MixtureCalculationResponse:
+      type: object
+      required: [ingredients, estimated_cost, is_valid_batch]
+      properties:
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculatedIngredient'
+        estimated_cost:
+          type: number
+          minimum: 0
+        warnings:
+          type: array
+          items:
+            type: string
+        is_valid_batch:
+          type: boolean
+
+    CalculatedIngredient:
+      type: object
+      required: [pigment_id, required_amount, available_amount, is_sufficient]
+      properties:
+        pigment_id:
+          type: string
+          format: uuid
+        required_amount:
+          $ref: '#/components/schemas/Measurement'
+        available_amount:
+          $ref: '#/components/schemas/Measurement'
+        is_sufficient:
+          type: boolean
+        unit_cost:
+          type: number
+
+    # Pagination Schemas
+    PaginatedPigmentList:
+      type: object
+      required: [count, results]
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+        previous:
+          type: string
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pigment'
+
+    PaginatedFormulaList:
+      type: object
+      required: [count, results]
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+        previous:
+          type: string
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorFormula'
+
+    PaginatedMixtureList:
+      type: object
+      required: [count, results]
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+        previous:
+          type: string
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MixtureRecord'
+
+    # Error Schemas
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ValidationError:
+      type: object
+      required: [message, field_errors]
+      properties:
+        message:
+          type: string
+        field_errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string

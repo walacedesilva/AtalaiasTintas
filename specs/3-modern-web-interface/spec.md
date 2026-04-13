@@ -103,6 +103,10 @@ Funcionário experiente utiliza sistema por várias horas seguidas e precisa que
 - **FR-UI-005**: Sistema MUST exibir mensagens de erro e sucesso de forma não-intrusiva com opções claras de ação
 - **FR-UI-006**: Sistema MUST preservar estado de formulários durante navegação para evitar perda de dados
 - **FR-UI-007**: Sistema MUST fornecer atalhos visuais (botões de ação rápida) para as 3 operações mais frequentes em cada seção
+- **FR-UI-008**: Interface tintométrica MUST implementar workflow guiado com validação incluindo: seleção de cor alvo, sugestão de fórmulas existentes, validação de quantidades de pigmentos disponíveis em estoque, e confirmação visual da mistura antes da execução
+- **FR-UI-009**: Sistema MUST prevenir erros tintométricos através de validações em tempo real (quantidades máximas, compatibilidade de pigmentos, alertas de custo) e confirmação obrigatória para misturas de alto valor
+- **FR-UI-010**: Interface MUST adaptar elementos visíveis baseado em hierarquia de usuários: Staff (operações básicas, consultas), Manager (relatórios, configurações, aprovações), Admin (gestão completa, usuários, manutenção)
+- **FR-UI-011**: Sistema MUST exibir indicadores visuais claros do nível de acesso do usuário atual e restrições aplicadas em cada seção
 
 ### Non-Functional Requirements
 
@@ -113,27 +117,45 @@ Funcionário experiente utiliza sistema por várias horas seguidas e precisa que
 - **NR-UI-005**: Interface MUST manter funcionalidade completa em navegadores com até 2 anos de idade
 - **NR-UI-006**: Paleta de cores MUST seguir princípios de design moderno com máximo de 5 cores primárias
 - **NR-UI-007**: Tipografia MUST usar no máximo 2 famílias de fontes com hierarquia clara de tamanhos (14px-32px)
+- **NR-UI-008**: Operações tintométricas complexas (cálculo de fórmulas, validação de estoque, geração de etiquetas) MUST completar em menos de 2 segundos com feedback de progresso visível
+- **NR-UI-009**: Sistema MUST manter responsividade de navegação (300ms) mesmo durante processamento de operações tintométricas em background
 
 ### Data Requirements
 
 - **DR-UI-001**: Sistema MUST armazenar preferências de usuário (tema, densidade de informação) por sessão
 - **DR-UI-002**: Sistema MUST registrar métricas de uso de interface para análise de UX (páginas mais visitadas, tempo por seção)
 - **DR-UI-003**: Sistema MUST manter histórico de navegação por sessão para funcionalidade de "voltar"
+- **DR-UI-004**: Interface MUST suportar modelo tintométrico completo incluindo pigmentos (código, cor, densidade), fórmulas de cores (proporções, base), misturas (histórico, cliente), estoque (quantidades, lotes) e clientes (perfil cromático, histórico de compras)
+- **DR-UI-005**: Sistema MUST permitir relacionamentos entre entidades tintométricas (fórmula→pigmentos, mistura→fórmula→cliente) com navegação visual entre conexões
 
 ### Integration Requirements
 
 - **IR-UI-001**: Interface MUST integrar com sistema de autenticação existente preservando contexto após login
 - **IR-UI-002**: Interface MUST consumir APIs existentes sem modificação de contratos para manter compatibilidade
 - **IR-UI-003**: Interface MUST suportar notificações em tempo real sem impactar performance de renderização
+- **IR-UI-004**: Sistema MUST integrar com sistemas core de negócio incluindo: POS (consulta de vendas, geração de recibos), sistema de estoque (consulta/atualização de quantidades), e fiscal (emissão de notas, cálculo de impostos)
+- **IR-UI-005**: Interface MUST fornecer fallback visível quando integrações externas estiverem indisponíveis, permitindo operação degradada com sincronização posterior
 
 ### Security Requirements
 
 - **SR-UI-001**: Interface MUST ocultar automaticamente informações sensíveis (preços, fórmulas) quando inativa por mais de 10 minutos
 - **SR-UI-002**: Sistema MUST validar entrada de usuário no frontend antes de submissão para prevenir ataques
 - **SR-UI-003**: Interface MUST implementar proteção contra clickjacking através de headers apropriados
+- **SR-UI-004**: Sistema MUST implementar controle de acesso baseado em funções com validação tanto no frontend (ocultação de UI) quanto backend (autorização de API)
+- **SR-UI-005**: Interface MUST registrar tentativas de acesso a funcionalidades restritas para auditoria de segurança
 
 ### Compliance Requirements
 
 - **CR-UI-001**: Interface MUST atender diretrizes de acessibilidade WCAG 2.1 nível AA
 - **CR-UI-002**: Sistema MUST funcionar sem JavaScript para funcionalidades críticas (navegação básica)
 - **CR-UI-003**: Interface MUST ser compatível com leitor de tela para usuários com deficiência visual
+
+## Clarifications
+
+### Session 2026-04-12
+
+- Q: Core business data model for the paint store system interfaces → A: Full tintometric data model (pigments, color formulas, mixtures, inventory, customers)
+- Q: Tintometric workflow complexity for color mixing operations → A: Guided workflow with validation (step-by-step color matching, formula suggestion, quantity validation)
+- Q: Performance expectations for paint store operational needs → A: Balanced performance (3s page load, 300ms transitions, 2s complex operations)
+- Q: User roles and authentication scope for interface access control → A: Role-based with basic hierarchy (staff/manager/admin with different UI panels)
+- Q: Integration scope with existing paint industry systems → A: Core business systems (POS, inventory, basic fiscal/tax integration)
