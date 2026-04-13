@@ -242,3 +242,99 @@ export interface SearchFilters {
   page?: number;
   page_size?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Inventory (Estoque) domain types
+// ---------------------------------------------------------------------------
+
+export type StatusEstoque = 'NORMAL' | 'BAIXO' | 'ZERADO';
+
+export interface EstoqueLojaItem {
+  id: number;
+  loja: number;
+  produto_id: string;
+  produto_codigo: string;
+  produto_nome: string;
+  produto_base_nome: string;
+  marca_nome: string;
+  unidade_sigla: string;
+  estoque_minimo: string;
+  preco_custo: string;
+  quantidade_atual: string;
+  quantidade_reservada: string;
+  quantidade_disponivel: string;
+  status_estoque: StatusEstoque;
+  localizacao: string | null;
+  data_ultima_movimentacao: string | null;
+  bloqueado_venda: boolean;
+}
+
+export interface EstoqueResumo {
+  total_itens: number;
+  estoque_zerado: number;
+  estoque_baixo: number;
+  valor_total_custo: string;
+}
+
+export type StatusLote = 'ATIVO' | 'VENCIDO' | 'ESGOTADO' | 'BLOQUEADO' | 'QUARENTENA';
+
+export interface LoteProduto {
+  id: number;
+  produto: string;       // UUID
+  loja: number;
+  numero_lote: string;
+  data_fabricacao: string | null;
+  data_validade: string | null;
+  data_entrada: string;
+  quantidade_inicial: string;
+  quantidade_atual: string;
+  unidade: number;
+  custo_unitario: string | null;
+  status: StatusLote;
+  documento_entrada: string | null;
+  observacoes: string | null;
+  esta_vencido: boolean;
+  dias_para_vencer: number | null;
+}
+
+export type StatusEntrada = 'RASCUNHO' | 'PENDENTE' | 'CONFIRMADA' | 'CANCELADA';
+
+export interface EntradaMercadoriaItem {
+  id: number;
+  produto: string | null;
+  descricao_nfe: string;
+  codigo_nfe: string;
+  ncm: string;
+  cfop: string;
+  cean: string;
+  quantidade: string;
+  unidade: number | null;
+  unidade_nfe: string;
+  valor_unitario: string;
+  valor_total: string;
+  desconto: string;
+  valor_icms: string;
+  valor_ipi: string;
+  valor_pis: string;
+  valor_cofins: string;
+  lote: number | null;
+  status: 'PENDENTE' | 'VINCULADO' | 'PROCESSADO' | 'IGNORADO';
+}
+
+export interface EntradaMercadoria {
+  id: number;
+  loja: number;
+  tipo_entrada: string;
+  fornecedor_cnpj: string;
+  fornecedor_nome: string;
+  chave_acesso_nfe: string | null;
+  numero_nfe: string | null;
+  serie_nfe: string | null;
+  data_emissao_nfe: string | null;
+  data_entrada: string;
+  valor_total_nfe: string | null;
+  valor_total_entrada: string;
+  status: StatusEntrada;
+  observacoes: string | null;
+  itens: EntradaMercadoriaItem[];
+}

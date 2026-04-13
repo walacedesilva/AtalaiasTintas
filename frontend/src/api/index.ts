@@ -7,12 +7,14 @@ export { apiClient, APIClient } from './client';
 
 import { authAPI } from './auth';
 import { tintometryAPI } from './tintometry';
-export { authAPI, tintometryAPI };
+import { inventoryAPI } from './inventory';
+export { authAPI, tintometryAPI, inventoryAPI };
 
 // Re-export all API functions for convenience
 export const API = {
   auth: authAPI,
-  tintometry: tintometryAPI
+  tintometry: tintometryAPI,
+  inventory: inventoryAPI,
 };
 
 export default API;

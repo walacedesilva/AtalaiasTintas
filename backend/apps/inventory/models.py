@@ -331,8 +331,191 @@ class MovimentacaoEstoque(TimeStampedModel):
     
     def __str__(self):
         return f"{self.tipo_movimentacao} - {self.produto} - {self.quantidade_original}"
-    
+
     class Meta:
         verbose_name = 'Movimentação de Estoque'
         verbose_name_plural = 'Movimentações de Estoque'
         ordering = ['-created_at']
+
+
+class LoteProduto(TimeStampedModel):
+    """Controle de lotes e validade para produtos perecíveis (catalisadores, primers, etc.)"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    produto = models.ForeignKey(ProdutoVariacao, on_delete=models.CASCADE, related_name='lotes')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='lotes')
+
+    # Identificação do lote
+    numero_lote = models.CharField(max_length=50)
+    codigo_barras_lote = models.CharField(max_length=100, null=True, blank=True)
+
+    # Datas de controle
+    data_fabricacao = models.DateField(null=True, blank=True)
+    data_validade = models.DateField(null=True, blank=True)
+    data_entrada = models.DateField()
+
+    # Quantidades (em unidade base do produto)
+    quantidade_inicial = models.DecimalField(max_digits=10, decimal_places=4)
+    quantidade_atual = models.DecimalField(max_digits=10, decimal_places=4)
+    unidade = models.ForeignKey(UnidadeMedida, on_delete=models.PROTECT)
+
+    # Custo de entrada (para cálculo de custo médio)
+    custo_unitario = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+
+    STATUS_CHOICES = [
+        ('ATIVO', 'Ativo'),
+        ('VENCIDO', 'Vencido'),
+        ('ESGOTADO', 'Esgotado'),
+        ('BLOQUEADO', 'Bloqueado'),
+        ('QUARENTENA', 'Em Quarentena'),
+    ]
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='ATIVO')
+    motivo_bloqueio = models.CharField(max_length=200, null=True, blank=True)
+
+    # Rastreabilidade — NF do fornecedor
+    documento_entrada = models.CharField(
+        max_length=100, null=True, blank=True,
+        help_text='Chave de acesso da NF-e do fornecedor ou número do documento'
+    )
+
+    observacoes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Lote de Produto'
+        verbose_name_plural = 'Lotes de Produto'
+        ordering = ['data_validade', 'data_entrada']
+        unique_together = ['produto', 'loja', 'numero_lote']
+        indexes = [
+            models.Index(fields=['produto', 'loja', 'status']),
+            models.Index(fields=['data_validade']),
+        ]
+
+    def __str__(self):
+        return f"Lote {self.numero_lote} — {self.produto} (val: {self.data_validade})"
+
+    @property
+    def esta_vencido(self) -> bool:
+        from django.utils import timezone
+        return bool(self.data_validade and self.data_validade < timezone.now().date())
+
+    @property
+    def dias_para_vencer(self) -> int | None:
+        from django.utils import timezone
+        if not self.data_validade:
+            return None
+        delta = self.data_validade - timezone.now().date()
+        return delta.days
+
+
+class EntradaMercadoria(TimeStampedModel):
+    """Registro de entrada de mercadorias — suporta importação de XML NF-e"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='entradas_mercadoria')
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+
+    TIPO_ENTRADA_CHOICES = [
+        ('COMPRA', 'Compra de Fornecedor'),
+        ('TRANSFERENCIA', 'Transferência entre Lojas'),
+        ('AJUSTE', 'Ajuste Positivo'),
+        ('DEVOLUCAO', 'Devolução de Cliente'),
+        ('BONIFICACAO', 'Bonificação'),
+    ]
+    tipo_entrada = models.CharField(max_length=20, choices=TIPO_ENTRADA_CHOICES, default='COMPRA')
+
+    # Dados do fornecedor (populados via XML NF-e ou manual)
+    fornecedor_cnpj = models.CharField(max_length=14, null=True, blank=True)
+    fornecedor_nome = models.CharField(max_length=200, null=True, blank=True)
+    fornecedor_uf = models.CharField(max_length=2, null=True, blank=True)
+
+    # Dados da NF-e do fornecedor
+    chave_acesso_nfe = models.CharField(
+        max_length=44, null=True, blank=True, unique=True,
+        help_text='Chave de acesso de 44 dígitos da NF-e do fornecedor'
+    )
+    numero_nfe = models.CharField(max_length=9, null=True, blank=True)
+    serie_nfe = models.CharField(max_length=3, null=True, blank=True)
+    data_emissao_nfe = models.DateField(null=True, blank=True)
+
+    # XML original armazenado para auditoria
+    xml_nfe = models.TextField(null=True, blank=True)
+
+    # Datas
+    data_entrada = models.DateField()
+    data_conferencia = models.DateTimeField(null=True, blank=True)
+
+    # Valores totais da NF
+    valor_total_nfe = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_total_entrada = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    STATUS_CHOICES = [
+        ('RASCUNHO', 'Rascunho'),
+        ('PENDENTE', 'Pendente de Conferência'),
+        ('CONFIRMADA', 'Confirmada'),
+        ('ERRO', 'Erro no Processamento'),
+        ('CANCELADA', 'Cancelada'),
+    ]
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='RASCUNHO')
+    observacoes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Entrada de Mercadoria'
+        verbose_name_plural = 'Entradas de Mercadoria'
+        ordering = ['-data_entrada', '-created_at']
+        indexes = [
+            models.Index(fields=['loja', 'status']),
+            models.Index(fields=['chave_acesso_nfe']),
+        ]
+
+    def __str__(self):
+        ref = self.chave_acesso_nfe or self.numero_nfe or str(self.id)[:8]
+        return f"Entrada {ref} — {self.fornecedor_nome or 'Sem fornecedor'} ({self.data_entrada})"
+
+
+class EntradaMercadoriaItem(TimeStampedModel):
+    """Itens individuais de uma entrada de mercadoria"""
+
+    entrada = models.ForeignKey(EntradaMercadoria, on_delete=models.CASCADE, related_name='itens')
+    produto = models.ForeignKey(ProdutoVariacao, on_delete=models.PROTECT, null=True, blank=True)
+
+    # Dados do item da NF-e (como vieram no XML)
+    descricao_nfe = models.CharField(max_length=200)
+    codigo_nfe = models.CharField(max_length=60, null=True, blank=True)
+    ncm = models.CharField(max_length=10, null=True, blank=True)
+    cfop = models.CharField(max_length=4, null=True, blank=True)
+    cean = models.CharField(max_length=14, null=True, blank=True)
+
+    # Quantidades
+    quantidade = models.DecimalField(max_digits=10, decimal_places=4)
+    unidade = models.ForeignKey(UnidadeMedida, on_delete=models.PROTECT, null=True, blank=True)
+    unidade_nfe = models.CharField(max_length=6, null=True, blank=True)  # sigla original da NF-e
+
+    # Valores
+    valor_unitario = models.DecimalField(max_digits=10, decimal_places=4)
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2)
+    desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Impostos
+    valor_icms = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    valor_ipi = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    valor_pis = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    valor_cofins = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Lote gerado (preenchido após confirmar entrada)
+    lote = models.ForeignKey(LoteProduto, on_delete=models.SET_NULL, null=True, blank=True)
+
+    STATUS_ITEM_CHOICES = [
+        ('PENDENTE', 'Pendente de Vinculação'),
+        ('VINCULADO', 'Produto Vinculado'),
+        ('PROCESSADO', 'Estoque Atualizado'),
+        ('IGNORADO', 'Ignorado'),
+    ]
+    status = models.CharField(max_length=15, choices=STATUS_ITEM_CHOICES, default='PENDENTE')
+
+    class Meta:
+        verbose_name = 'Item de Entrada'
+        verbose_name_plural = 'Itens de Entrada'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.descricao_nfe} x{self.quantidade}"

@@ -40,24 +40,24 @@ Based on plan.md structure:
 - [x] T004 [P] [US1,US3] Create MovimentacaoEstoque model in apps/inventory/models.py with complete audit trail fields
 - [x] T005 [P] [US2] Enhance NotaFiscalEletronica model in apps/fiscal/models.py with automation fields (tipo_emissao, status, tentativas_envio)
 - [x] T006 [P] [US2] Create ItemNotaFiscalEletronica model in apps/fiscal/models.py with multi-unit support fields
-- [ ] T007 [US1,US2,US4] Create migration file 0003_multi_unit_support.py for inventory models (depends on T001-T004)
-- [ ] T008 [US2] Create migration file 0002_nfe_automation.py for fiscal models (depends on T005-T006)
-- [ ] T009 [US1,US2] Create migration file 0002_inventory_fiscal_integration.py for sales model extensions
+- [x] T007 [US1,US2,US4] Create migration file 0003_lote_validade_entrada.py for inventory models (depends on T001-T004) — includes LoteProduto, EntradaMercadoria, EntradaMercadoriaItem
+- [x] T008 [US2] Fiscal models with automation fields already included in 0002_initial.py
+- [ ] T009 [US1,US2] Create migration file for sales model extensions (Phase 4)
 
 ### Core Service Layer
 
-- [ ] T010 [P] [US1,US4] Create EstoqueService class in apps/inventory/services.py with stock management methods
-- [ ] T011 [P] [US4] Create ConversaoService class in apps/inventory/services.py with multi-unit conversion logic
-- [ ] T012 [P] [US2] Create NFEService class in apps/fiscal/services.py with NFe business logic
-- [ ] T013 [P] [US2] Create SefazClient class in apps/fiscal/services.py with SEFAZ API integration
-- [ ] T014 [P] [US1,US2] Create event signal handlers in apps/core/signals.py for sale → inventory → NFe workflow
+- [x] T010 [P] [US1,US4] Create EstoqueService class in apps/inventory/services.py with stock management methods
+- [x] T011 [P] [US4] Create ConversaoService class in apps/inventory/services.py with multi-unit conversion logic
+- [x] T012 [P] [US2] Create NFEService skeleton in apps/fiscal/services.py (stub — full impl Phase 3)
+- [x] T013 [P] [US2] Create SefazClient stub in apps/fiscal/services.py (full impl Phase 3)
+- [x] T014 [P] [US1,US2] Create event signal handlers in apps/core/signals.py for sale → inventory → NFe workflow
 
 ### Basic Configuration
 
-- [ ] T015 [P] Add fiscal dependencies to requirements/fiscal.txt (lxml, signxml, cryptography, zeep, celery, redis)
-- [ ] T016 [P] Update Django settings with Celery configuration in tintas_system/settings/base.py
+- [x] T015 [P] xmltodict already in requirements/base.txt; celery[redis] in base.txt
+- [x] T016 [P] Celery configuration already in tintas_system/settings/base.py
 - [ ] T017 [P] Create NFe environment variables template in .env.example
-- [ ] T018 [P] [US1,US2] Configure Redis for reservation caching and Celery messaging
+- [x] T018 [P] [US1,US2] Redis already configured in base.py (django-redis)
 
 **Checkpoint**: Foundation models and services ready - can begin feature implementation
 
@@ -69,30 +69,49 @@ Based on plan.md structure:
 
 ### Multi-Unit Conversion System
 
-- [ ] T019 [US4] Implement calcular_disponibilidade method in EstoqueService (depends on T010)
-- [ ] T020 [US4] Implement converter_quantidade method in ConversaoService (depends on T011)
-- [ ] T021 [US4] Implement obter_unidade_base method in ConversaoService (depends on T011)
-- [ ] T022 [P] [US4] Create unit conversion admin interface in apps/inventory/admin.py
+- [x] T019 [US4] Implement calcular_disponibilidade method in EstoqueService (depends on T010)
+- [x] T020 [US4] Implement converter_quantidade method in ConversaoService (depends on T011)
+- [x] T021 [US4] Implement obter_unidade_base method in ConversaoService (depends on T011)
+- [x] T022 [P] [US4] Create unit conversion admin interface in apps/inventory/admin.py (ProdutoUnidadeAdmin + ProdutoVariacaoAdmin with inline)
 - [ ] T023 [P] [US4] Create multi-unit calculator JavaScript component in static/js/inventory/multi-unit-calculator.js
-- [ ] T024 [US4] Create ConversaoUnidadeViewSet in apps/inventory/apis.py for unit conversion API (depends on T020-T021)
+- [x] T024 [US4] Create ConversaoUnidadeViewSet in apps/inventory/apis.py for unit conversion API (depends on T020-T021)
 
 ### Stock Reservation System
 
-- [ ] T025 [US1] Implement criar_reserva method in EstoqueService (depends on T019)
-- [ ] T026 [US1] Implement confirmar_reservas method in EstoqueService (depends on T025)
-- [ ] T027 [US1] Create EstoqueReservaViewSet in apps/inventory/apis.py for reservation management (depends on T025-T026)
+- [x] T025 [US1] Implement criar_reserva method in EstoqueService (depends on T019)
+- [x] T026 [US1] Implement confirmar_reservas method in EstoqueService (depends on T025)
+- [x] T027 [US1] Create EstoqueReservaViewSet in apps/inventory/apis.py for reservation management (depends on T025-T026)
 - [ ] T028 [P] [US1] Create stock reservation JavaScript component in static/js/inventory/stock-reservation.js
 - [ ] T029 [P] [US1] Create stock availability template in templates/inventory/stock-availability.html
-- [ ] T030 [US1] Create Celery task limpar_reservas_expiradas in apps/inventory/tasks.py (depends on T010)
+- [x] T030 [US1] Create Celery task limpar_reservas_expiradas_v2 in apps/inventory/tasks.py (depends on T010)
 
 ### Stock Movement Management
 
-- [ ] T031 [US1,US3] Implement processar_baixa_venda method in EstoqueService (depends on T026)
-- [ ] T032 [P] [US3] Create EstoqueConsultaAPIView in apps/inventory/apis.py for real-time stock queries
-- [ ] T033 [P] [US1,US3] Create MovimentacaoEstoque admin interface in apps/inventory/admin.py
-- [ ] T034 [US3] Implement entrada de produtos workflow in EstoqueService (depends on T031)
+- [x] T031 [US1,US3] Implement processar_baixa_venda method in EstoqueService (depends on T026)
+- [x] T032 [P] [US3] Create EstoqueConsultaAPIView in apps/inventory/apis.py for real-time stock queries
+- [x] T033 [P] [US1,US3] Create MovimentacaoEstoque admin interface in apps/inventory/admin.py
+- [x] T034 [US3] Implement entrada de produtos workflow in EstoqueService.processar_entrada + EntradaMercadoriaService (depends on T031)
 
-**Checkpoint**: Multi-unit inventory system fully functional - stock operations working correctly
+### Lotes & Validade Control (NEW — FR-001)
+
+- [x] T034a [P] Create LoteProduto model in apps/inventory/models.py with numero_lote, data_validade, quantidade_atual, status fields
+- [x] T034b [P] Create LoteService in apps/inventory/services.py with FIFO/FEFO, proximos_vencimento, marcar_vencidos methods
+- [x] T034c [P] Create LoteViewSet in apps/inventory/apis.py with proximos-vencimento and marcar-vencidos actions
+- [x] T034d [P] Create LoteProdutoAdmin in apps/inventory/admin.py with validade status display
+- [x] T034e [P] Create marcar_lotes_vencidos Celery task in apps/inventory/tasks.py
+- [ ] T034f Create unit tests for LoteService in tests/inventory/test_lote_service.py
+
+### XML NF-e Importer (NEW — FR-004 expansion)
+
+- [x] T034g [P] Create XmlNFeParser in apps/fiscal/services.py — parses layout NF-e 4.00 XML
+- [x] T034h [P] Create EntradaMercadoria + EntradaMercadoriaItem models in apps/inventory/models.py
+- [x] T034i [P] Create EntradaMercadoriaService.importar_xml in apps/fiscal/services.py (idempotent by chave_acesso)
+- [x] T034j [P] Create EntradaMercadoriaService.confirmar_entrada — updates stock via EstoqueService
+- [x] T034k [P] Create EntradaMercadoriaViewSet with importar-xml, confirmar, vincular-item actions
+- [x] T034l [P] Create EntradaMercadoriaAdmin with inline items and XML viewer
+- [ ] T034m Create unit tests for XmlNFeParser in tests/fiscal/test_xml_nfe_parser.py
+
+**Checkpoint**: Multi-unit inventory system, lotes/validade control and XML NF-e importer fully functional
 
 ---
 
