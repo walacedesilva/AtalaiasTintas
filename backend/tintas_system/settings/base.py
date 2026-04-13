@@ -12,6 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Application definition
 INSTALLED_APPS = [
+    # Admin theme - must be before django.contrib.admin
+    'jazzmin',
+
     # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
@@ -195,6 +198,99 @@ BACKUP_RETENTION_DAYS = config('BACKUP_RETENTION_DAYS', default=30, cast=int)
 
 # Admin notification settings
 ALERT_ADMIN_EMAILS = config('ALERT_ADMIN_EMAILS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+
+# =============================================================================
+# JAZZMIN - Django Admin Theme
+# =============================================================================
+JAZZMIN_SETTINGS = {
+    'site_title': 'Atalaia Tintas',
+    'site_header': 'Atalaia Tintas',
+    'site_brand': 'Atalaia Tintas',
+    'site_logo': None,
+    'login_logo': None,
+    'welcome_sign': 'Bem-vindo ao painel administrativo',
+    'copyright': 'Atalaia Tintas',
+    'search_model': ['auth.User'],
+    'topmenu_links': [
+        {'name': 'Início', 'url': 'admin:index', 'permissions': ['auth.view_user']},
+    ],
+    'show_sidebar': True,
+    'navigation_expanded': True,
+    'icons': {
+        'auth': 'fas fa-users-cog',
+        'auth.user': 'fas fa-user',
+        'auth.Group': 'fas fa-users',
+        'core': 'fas fa-cog',
+        'core.user': 'fas fa-user-circle',
+        'core.userprofile': 'fas fa-id-badge',
+        'core.auditlog': 'fas fa-history',
+        'core.userpreferences': 'fas fa-sliders-h',
+        'companies': 'fas fa-building',
+        'companies.empresa': 'fas fa-building',
+        'companies.loja': 'fas fa-store-alt',
+        'inventory': 'fas fa-boxes',
+        'inventory.produtobase': 'fas fa-box',
+        'inventory.produtovariacao': 'fas fa-tags',
+        'inventory.categoria': 'fas fa-folder-open',
+        'inventory.marca': 'fas fa-trademark',
+        'tintometry': 'fas fa-paint-brush',
+        'tintometry.pigmento': 'fas fa-flask',
+        'tintometry.lequecoredefinida': 'fas fa-palette',
+        'tintometry.formulatintometrica': 'fas fa-file-alt',
+        'tintometry.misturatinta': 'fas fa-blender',
+        'tintometry.estoquepigmento': 'fas fa-warehouse',
+        'tintometry.etiquetamistura': 'fas fa-tag',
+        'labels': 'fas fa-tags',
+        'sales': 'fas fa-shopping-cart',
+        'sales.cliente': 'fas fa-user-tie',
+        'sales.pedidovenda': 'fas fa-receipt',
+        'fiscal': 'fas fa-file-invoice-dollar',
+        'marketplaces': 'fas fa-globe',
+    },
+    'default_icon_parents': 'fas fa-chevron-circle-right',
+    'default_icon_children': 'fas fa-circle',
+    'related_modal_active': True,
+    'custom_css': 'css/admin_custom.css',
+    'custom_js': None,
+    'use_google_fonts_cdn': True,
+    'show_ui_builder': False,
+    'order_with_respect_to': [
+        'auth', 'core', 'companies', 'inventory',
+        'tintometry', 'labels', 'sales', 'fiscal', 'marketplaces',
+    ],
+}
+
+JAZZMIN_UI_TWEAKS = {
+    'navbar_small_text': False,
+    'footer_small_text': False,
+    'body_small_text': False,
+    'brand_small_text': False,
+    'brand_colour': 'navbar-dark',
+    'accent': 'accent-teal',
+    'navbar': 'navbar-dark',
+    'no_navbar_border': True,
+    'navbar_fixed': True,
+    'layout_boxed': False,
+    'footer_fixed': False,
+    'sidebar_fixed': True,
+    'sidebar': 'sidebar-dark-teal',
+    'sidebar_nav_small_text': False,
+    'sidebar_disable_expand': False,
+    'sidebar_nav_child_indent': True,
+    'sidebar_nav_compact_style': False,
+    'sidebar_nav_legacy_style': False,
+    'sidebar_nav_flat_style': False,
+    'theme': 'flatly',
+    'dark_mode_theme': None,
+    'button_classes': {
+        'primary': 'btn-primary',
+        'secondary': 'btn-outline-secondary',
+        'info': 'btn-outline-info',
+        'warning': 'btn-warning',
+        'danger': 'btn-danger',
+        'success': 'btn-outline-success',
+    },
+}
 ALERT_ADMIN_PHONES = config('ALERT_ADMIN_PHONES', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
 # Logging Configuration

@@ -37,11 +37,7 @@
     }
   },
   "include": [
-    "src",
-    "**/*.ts", 
-    "**/*.tsx",
-    "vite.config.ts",
-    "playwright.config.ts"
+    "src"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

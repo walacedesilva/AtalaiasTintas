@@ -1,20 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Paintbrush, ArrowLeft } from 'lucide-react';
 
 export default function NotFoundPage(): React.ReactElement {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full text-center">
-        <div className="text-6xl mb-6">🎨</div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-        <h2 className="text-xl text-gray-600 mb-8">Página não encontrada</h2>
-        <p className="text-gray-500 mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
+      <div className="text-center max-w-md">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-teal-50 mx-auto mb-6">
+          <Paintbrush className="h-10 w-10 text-teal-600" aria-hidden="true" />
+        </div>
+        <h1 className="text-7xl font-black text-slate-200 leading-none">404</h1>
+        <h2 className="text-xl font-bold text-slate-900 mt-2 mb-3">Página não encontrada</h2>
+        <p className="text-sm text-slate-500 mb-8">
           A página que você procura não existe ou foi movida.
         </p>
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
+        <Link to="/dashboard" className="btn-primary inline-flex">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Voltar ao Dashboard
         </Link>
       </div>

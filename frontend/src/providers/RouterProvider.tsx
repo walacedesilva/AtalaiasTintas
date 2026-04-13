@@ -127,7 +127,12 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFoundPage />
   }
-]);
+], {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  }
+});
 
 interface RouterProviderProps {
   children?: never; // This provider doesn't accept children

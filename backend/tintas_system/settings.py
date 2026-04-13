@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +50,108 @@ INSTALLED_APPS = [
     'apps.fiscal',
     'apps.marketplaces',
 ]
+
+# =============================================================================
+# JAZZMIN - Django Admin Theme
+# =============================================================================
+JAZZMIN_SETTINGS = {
+    'site_title': 'Atalaia Tintas',
+    'site_header': 'Atalaia Tintas',
+    'site_brand': 'Atalaia Tintas',
+    'site_logo': None,
+    'login_logo': None,
+    'welcome_sign': 'Bem-vindo ao painel administrativo',
+    'copyright': 'Atalaia Tintas',
+    'search_model': ['auth.User'],
+    'topmenu_links': [
+        {'name': 'Início', 'url': 'admin:index', 'permissions': ['auth.view_user']},
+    ],
+    'show_sidebar': True,
+    'navigation_expanded': True,
+    'icons': {
+        # Auth
+        'auth': 'fas fa-users-cog',
+        'auth.user': 'fas fa-user',
+        'auth.Group': 'fas fa-users',
+        # Core
+        'core': 'fas fa-cog',
+        'core.user': 'fas fa-user-circle',
+        'core.userprofile': 'fas fa-id-badge',
+        'core.auditlog': 'fas fa-history',
+        'core.userpreferences': 'fas fa-sliders-h',
+        # Companies
+        'companies': 'fas fa-building',
+        'companies.empresa': 'fas fa-building',
+        'companies.loja': 'fas fa-store-alt',
+        # Inventory
+        'inventory': 'fas fa-boxes',
+        'inventory.produtobase': 'fas fa-box',
+        'inventory.produtovariacao': 'fas fa-tags',
+        'inventory.categoria': 'fas fa-folder-open',
+        'inventory.marca': 'fas fa-trademark',
+        # Tintometry
+        'tintometry': 'fas fa-paint-brush',
+        'tintometry.pigmento': 'fas fa-flask',
+        'tintometry.lequecoredefinida': 'fas fa-palette',
+        'tintometry.formulatintometrica': 'fas fa-file-alt',
+        'tintometry.misturatinta': 'fas fa-blender',
+        'tintometry.estoquepigmento': 'fas fa-warehouse',
+        'tintometry.etiquetamistura': 'fas fa-tag',
+        # Labels
+        'labels': 'fas fa-tags',
+        # Sales
+        'sales': 'fas fa-shopping-cart',
+        'sales.cliente': 'fas fa-user-tie',
+        'sales.pedidovenda': 'fas fa-receipt',
+        # Fiscal
+        'fiscal': 'fas fa-file-invoice-dollar',
+        # Marketplaces
+        'marketplaces': 'fas fa-globe',
+    },
+    'default_icon_parents': 'fas fa-chevron-circle-right',
+    'default_icon_children': 'fas fa-circle',
+    'related_modal_active': True,
+    'custom_css': None,
+    'custom_js': None,
+    'use_google_fonts_cdn': True,
+    'show_ui_builder': False,
+    'order_with_respect_to': [
+        'auth', 'core', 'companies', 'inventory',
+        'tintometry', 'labels', 'sales', 'fiscal', 'marketplaces',
+    ],
+}
+
+JAZZMIN_UI_TWEAKS = {
+    'navbar_small_text': False,
+    'footer_small_text': False,
+    'body_small_text': False,
+    'brand_small_text': False,
+    'brand_colour': 'navbar-success',
+    'accent': 'accent-teal',
+    'navbar': 'navbar-dark',
+    'no_navbar_border': True,
+    'navbar_fixed': True,
+    'layout_boxed': False,
+    'footer_fixed': False,
+    'sidebar_fixed': True,
+    'sidebar': 'sidebar-dark-teal',
+    'sidebar_nav_small_text': False,
+    'sidebar_disable_expand': False,
+    'sidebar_nav_child_indent': True,
+    'sidebar_nav_compact_style': False,
+    'sidebar_nav_legacy_style': False,
+    'sidebar_nav_flat_style': False,
+    'theme': 'darkly',
+    'dark_mode_theme': 'darkly',
+    'button_classes': {
+        'primary': 'btn-outline-primary',
+        'secondary': 'btn-outline-secondary',
+        'info': 'btn-outline-info',
+        'warning': 'btn-warning',
+        'danger': 'btn-danger',
+        'success': 'btn-outline-success',
+    },
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

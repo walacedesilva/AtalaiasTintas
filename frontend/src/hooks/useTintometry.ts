@@ -2,16 +2,11 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import { tintometryAPI } from '@/api';
 import type {
   Pigmento,
-  LequeCorDefinida,
   FormulaTintometrica,
   MisturaTinta,
-  EstoquePigmento,
-  EtiquetaMistura,
   MisturaCalculationRequest,
   ColorAnalysisRequest,
   SearchFilters,
-  DashboardStats,
-  PaginatedResponse
 } from '@/types';
 
 /**
@@ -184,9 +179,9 @@ export function useMistura(id: number) {
     queryKey: tintometryKeys.mistura(id),
     queryFn: () => tintometryAPI.misturas.get(id),
     enabled: id > 0,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Auto-refresh if mixture is in progress
-      return data?.status === 'em_preparacao' ? 10000 : false; // 10 seconds
+      return query.state.data?.status === 'em_preparacao' ? 10000 : false; // 10 seconds
     }
   });
 }

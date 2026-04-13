@@ -18,7 +18,7 @@ function getConfig(): Config {
   const isProd = import.meta.env.PROD;
 
   return {
-    API_BASE_URL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api',
+    API_BASE_URL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1',
     APP_NAME: import.meta.env.VITE_APP_NAME || 'Atalaia Tintas',
     APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
     ENVIRONMENT: isTest ? 'test' : isProd ? 'production' : 'development',

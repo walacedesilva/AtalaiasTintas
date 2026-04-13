@@ -1,3 +1,6 @@
+# Admin Theme
+django-jazzmin>=3.0.4
+
 # Core Django & Web Framework
 Django>=4.2,<7.0
 djangorestframework>=3.14,<4.0

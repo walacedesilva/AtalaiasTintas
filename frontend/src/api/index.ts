@@ -4,8 +4,10 @@
  */
 
 export { apiClient, APIClient } from './client';
-export { authAPI } from './auth';
-export { tintometryAPI } from './tintometry';
+
+import { authAPI } from './auth';
+import { tintometryAPI } from './tintometry';
+export { authAPI, tintometryAPI };
 
 // Re-export all API functions for convenience
 export const API = {

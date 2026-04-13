@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authAPI } from '@/api';
+import { authAPI, apiClient } from '@/api';
 import type { AuthResponse, LoginRequest, User } from '@/types';
 
 /**
@@ -27,7 +27,7 @@ export function useAuth(): AuthState {
   const { data: user, isLoading, error } = useQuery({
     queryKey: authKeys.user(),
     queryFn: authAPI.getCurrentUser,
-    enabled: authAPI.isAuthenticated(), // Only fetch if we have a token
+    enabled: apiClient.isAuthenticated(), // Only fetch if we have a token
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error: any) => {
       // Don't retry on 401 (unauthorized)

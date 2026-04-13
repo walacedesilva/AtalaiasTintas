@@ -36,7 +36,7 @@ class APIClient {
       (config) => {
         // Add auth token if available
         if (this.authToken) {
-          config.headers.Authorization = `Bearer ${this.authToken}`;
+          config.headers.Authorization = `Token ${this.authToken}`;
         }
 
         // Add CSRF token if available (for Django compatibility)
@@ -119,7 +119,7 @@ class APIClient {
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'csrftoken') {
-        return value;
+        return value ?? null;
       }
     }
     return null;

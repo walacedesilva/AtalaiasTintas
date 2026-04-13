@@ -163,8 +163,16 @@ class UserAdmin(BaseUserAdmin):
     
     def business_role_display(self, obj):
         """Display user's business role"""
-        from .permissions import BusinessRole
-        return BusinessRole.get_user_role(obj).value
+        from .permissions import BusinessPermissions, BusinessRole
+        if obj.is_superuser or getattr(obj, 'pode_administrar', False):
+            role = BusinessRole.ADMIN
+        elif getattr(obj, 'pode_vender', False):
+            role = BusinessRole.VENDOR
+        elif getattr(obj, 'pode_gerenciar_estoque', False):
+            role = BusinessRole.OPERATOR
+        else:
+            role = BusinessRole.VIEWER
+        return role.value
     business_role_display.short_description = 'Função'
     
     def active_sessions_count(self, obj):

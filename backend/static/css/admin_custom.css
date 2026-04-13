@@ -1,0 +1,157 @@
+/* Atalaia Tintas - Admin Custom CSS
+   Alinha o visual do Django Admin com o frontend React
+   Frontend usa: slate-900 no header/sidebar, teal-600 como acento, corpo claro
+*/
+
+/* Fonte Inter (mesma do frontend) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Variáveis de cor alinhadas com o frontend */
+:root {
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-400: #2dd4bf;
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-50:  #f8fafc;
+}
+
+/* Tipografia global */
+body,
+.content-wrapper,
+.main-footer {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Navbar (header) ──────────────────────────────────────── */
+.main-header.navbar {
+  background-color: var(--slate-900) !important;
+  border-bottom: 1px solid var(--slate-800) !important;
+}
+.main-header .navbar-brand {
+  background-color: var(--teal-600) !important;
+}
+
+/* ─── Sidebar ──────────────────────────────────────────────── */
+.main-sidebar,
+.main-sidebar .sidebar {
+  background-color: var(--slate-900) !important;
+  border-right: 1px solid var(--slate-800) !important;
+}
+
+/* Links de navegação */
+.nav-sidebar > .nav-item > .nav-link {
+  color: #94a3b8 !important; /* slate-400 */
+  border-radius: 0.5rem;
+  margin: 0 0.5rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+.nav-sidebar > .nav-item > .nav-link:hover {
+  background-color: var(--slate-800) !important;
+  color: #f1f5f9 !important; /* slate-100 */
+}
+/* Item ativo */
+.nav-sidebar > .nav-item > .nav-link.active,
+.nav-sidebar > .nav-item.menu-open > .nav-link {
+  background-color: rgba(13, 148, 136, 0.2) !important; /* teal-600/20 */
+  color: var(--teal-400) !important;
+  box-shadow: inset 0 0 0 1px rgba(13, 148, 136, 0.3);
+}
+
+/* Ícones dos itens ativos */
+.nav-sidebar .nav-link.active .nav-icon {
+  color: var(--teal-400) !important;
+}
+
+/* ─── Área de conteúdo (corpo claro, igual ao frontend) ────── */
+.content-wrapper {
+  background-color: var(--slate-50) !important;
+}
+.content-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important; /* slate-200 */
+}
+.content-header h1 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+/* ─── Cards / Caixas ───────────────────────────────────────── */
+.card {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+.card-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+/* ─── Tabelas ──────────────────────────────────────────────── */
+.table thead th {
+  background-color: #f8fafc !important;
+  color: #475569 !important; /* slate-600 */
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.table td {
+  color: #0f172a !important;
+  border-color: #f1f5f9 !important;
+}
+
+/* ─── Botões primários (teal, igual ao frontend) ───────────── */
+.btn-primary,
+input[type="submit"],
+.submit-row input[type="submit"] {
+  background-color: var(--teal-600) !important;
+  border-color: var(--teal-600) !important;
+  border-radius: 0.5rem !important;
+  font-weight: 500 !important;
+}
+.btn-primary:hover,
+input[type="submit"]:hover {
+  background-color: var(--teal-700) !important;
+  border-color: var(--teal-700) !important;
+}
+
+/* ─── Formulários ──────────────────────────────────────────── */
+.form-control:focus {
+  border-color: var(--teal-600) !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.2) !important;
+}
+
+/* ─── Login Page ───────────────────────────────────────────── */
+.login-page,
+.login-box {
+  background-color: var(--slate-50) !important;
+}
+.login-card-body {
+  border-radius: 0.75rem !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+}
+.login-logo a {
+  color: var(--teal-600) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 700 !important;
+}
+
+/* ─── Breadcrumb ───────────────────────────────────────────── */
+.breadcrumb-item a {
+  color: var(--teal-600) !important;
+}
+
+/* ─── Footer ───────────────────────────────────────────────── */
+.main-footer {
+  background-color: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+}

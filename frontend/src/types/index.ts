@@ -23,9 +23,10 @@ export interface User {
 }
 
 export interface AuthResponse {
-  access: string;
-  refresh: string;
+  token: string;
   user: User;
+  session_id: number;
+  message: string;
 }
 
 export interface LoginRequest {

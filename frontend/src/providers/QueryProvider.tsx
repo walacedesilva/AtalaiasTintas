@@ -52,13 +52,6 @@ export function QueryProvider({ children }: QueryProviderProps): React.ReactElem
         <ReactQueryDevtools 
           initialIsOpen={false} 
           position="bottom"
-          toggleButtonProps={{
-            style: {
-              marginLeft: '5px',
-              transform: 'scale(0.7)',
-              transformOrigin: 'bottom left'
-            }
-          }}
         />
       )}
     </QueryClientProvider>

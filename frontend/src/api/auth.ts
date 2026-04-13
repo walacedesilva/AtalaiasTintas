@@ -13,8 +13,8 @@ export const authAPI = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await apiClient.postData<AuthResponse>('/auth/login/', credentials);
     
-    // Store tokens automatically
-    apiClient.setAuthToken(response.access);
+    // Store token automatically
+    apiClient.setAuthToken(response.token);
     
     return response;
   },
@@ -44,7 +44,7 @@ export const authAPI = {
     });
     
     // Update stored token
-    apiClient.setAuthToken(response.access);
+    apiClient.setAuthToken(response.token);
     
     return response;
   },

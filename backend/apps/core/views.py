@@ -12,6 +12,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import transaction
+import uuid
 
 from .models import User, UserSession, AuditLog, UserPreferences, Configuracao
 from .permissions import IsAuthenticated, BusinessPermissions, BusinessRole
@@ -43,9 +44,10 @@ class LoginView(APIView):
                 token, created = Token.objects.get_or_create(user=user)
                 
                 # Create user session
+                session_key = request.session.session_key or uuid.uuid4().hex[:40]
                 session = UserSession.objects.create(
                     user=user,
-                    session_key=request.session.session_key or '',
+                    session_key=session_key,
                     ip_address=self.get_client_ip(request),
                     user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
                     is_active=True
