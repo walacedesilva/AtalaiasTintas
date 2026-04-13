@@ -1,0 +1,887 @@
+---
+# ================================================================
+# Ansible Monitoring Playbook for Atalaia Tintas Paint Store System
+# ================================================================
+#
+# This playbook sets up comprehensive monitoring infrastructure across
+# all servers, including health checks, performance monitoring, alerting,
+# and dashboard setup for the paint store system.
+#
+# Usage:
+#   ansible-playbook -i inventory/production monitoring.yml
+#   ansible-playbook -i inventory/staging monitoring.yml --extra-vars="action=install"
+#   ansible-playbook -i inventory/production monitoring.yml --extra-vars="action=configure"
+#   ansible-playbook -i inventory/production monitoring.yml --extra-vars="action=check"
+#
+# Author: Atalaia Tintas DevOps Team
+# Version: 1.0.0
+
+- name: "Atalaia Tintas Monitoring Infrastructure Setup"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Monitoring configuration
+    monitoring_user: "tintas"
+    monitoring_group: "tintas"
+    project_root: "/opt/atalaias_tintas"
+    backend_dir: "{{ project_root }}/backend"
+    
+    # Monitoring directories
+    monitoring_root: "/opt/monitoring"
+    logs_dir: "/var/log/tintas"
+    metrics_dir: "{{ monitoring_root }}/metrics"
+    
+    # Action to perform: install, configure, check, remove
+    action: "{{ action | default('install') }}"
+    
+    # Monitoring tools configuration
+    prometheus_enabled: true
+    grafana_enabled: true
+    alertmanager_enabled: true
+    node_exporter_enabled: true
+    
+    # Paint store specific monitoring
+    business_metrics_enabled: true
+    color_matching_monitoring: true
+    inventory_alerts_enabled: true
+    
+    # Alert thresholds
+    cpu_threshold: 80
+    memory_threshold: 85
+    disk_threshold: 90
+    response_time_threshold: 2000  # milliseconds
+    error_rate_threshold: 5  # percent
+    
+    # Notification settings
+    notification_email: "{{ vault_notification_email | default('monitoring@atalaiastintas.com') }}"
+    slack_webhook: "{{ vault_slack_webhook | default('') }}"
+    pagerduty_key: "{{ vault_pagerduty_key | default('') }}"
+    
+    # Retention policies
+    metrics_retention: "30d"
+    logs_retention: "90d"
+    
+    # External monitoring
+    external_monitoring_enabled: true
+    uptime_check_urls:
+      - "https://{{ domain_name }}/health/"
+      - "https://{{ domain_name }}/api/auth/profile/"
+
+  vars_files:
+    - ../vars/{{ env }}.yml  
+    - ../vars/vault.yml
+
+  tasks:
+    # ================================
+    # Setup and Validation
+    # ================================
+    
+    - name: "Display monitoring setup information"
+      debug:
+        msg:
+          - "Action: {{ action }}"
+          - "Server: {{ inventory_hostname }}"
+          - "Server Type: {{ group_names }}"
+          - "Prometheus: {{ prometheus_enabled }}"
+          - "Grafana: {{ grafana_enabled }}"
+          - "Business Metrics: {{ business_metrics_enabled }}"
+
+    - name: "Create monitoring directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ monitoring_user }}"
+        group: "{{ monitoring_group }}"
+        mode: '0755'
+      loop:
+        - "{{ monitoring_root }}"
+        - "{{ metrics_dir }}"
+        - "{{ logs_dir }}"
+        - "{{ monitoring_root }}/config"
+        - "{{ monitoring_root }}/data"
+        - "{{ monitoring_root }}/scripts"
+
+    # ================================
+    # Node Exporter Installation
+    # ================================
+    
+    - name: "Download Node Exporter"
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+        mode: '0644'
+      when: 
+        - node_exporter_enabled
+        - action in ['install', 'configure']
+
+    - name: "Extract Node Exporter"
+      unarchive:
+        src: "/tmp/node_exporter.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+      when: 
+        - node_exporter_enabled
+        - action in ['install', 'configure']
+
+    - name: "Install Node Exporter binary"
+      copy:
+        src: "/tmp/node_exporter-1.6.1.linux-amd64/node_exporter"
+        dest: "/usr/local/bin/node_exporter"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+      when: 
+        - node_exporter_enabled
+        - action in ['install', 'configure']
+
+    - name: "Create Node Exporter systemd service"
+      copy:
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Documentation=https://prometheus.io/docs/guides/node-exporter/
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User=nobody
+          Group=nogroup
+          ExecReload=/bin/kill -HUP $MAINPID
+          ExecStart=/usr/local/bin/node_exporter \
+            --web.listen-address=:9100 \
+            --path.procfs=/proc \
+            --path.sysfs=/sys \
+            --collector.filesystem.mount-points-exclude="^/(sys|proc|dev|host|etc)($$|/)" \
+            --collector.systemd \
+            --collector.processes \
+            --collector.tcpstat
+
+          SyslogIdentifier=node_exporter
+          Restart=always
+          RestartSec=1
+          StartLimitInterval=0
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/node_exporter.service"
+        mode: '0644'
+      when: 
+        - node_exporter_enabled
+        - action in ['install', 'configure']
+
+    - name: "Start and enable Node Exporter"
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      when: 
+        - node_exporter_enabled
+        - action in ['install', 'configure']
+
+    # ================================
+    # Prometheus Installation (on monitoring servers)
+    # ================================
+    
+    - name: "Download Prometheus"
+      get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz"
+        dest: "/tmp/prometheus.tar.gz"
+        mode: '0644'
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Extract Prometheus"
+      unarchive:
+        src: "/tmp/prometheus.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Install Prometheus binaries"
+      copy:
+        src: "/tmp/prometheus-2.45.0.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - prometheus
+        - promtool
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Create Prometheus configuration"
+      copy:
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+            external_labels:
+              cluster: 'tintas_{{ env }}'
+              replica: '{{ inventory_hostname }}'
+
+          rule_files:
+            - "/etc/prometheus/rules/*.yml"
+
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets:
+                    {% for host in groups['tintas_monitoring'] %}
+                    - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:9093
+                    {% endfor %}
+
+          scrape_configs:
+            # Prometheus itself
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+
+            # Node exporters on all servers
+            - job_name: 'node_exporter'
+              static_configs:
+                - targets:
+                  {% for host in groups['all'] %}
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:9100
+                  {% endfor %}
+
+            # Paint store application servers
+            - job_name: 'tintas_web'
+              metrics_path: '/metrics'
+              static_configs:
+                - targets:
+                  {% for host in groups['tintas_web'] %}
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:8000
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:8002
+                  {% endfor %}
+
+            # Database servers
+            - job_name: 'postgres_exporter'
+              static_configs:
+                - targets:
+                  {% for host in groups['tintas_db'] %}
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:9187
+                  {% endfor %}
+
+            # Redis servers
+            - job_name: 'redis_exporter'
+              static_configs:
+                - targets:
+                  {% for host in groups['tintas_cache'] %}
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:9121
+                  {% endfor %}
+
+            # Nginx servers
+            - job_name: 'nginx'
+              static_configs:
+                - targets:
+                  {% for host in groups['tintas_web'] %}
+                  - {{ hostvars[host]['ansible_default_ipv4']['address'] }}:8888
+                  {% endfor %}
+
+        dest: "/etc/prometheus/prometheus.yml"
+        mode: '0644'
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+      notify: restart prometheus
+
+    - name: "Create Prometheus alert rules for paint store"
+      copy:
+        content: |
+          groups:
+            - name: tintas_system_alerts
+              rules:
+                - alert: HighCPUUsage
+                  expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > {{ cpu_threshold }}
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "High CPU usage on {{ "{{ $labels.instance }}" }}"
+                    description: "CPU usage is above {{ cpu_threshold }}% for 5 minutes"
+
+                - alert: HighMemoryUsage
+                  expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > {{ memory_threshold }}
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "High memory usage on {{ "{{ $labels.instance }}" }}"
+                    description: "Memory usage is above {{ memory_threshold }}% for 5 minutes"
+
+                - alert: LowDiskSpace
+                  expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < (100 - {{ disk_threshold }})
+                  for: 2m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "Low disk space on {{ "{{ $labels.instance }}" }}"
+                    description: "Disk space is below {{ 100 - disk_threshold }}% available"
+
+                - alert: ServiceDown
+                  expr: up == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "Service {{ "{{ $labels.job }}" }} is down on {{ "{{ $labels.instance }}" }}"
+                    description: "Service has been down for more than 1 minute"
+
+            - name: tintas_business_alerts
+              rules:
+                - alert: HighResponseTime
+                  expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000 > {{ response_time_threshold }}
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "High response time detected"
+                    description: "95th percentile response time is above {{ response_time_threshold }}ms"
+
+                - alert: HighErrorRate
+                  expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > {{ error_rate_threshold }}
+                  for: 2m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "High error rate detected"
+                    description: "Error rate is above {{ error_rate_threshold }}% for 2 minutes"
+
+                - alert: ColorMatchingServiceDown
+                  expr: tintas_color_matching_available == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "Color matching service is unavailable"
+                    description: "Critical paint store service is down"
+
+                - alert: LowInventoryStock
+                  expr: tintas_inventory_stock_level < tintas_inventory_minimum_threshold
+                  for: 0m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "Low inventory stock for {{ "{{ $labels.product }}" }}"
+                    description: "Stock level is below minimum threshold"
+
+        dest: "/etc/prometheus/rules/tintas_alerts.yml"
+        mode: '0644'
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+      notify: restart prometheus
+
+    - name: "Create Prometheus systemd service"
+      copy:
+        content: |
+          [Unit]
+          Description=Prometheus
+          Documentation=https://prometheus.io/docs/introduction/overview/
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User={{ monitoring_user }}
+          Group={{ monitoring_group }}
+          ExecReload=/bin/kill -HUP $MAINPID
+          ExecStart=/usr/local/bin/prometheus \
+            --config.file=/etc/prometheus/prometheus.yml \
+            --storage.tsdb.path={{ monitoring_root }}/data \
+            --storage.tsdb.retention.time={{ metrics_retention }} \
+            --web.console.templates=/etc/prometheus/consoles \
+            --web.console.libraries=/etc/prometheus/console_libraries \
+            --web.listen-address=0.0.0.0:9090 \
+            --web.external-url=http://{{ ansible_default_ipv4.address }}:9090/ \
+            --web.enable-lifecycle
+
+          SyslogIdentifier=prometheus
+          Restart=always
+          RestartSec=1
+          StartLimitInterval=0
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/prometheus.service"
+        mode: '0644'
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Start and enable Prometheus"
+      systemd:
+        name: prometheus
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      when: 
+        - prometheus_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    # ================================
+    # Grafana Installation (on monitoring servers)
+    # ================================
+    
+    - name: "Add Grafana APT key"
+      apt_key:
+        url: https://apt.grafana.com/gpg.key
+        state: present
+      when: 
+        - grafana_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Add Grafana APT repository"
+      apt_repository:
+        repo: "deb https://apt.grafana.com stable main"
+        state: present
+      when: 
+        - grafana_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Install Grafana"
+      apt:
+        name: grafana
+        state: present
+        update_cache: yes
+      when: 
+        - grafana_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Configure Grafana"
+      copy:
+        content: |
+          [server]
+          protocol = http
+          http_addr = 0.0.0.0
+          http_port = 3000
+          domain = {{ ansible_default_ipv4.address }}
+          root_url = http://{{ ansible_default_ipv4.address }}:3000/
+
+          [database]
+          type = sqlite3
+          path = {{ monitoring_root }}/data/grafana.db
+
+          [analytics]
+          reporting_enabled = false
+          check_for_updates = false
+
+          [security]
+          admin_user = admin
+          admin_password = {{ vault_grafana_admin_password | default('tintas_admin') }}
+          secret_key = {{ vault_grafana_secret_key | default('SW2YcwTIb9zpOOhoPsMm') }}
+
+          [users]
+          allow_sign_up = false
+          allow_org_create = false
+          default_theme = light
+
+          [auth.anonymous]
+          enabled = false
+
+          [alerting]
+          enabled = true
+          execute_alerts = true
+
+          [smtp]
+          enabled = true
+          host = {{ vault_smtp_host | default('localhost:587') }}
+          user = {{ vault_smtp_user | default('') }}
+          password = {{ vault_smtp_password | default('') }}
+          from_address = grafana@atalaiastintas.com
+          from_name = Atalaia Tintas Monitoring
+
+        dest: "/etc/grafana/grafana.ini"
+        mode: '0640'
+        owner: root
+        group: grafana
+      when: 
+        - grafana_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+      notify: restart grafana
+
+    - name: "Start and enable Grafana"
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      when: 
+        - grafana_enabled
+        - "'tintas_monitoring' in group_names"
+        - action in ['install', 'configure']
+
+    # ================================
+    # Paint Store Custom Metrics
+    # ================================
+    
+    - name: "Create Django monitoring middleware"
+      copy:
+        content: |
+          """
+          Custom monitoring middleware for Atalaia Tintas Paint Store
+          Collects business metrics specific to paint store operations
+          """
+          import time
+          from django.conf import settings
+          from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry, generate_latest
+
+          # Business metrics for paint store
+          PAINT_ORDERS_TOTAL = Counter('tintas_paint_orders_total', 'Total paint orders processed', ['order_type', 'status'])
+          COLOR_MATCHING_REQUESTS = Counter('tintas_color_matching_requests_total', 'Color matching requests', ['result'])
+          INVENTORY_STOCK_LEVEL = Gauge('tintas_inventory_stock_level', 'Current inventory stock level', ['product_code'])
+          INVENTORY_MINIMUM_THRESHOLD = Gauge('tintas_inventory_minimum_threshold', 'Minimum stock threshold', ['product_code'])
+          COLOR_MATCHING_AVAILABLE = Gauge('tintas_color_matching_available', 'Color matching service availability')
+          PAINT_MIXING_TIME = Histogram('tintas_paint_mixing_seconds', 'Time spent mixing paint', ['color_type'])
+
+          class PaintStoreMetricsMiddleware:
+              def __init__(self, get_response):
+                  self.get_response = get_response
+
+              def __call__(self, request):
+                  start_time = time.time()
+                  
+                  response = self.get_response(request)
+                  
+                  # Track response time
+                  duration = time.time() - start_time
+                  
+                  # Business logic metrics
+                  if request.path.startswith('/api/orders/'):
+                      if response.status_code == 201:  # Order created
+                          PAINT_ORDERS_TOTAL.labels(order_type='web', status='created').inc()
+                  
+                  elif request.path.startswith('/api/color-matching/'):
+                      if response.status_code == 200:
+                          COLOR_MATCHING_REQUESTS.labels(result='success').inc()
+                      else:
+                          COLOR_MATCHING_REQUESTS.labels(result='error').inc()
+                  
+                  return response
+
+        dest: "{{ backend_dir }}/apps/core/middleware/monitoring.py"
+        owner: "{{ monitoring_user }}"
+        group: "{{ monitoring_group }}"
+        mode: '0644'
+      when: 
+        - business_metrics_enabled
+        - "'tintas_web' in group_names"
+        - action in ['install', 'configure']
+
+    - name: "Create metrics endpoint view"
+      copy:
+        content: |
+          """
+          Metrics endpoint for Prometheus scraping
+          """
+          from django.http import HttpResponse
+          from django.views import View
+          from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+          from .middleware.monitoring import COLOR_MATCHING_AVAILABLE
+
+          class MetricsView(View):
+              def get(self, request):
+                  # Update service availability metrics
+                  try:
+                      # Check if color matching service is available
+                      # This would typically check the actual service
+                      COLOR_MATCHING_AVAILABLE.set(1)  # 1 = available, 0 = unavailable
+                  except Exception:
+                      COLOR_MATCHING_AVAILABLE.set(0)
+                  
+                  return HttpResponse(generate_latest(REGISTRY), content_type=CONTENT_TYPE_LATEST)
+
+        dest: "{{ backend_dir }}/apps/monitoring/views/metrics.py"
+        owner: "{{ monitoring_user }}"
+        group: "{{ monitoring_group }}"
+        mode: '0644'
+      when: 
+        - business_metrics_enabled
+        - "'tintas_web' in group_names"
+        - action in ['install', 'configure']
+
+    # ================================
+    # Health Check Scripts
+    # ================================
+    
+    - name: "Create comprehensive health check script"
+      copy:
+        content: |
+          #!/bin/bash
+          # Comprehensive health check for Atalaia Tintas Paint Store
+          # Returns: 0 = healthy, 1 = warning, 2 = critical
+
+          set -euo pipefail
+
+          HEALTH_STATUS=0
+          HEALTH_REPORT="/tmp/tintas_health_$(date +%s).json"
+
+          # Check application health
+          check_application() {
+              local app_status=0
+              
+              # Check if application is responding
+              if ! curl -sf http://localhost:8000/health/ > /dev/null 2>&1; then
+                  echo "ERROR: Application health check failed" >&2
+                  app_status=2
+              fi
+              
+              return $app_status
+          }
+
+          # Check database health
+          check_database() {
+              local db_status=0
+              
+              # Check PostgreSQL connection
+              if ! pg_isready -h localhost > /dev/null 2>&1; then
+                  echo "ERROR: Database connection failed" >&2
+                  db_status=2
+              fi
+              
+              return $db_status
+          }
+
+          # Check cache health
+          check_cache() {
+              local cache_status=0
+              
+              # Check Redis connection
+              if ! redis-cli ping > /dev/null 2>&1; then
+                  echo "ERROR: Cache connection failed" >&2
+                  cache_status=1  # Cache failure is warning, not critical
+              fi
+              
+              return $cache_status
+          }
+
+          # Check system resources
+          check_resources() {
+              local resource_status=0
+              
+              # Check CPU usage
+              cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | awk -F'%' '{print $1}')
+              if (( $(echo "$cpu_usage > {{ cpu_threshold }}" | bc -l) )); then
+                  echo "WARNING: High CPU usage ($cpu_usage%)" >&2
+                  resource_status=1
+              fi
+              
+              # Check memory usage
+              mem_usage=$(free | grep Mem | awk '{printf("%.2f", $3/$2 * 100.0)}')
+              if (( $(echo "$mem_usage > {{ memory_threshold }}" | bc -l) )); then
+                  echo "WARNING: High memory usage ($mem_usage%)" >&2
+                  resource_status=1
+              fi
+              
+              # Check disk usage
+              disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+              if (( disk_usage > {{ disk_threshold }} )); then
+                  echo "WARNING: High disk usage ($disk_usage%)" >&2
+                  resource_status=1
+              fi
+              
+              return $resource_status
+          }
+
+          # Main health check
+          main() {
+              local app_health db_health cache_health resource_health
+              
+              app_health=0; check_application || app_health=$?
+              db_health=0; check_database || db_health=$?
+              cache_health=0; check_cache || cache_health=$?
+              resource_health=0; check_resources || resource_health=$?
+              
+              # Determine overall health status
+              local max_status=$(printf "%s\n%s\n%s\n%s\n" "$app_health" "$db_health" "$cache_health" "$resource_health" | sort -nr | head -1)
+              
+              # Generate health report
+              cat > "$HEALTH_REPORT" << EOF
+          {
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "hostname": "$(hostname)",
+              "overall_status": $max_status,
+              "checks": {
+                  "application": $app_health,
+                  "database": $db_health,
+                  "cache": $cache_health,
+                  "resources": $resource_health
+              }
+          }
+          EOF
+              
+              exit $max_status
+          }
+
+          main "$@"
+
+        dest: "{{ monitoring_root }}/scripts/health_check.sh"
+        owner: "{{ monitoring_user }}"
+        group: "{{ monitoring_group }}"
+        mode: '0755'
+      when: action in ['install', 'configure']
+
+    - name: "Create health check cron job"
+      cron:
+        name: "Tintas health check"
+        job: "{{ monitoring_root }}/scripts/health_check.sh >> {{ logs_dir }}/health_check.log 2>&1"
+        minute: "*/5"
+        user: "{{ monitoring_user }}"
+      when: action in ['install', 'configure']
+
+    # ================================
+    # Log Rotation Configuration
+    # ================================
+    
+    - name: "Configure log rotation for monitoring logs"
+      copy:
+        content: |
+          {{ logs_dir }}/*.log {
+              daily
+              rotate {{ logs_retention | regex_replace('d$', '') | int }}
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0644 {{ monitoring_user }} {{ monitoring_group }}
+              postrotate
+                  /bin/systemctl reload rsyslog > /dev/null 2>&1 || true
+              endscript
+          }
+
+          {{ monitoring_root }}/data/*.log {
+              weekly
+              rotate 4
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0644 {{ monitoring_user }} {{ monitoring_group }}
+          }
+
+        dest: "/etc/logrotate.d/tintas_monitoring"
+        mode: '0644'
+      when: action in ['install', 'configure']
+
+    # ================================
+    # External Monitoring Setup
+    # ================================
+    
+    - name: "Create external uptime monitoring script"
+      copy:
+        content: |
+          #!/bin/bash
+          # External uptime monitoring for Atalaia Tintas
+
+          URLS="{{ uptime_check_urls | join(' ') }}"
+          ALERT_EMAIL="{{ notification_email }}"
+          
+          for url in $URLS; do
+              if ! curl -sf --max-time 10 "$url" > /dev/null 2>&1; then
+                  echo "ALERT: $url is not responding" | mail -s "[Tintas] Service Down Alert" "$ALERT_EMAIL"
+              fi
+          done
+
+        dest: "{{ monitoring_root }}/scripts/external_uptime_check.sh"
+        owner: "{{ monitoring_user }}"
+        group: "{{ monitoring_group }}"
+        mode: '0755'
+      when: 
+        - external_monitoring_enabled
+        - action in ['install', 'configure']
+
+    - name: "Create external uptime monitoring cron job"
+      cron:
+        name: "External uptime check"
+        job: "{{ monitoring_root }}/scripts/external_uptime_check.sh"
+        minute: "*/2"
+        user: "{{ monitoring_user }}"
+      when: 
+        - external_monitoring_enabled
+        - action in ['install', 'configure']
+
+    # ================================
+    # Monitoring Status Check
+    # ================================
+    
+    - name: "Check monitoring services status"
+      command: "systemctl is-active {{ item }}"
+      register: service_status
+      failed_when: false
+      changed_when: false
+      loop:
+        - node_exporter
+        - prometheus
+        - grafana-server
+      when: action == 'check'
+
+    - name: "Display monitoring services status"
+      debug:
+        msg: "{{ item.item }}: {{ item.stdout }}"
+      loop: "{{ service_status.results }}"
+      when: 
+        - action == 'check'
+        - service_status is defined
+
+    - name: "Test Prometheus targets"
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:9090/api/v1/targets"
+        method: GET
+        return_content: yes
+      register: prometheus_targets
+      when: 
+        - action == 'check'
+        - "'tintas_monitoring' in group_names"
+
+    - name: "Display Prometheus targets status"
+      debug:
+        var: prometheus_targets.json.data.activeTargets
+      when: 
+        - action == 'check'
+        - prometheus_targets is defined
+        - "'tintas_monitoring' in group_names"
+
+  # ================================
+  # Handlers
+  # ================================
+
+  handlers:
+    - name: restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+        daemon_reload: yes
+
+    - name: restart grafana
+      systemd:
+        name: grafana-server
+        state: restarted
+        daemon_reload: yes
+
+    - name: restart node_exporter
+      systemd:
+        name: node_exporter
+        state: restarted
+        daemon_reload: yes

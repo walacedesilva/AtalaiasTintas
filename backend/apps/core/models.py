@@ -442,3 +442,335 @@ class AuditLog(TimeStampedModel):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+
+class BackupRecord(TimeStampedModel):
+    """
+    Model to track database backup operations and audit trail
+    Task: T037 - BackupRecord model for backup audit trail
+    User Story 2: Data Integrity and Backup
+    """
+    
+    # Backup types
+    TYPE_FULL = 'FULL'
+    TYPE_INCREMENTAL = 'INCREMENTAL'
+    TYPE_DIFFERENTIAL = 'DIFFERENTIAL'
+    TYPE_MANUAL = 'MANUAL'
+    TYPE_EMERGENCY = 'EMERGENCY'
+    
+    TYPE_CHOICES = [
+        (TYPE_FULL, 'Full Backup'),
+        (TYPE_INCREMENTAL, 'Incremental Backup'),
+        (TYPE_DIFFERENTIAL, 'Differential Backup'),
+        (TYPE_MANUAL, 'Manual Backup'),
+        (TYPE_EMERGENCY, 'Emergency Backup'),
+    ]
+    
+    # Backup status
+    STATUS_STARTED = 'STARTED'
+    STATUS_IN_PROGRESS = 'IN_PROGRESS'
+    STATUS_COMPLETED = 'COMPLETED'
+    STATUS_FAILED = 'FAILED'
+    STATUS_CANCELLED = 'CANCELLED'
+    STATUS_CORRUPTED = 'CORRUPTED'
+    
+    STATUS_CHOICES = [
+        (STATUS_STARTED, 'Started'),
+        (STATUS_IN_PROGRESS, 'In Progress'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_CANCELLED, 'Cancelled'),
+        (STATUS_CORRUPTED, 'Corrupted'),
+    ]
+    
+    # Core fields
+    backup_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        help_text="Type of backup operation"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_STARTED,
+        help_text="Current backup status"
+    )
+    
+    # File information
+    filename = models.CharField(
+        max_length=255,
+        help_text="Backup file name"
+    )
+    
+    file_path = models.CharField(
+        max_length=500,
+        help_text="Full path to backup file"
+    )
+    
+    file_size = models.BigIntegerField(
+        null=True, blank=True,
+        help_text="Backup file size in bytes"
+    )
+    
+    checksum = models.CharField(
+        max_length=64,
+        null=True, blank=True,
+        help_text="SHA256 checksum of backup file for integrity verification"
+    )
+    
+    # Timing information
+    started_at = models.DateTimeField(
+        help_text="When backup operation started"
+    )
+    
+    completed_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When backup operation completed"
+    )
+    
+    duration = models.DurationField(
+        null=True, blank=True,
+        help_text="Total backup duration"
+    )
+    
+    # Backup details
+    database_name = models.CharField(
+        max_length=100,
+        default='default',
+        help_text="Database name that was backed up"
+    )
+    
+    tables_included = models.JSONField(
+        null=True, blank=True,
+        help_text="List of tables included in backup"
+    )
+    
+    compression_used = models.BooleanField(
+        default=True,
+        help_text="Whether compression was used"
+    )
+    
+    encryption_used = models.BooleanField(
+        default=False,
+        help_text="Whether encryption was used"
+    )
+    
+    # User and automation
+    initiated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='backup_records',
+        help_text="User who initiated the backup (null for automated)"
+    )
+    
+    is_automated = models.BooleanField(
+        default=False,
+        help_text="Whether this was an automated backup"
+    )
+    
+    # Error handling
+    error_message = models.TextField(
+        null=True, blank=True,
+        help_text="Error message if backup failed"
+    )
+    
+    error_details = models.JSONField(
+        null=True, blank=True,
+        help_text="Detailed error information"
+    )
+    
+    # Retention management
+    retention_days = models.IntegerField(
+        default=30,
+        help_text="How many days to retain this backup"
+    )
+    
+    expires_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When this backup expires and can be deleted"
+    )
+    
+    is_archived = models.BooleanField(
+        default=False,
+        help_text="Whether backup has been archived to long-term storage"
+    )
+    
+    archive_location = models.CharField(
+        max_length=500,
+        null=True, blank=True,
+        help_text="Location of archived backup"
+    )
+    
+    # Recovery information
+    last_verified = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When backup integrity was last verified"
+    )
+    
+    verification_result = models.BooleanField(
+        null=True, blank=True,
+        help_text="Result of last integrity verification"
+    )
+    
+    restore_count = models.IntegerField(
+        default=0,
+        help_text="Number of times this backup has been used for restore"
+    )
+    
+    # Metadata
+    metadata = models.JSONField(
+        null=True, blank=True,
+        help_text="Additional backup metadata and configuration"
+    )
+    
+    notes = models.TextField(
+        null=True, blank=True,
+        help_text="Administrative notes about this backup"
+    )
+    
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['backup_type', 'started_at']),
+            models.Index(fields=['status', 'started_at']),
+            models.Index(fields=['database_name', 'started_at']),
+            models.Index(fields=['is_automated', 'started_at']),
+            models.Index(fields=['expires_at']),
+        ]
+        verbose_name = 'Backup Record'
+        verbose_name_plural = 'Backup Records'
+    
+    def __str__(self):
+        return f"{self.get_backup_type_display()} - {self.filename} ({self.get_status_display()})"
+    
+    @property
+    def is_successful(self):
+        """Check if backup completed successfully"""
+        return self.status == self.STATUS_COMPLETED
+    
+    @property
+    def is_expired(self):
+        """Check if backup has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+    
+    @property
+    def size_formatted(self):
+        """Get human-readable file size"""
+        if not self.file_size:
+            return "Unknown"
+        
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if self.file_size < 1024.0:
+                return f"{self.file_size:.1f} {unit}"
+            self.file_size /= 1024.0
+        return f"{self.file_size:.1f} PB"
+    
+    def mark_completed(self, file_size=None, checksum=None):
+        """Mark backup as completed with file information"""
+        from django.utils import timezone
+        
+        self.status = self.STATUS_COMPLETED
+        self.completed_at = timezone.now()
+        
+        if self.started_at and self.completed_at:
+            self.duration = self.completed_at - self.started_at
+        
+        if file_size:
+            self.file_size = file_size
+        
+        if checksum:
+            self.checksum = checksum
+        
+        # Set expiration date
+        if self.retention_days and not self.expires_at:
+            from datetime import timedelta
+            self.expires_at = self.completed_at + timedelta(days=self.retention_days)
+        
+        self.save(update_fields=[
+            'status', 'completed_at', 'duration', 'file_size', 
+            'checksum', 'expires_at'
+        ])
+    
+    def mark_failed(self, error_message, error_details=None):
+        """Mark backup as failed with error information"""
+        self.status = self.STATUS_FAILED
+        self.completed_at = timezone.now()
+        self.error_message = error_message
+        
+        if error_details:
+            self.error_details = error_details
+        
+        if self.started_at and self.completed_at:
+            self.duration = self.completed_at - self.started_at
+        
+        self.save(update_fields=[
+            'status', 'completed_at', 'duration', 'error_message', 'error_details'
+        ])
+    
+    def verify_integrity(self):
+        """Verify backup file integrity using checksum"""
+        import hashlib
+        import os
+        
+        if not os.path.exists(self.file_path):
+            self.verification_result = False
+            self.last_verified = timezone.now()
+            self.save(update_fields=['verification_result', 'last_verified'])
+            return False
+        
+        if not self.checksum:
+            # No checksum to verify against
+            return None
+        
+        # Calculate current file checksum
+        sha256_hash = hashlib.sha256()
+        try:
+            with open(self.file_path, "rb") as f:
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            
+            current_checksum = sha256_hash.hexdigest()
+            self.verification_result = (current_checksum == self.checksum)
+            self.last_verified = timezone.now()
+            self.save(update_fields=['verification_result', 'last_verified'])
+            
+            return self.verification_result
+        
+        except Exception:
+            self.verification_result = False
+            self.last_verified = timezone.now()
+            self.save(update_fields=['verification_result', 'last_verified'])
+            return False
+    
+    @classmethod
+    def create_backup_record(cls, backup_type, filename, file_path, 
+                           initiated_by=None, is_automated=False, **kwargs):
+        """Helper method to create new backup records"""
+        return cls.objects.create(
+            backup_type=backup_type,
+            filename=filename,
+            file_path=file_path,
+            started_at=timezone.now(),
+            initiated_by=initiated_by,
+            is_automated=is_automated,
+            **kwargs
+        )
+    
+    @classmethod
+    def get_recent_backups(cls, days=7):
+        """Get backups from the last N days"""
+        from datetime import timedelta
+        cutoff_date = timezone.now() - timedelta(days=days)
+        return cls.objects.filter(started_at__gte=cutoff_date)
+    
+    @classmethod
+    def get_expired_backups(cls):
+        """Get backups that have expired"""
+        return cls.objects.filter(
+            expires_at__lt=timezone.now(),
+            is_archived=False
+        )

@@ -1,0 +1,553 @@
+---
+# ================================================================
+# Ansible Backup Playbook for Atalaia Tintas Paint Store System
+# ================================================================
+#
+# This playbook performs comprehensive backup operations across all servers
+# in the paint store infrastructure, including database, media files, 
+# configuration, and application data.
+#
+# Usage:
+#   ansible-playbook -i inventory/production backup.yml
+#   ansible-playbook -i inventory/staging backup.yml --extra-vars="backup_type=full"
+#   ansible-playbook -i inventory/production backup.yml --extra-vars="backup_type=database"
+#   ansible-playbook -i inventory/production backup.yml --extra-vars="restore=true backup_file=/path/to/backup.tar.gz"
+#
+# Author: Atalaia Tintas DevOps Team
+# Version: 1.0.0
+
+- name: "Atalaia Tintas Comprehensive Backup System"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Backup configuration
+    backup_user: "tintas"
+    backup_group: "tintas"
+    project_root: "/opt/atalaias_tintas"
+    backend_dir: "{{ project_root }}/backend"
+    
+    # Backup destinations
+    backup_root: "/var/backups/tintas"
+    local_backup_dir: "{{ backup_root }}/local"
+    remote_backup_dir: "{{ backup_root }}/remote"
+    
+    # Backup types: full, incremental, database, media, config
+    backup_type: "{{ backup_type | default('incremental') }}"
+    
+    # Retention policies (days)
+    full_backup_retention: 30
+    incremental_backup_retention: 7
+    database_backup_retention: 14
+    media_backup_retention: 90
+    
+    # Remote backup settings
+    remote_backup_enabled: "{{ vault_remote_backup_enabled | default(false) }}"
+    s3_bucket: "{{ vault_s3_bucket | default('') }}"
+    s3_region: "{{ vault_s3_region | default('us-east-1') }}"
+    
+    # Encryption settings
+    backup_encryption_enabled: true
+    encryption_key_file: "/etc/tintas/backup_encryption.key"
+    
+    # Notification settings
+    notification_email: "{{ vault_notification_email | default('backup@atalaiastintas.com') }}"
+    
+    # Restore mode (set via command line: --extra-vars="restore=true")
+    restore: false
+    backup_file: ""
+    
+    # Compression settings
+    compression_level: 6  # 1-9, higher is better compression but slower
+
+  vars_files:
+    - ../vars/{{ env }}.yml
+    - ../vars/vault.yml
+
+  tasks:
+    # ================================
+    # Setup and Validation
+    # ================================
+    
+    - name: "Create backup timestamp"
+      set_fact:
+        backup_timestamp: "{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}"
+        backup_date: "{{ ansible_date_time.date }}"
+        backup_start_time: "{{ ansible_date_time.epoch }}"
+
+    - name: "Display backup information"
+      debug:
+        msg:
+          - "Backup Type: {{ backup_type }}"
+          - "Backup Timestamp: {{ backup_timestamp }}"
+          - "Server: {{ inventory_hostname }}"
+          - "Restore Mode: {{ restore }}"
+          - "Remote Backup: {{ remote_backup_enabled }}"
+
+    - name: "Create backup directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0750'
+      loop:
+        - "{{ backup_root }}"
+        - "{{ local_backup_dir }}"
+        - "{{ remote_backup_dir }}"
+        - "{{ backup_root }}/tmp"
+        - "{{ backup_root }}/logs"
+
+    - name: "Check available disk space"
+      shell: "df {{ backup_root }} | awk 'NR==2 {print $4}'"
+      register: available_space_kb
+      changed_when: false
+
+    - name: "Estimate backup size"
+      shell: |
+        du -sb {{ project_root }} 2>/dev/null | cut -f1 || echo "0"
+      register: estimated_backup_size_bytes
+      changed_when: false
+      
+    - name: "Verify sufficient disk space"
+      fail:
+        msg: "Insufficient disk space for backup. Available: {{ available_space_kb.stdout }}KB, Estimated needed: {{ (estimated_backup_size_bytes.stdout | int / 1024) | int }}KB"
+      when: 
+        - not restore | bool
+        - (available_space_kb.stdout | int) < ((estimated_backup_size_bytes.stdout | int / 1024) * 2)
+
+    # ================================
+    # Restore Mode
+    # ================================
+    
+    - block:
+        - name: "Validate restore parameters"
+          fail:
+            msg: "backup_file parameter is required for restore mode"
+          when: backup_file == ""
+
+        - name: "Check if backup file exists"
+          stat:
+            path: "{{ backup_file }}"
+          register: restore_file_check
+
+        - name: "Fail if backup file doesn't exist"
+          fail:
+            msg: "Backup file {{ backup_file }} not found"
+          when: not restore_file_check.stat.exists
+
+        - name: "Stop application services before restore"
+          supervisorctl:
+            name: "tintas_{{ item }}:*"
+            state: stopped
+          loop: ['blue', 'green']
+          become_user: "{{ backup_user }}"
+          ignore_errors: yes
+
+        - name: "Create restore directory"
+          file:
+            path: "{{ backup_root }}/restore_{{ backup_timestamp }}"
+            state: directory
+            owner: "{{ backup_user }}"
+            group: "{{ backup_group }}"
+            mode: '0750'
+
+        - name: "Extract backup archive"
+          unarchive:
+            src: "{{ backup_file }}"
+            dest: "{{ backup_root }}/restore_{{ backup_timestamp }}"
+            remote_src: yes
+            owner: "{{ backup_user }}"
+            group: "{{ backup_group }}"
+
+        - name: "Restore application files"
+          synchronize:
+            src: "{{ backup_root }}/restore_{{ backup_timestamp }}/application/"
+            dest: "{{ project_root }}/"
+            delete: yes
+            rsync_opts:
+              - "--chown={{ backup_user }}:{{ backup_group }}"
+
+        - name: "Restore database from backup"
+          postgresql_db:
+            name: "{{ vault_db_name }}"
+            state: restore
+            target: "{{ backup_root }}/restore_{{ backup_timestamp }}/database/tintas_{{ backup_date }}.sql"
+          become_user: postgres
+          when: "'database' in backup_file"
+
+        - name: "Start application services after restore"
+          supervisorctl:
+            name: "tintas_blue:*"
+            state: started
+          become_user: "{{ backup_user }}"
+
+        - name: "Send restore notification"
+          mail:
+            subject: "[Atalaia Tintas] Backup Restore Completed - {{ backup_timestamp }}"
+            to: "{{ notification_email }}"
+            body: |
+              Backup restore completed successfully on {{ inventory_hostname }}
+              
+              Restored from: {{ backup_file }}
+              Restore timestamp: {{ ansible_date_time.iso8601 }}
+              
+              Please verify application functionality.
+          ignore_errors: yes
+
+        - name: "End playbook after restore"
+          meta: end_play
+
+      when: restore | bool
+
+    # ================================
+    # Database Backup
+    # ================================
+
+    - name: "Create database backup directory"
+      file:
+        path: "{{ local_backup_dir }}/database"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0750'
+      when: "backup_type in ['full', 'database']"
+
+    - name: "Perform database backup"
+      postgresql_db:
+        name: "{{ vault_db_name }}"
+        state: dump
+        target: "{{ local_backup_dir }}/database/tintas_{{ backup_date }}.sql"
+        target_opts: "--verbose --create --clean"
+      become_user: postgres
+      when: "backup_type in ['full', 'database'] and 'tintas_db' in group_names"
+
+    - name: "Compress database backup"
+      archive:
+        path: "{{ local_backup_dir }}/database/tintas_{{ backup_date }}.sql"
+        dest: "{{ local_backup_dir }}/database/tintas_{{ backup_date }}.sql.gz"
+        format: gz
+        remove: yes
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0640'
+      when: "backup_type in ['full', 'database'] and 'tintas_db' in group_names"
+
+    # ================================
+    # Application Files Backup
+    # ================================
+
+    - name: "Create application backup directory"
+      file:
+        path: "{{ local_backup_dir }}/application_{{ backup_timestamp }}"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0750'
+      when: "backup_type in ['full', 'incremental'] and 'tintas_web' in group_names"
+
+    - name: "Backup application code and configuration"
+      synchronize:
+        src: "{{ project_root }}/"
+        dest: "{{ local_backup_dir }}/application_{{ backup_timestamp }}/"
+        archive: yes
+        delete: no
+        rsync_opts:
+          - "--exclude=*.pyc"
+          - "--exclude=__pycache__"
+          - "--exclude=.git"
+          - "--exclude=venv"
+          - "--exclude=node_modules"
+          - "--exclude=*.log"
+          - "--exclude=media/cache"
+      delegate_to: "{{ inventory_hostname }}"
+      when: "backup_type in ['full', 'incremental'] and 'tintas_web' in group_names"
+
+    # ================================
+    # Media Files Backup
+    # ================================
+
+    - name: "Create media backup directory"
+      file:
+        path: "{{ local_backup_dir }}/media"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0750'
+      when: "backup_type in ['full', 'media'] and 'tintas_web' in group_names"
+
+    - name: "Backup media files"
+      synchronize:
+        src: "{{ project_root }}/media/"
+        dest: "{{ local_backup_dir }}/media/{{ backup_date }}/"
+        archive: yes
+        delete: no
+        rsync_opts:
+          - "--exclude=cache"
+          - "--exclude=tmp"
+      delegate_to: "{{ inventory_hostname }}"
+      when: "backup_type in ['full', 'media'] and 'tintas_web' in group_names"
+
+    # ================================
+    # System Configuration Backup
+    # ================================
+
+    - name: "Create configuration backup directory"
+      file:
+        path: "{{ local_backup_dir }}/config_{{ backup_timestamp }}"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0750'
+      when: "backup_type in ['full', 'config']"
+
+    - name: "Backup system configuration files"
+      copy:
+        src: "{{ item }}"
+        dest: "{{ local_backup_dir }}/config_{{ backup_timestamp }}/"
+        remote_src: yes
+        backup: yes
+      loop:
+        - "/etc/nginx/sites-available/tintas"
+        - "/etc/supervisor/conf.d/tintas.conf"
+        - "/etc/postgresql/*/main/postgresql.conf"
+        - "/etc/redis/redis.conf"
+        - "/etc/systemd/system/tintas*.service"
+      ignore_errors: yes
+      when: "backup_type in ['full', 'config']"
+
+    - name: "Backup application configuration"
+      copy:
+        src: "{{ backend_dir }}/tintas_system/settings/"
+        dest: "{{ local_backup_dir }}/config_{{ backup_timestamp }}/django_settings/"
+        remote_src: yes
+      when: "backup_type in ['full', 'config'] and 'tintas_web' in group_names"
+
+    # ================================
+    # SSL Certificates Backup
+    # ================================
+
+    - name: "Create SSL certificates backup directory"
+      file:
+        path: "{{ local_backup_dir }}/ssl_{{ backup_timestamp }}"
+        state: directory
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0700'
+      when: "backup_type in ['full', 'config']"
+
+    - name: "Backup SSL certificates"
+      copy:
+        src: "/etc/ssl/certs/tintas/"
+        dest: "{{ local_backup_dir }}/ssl_{{ backup_timestamp }}/"
+        remote_src: yes
+      ignore_errors: yes
+      when: "backup_type in ['full', 'config']"
+
+    # ================================
+    # Create Comprehensive Archive
+    # ================================
+
+    - name: "Create comprehensive backup archive"
+      archive:
+        path:
+          - "{{ local_backup_dir }}/database"
+          - "{{ local_backup_dir }}/application_{{ backup_timestamp }}"
+          - "{{ local_backup_dir }}/media"
+          - "{{ local_backup_dir }}/config_{{ backup_timestamp }}"
+          - "{{ local_backup_dir }}/ssl_{{ backup_timestamp }}"
+        dest: "{{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz"
+        format: gz
+        remove: no
+        owner: "{{ backup_user }}"
+        group: "{{ backup_group }}"
+        mode: '0640'
+      when: "backup_type == 'full'"
+
+    # ================================
+    # Encryption (if enabled)
+    # ================================
+
+    - name: "Encrypt backup archive"
+      command: >
+        gpg --cipher-algo AES256 --compress-algo 1 --s2k-mode 3
+        --s2k-digest-algo SHA512 --s2k-count 65536 --force-mdc 
+        --quiet --no-greeting --batch --yes
+        --passphrase-file {{ encryption_key_file }}
+        --symmetric --output {{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz.gpg
+        {{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz
+      when: 
+        - backup_encryption_enabled
+        - backup_type == 'full'
+
+    - name: "Remove unencrypted backup after encryption"
+      file:
+        path: "{{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz"
+        state: absent
+      when: 
+        - backup_encryption_enabled
+        - backup_type == 'full'
+
+    # ================================
+    # Remote Backup (S3)
+    # ================================
+
+    - name: "Upload backup to S3"
+      aws_s3:
+        bucket: "{{ s3_bucket }}"
+        object: "tintas/{{ inventory_hostname }}/{{ backup_type }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz{{ backup_encryption_enabled | ternary('.gpg', '') }}"
+        src: "{{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz{{ backup_encryption_enabled | ternary('.gpg', '') }}"
+        mode: put
+        region: "{{ s3_region }}"
+      when: 
+        - remote_backup_enabled
+        - backup_type == 'full'
+        - s3_bucket != ""
+
+    # ================================
+    # Backup Verification
+    # ================================
+
+    - name: "Verify backup file integrity"
+      stat:
+        path: "{{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz{{ backup_encryption_enabled | ternary('.gpg', '') }}"
+        checksum_algorithm: sha256
+      register: backup_file_stat
+      when: backup_type == 'full'
+
+    - name: "Test backup archive (without encryption)"
+      command: "tar -tzf {{ local_backup_dir }}/tintas_{{ backup_type }}_{{ backup_timestamp }}.tar.gz"
+      register: backup_test_result
+      when: 
+        - backup_type == 'full'
+        - not backup_encryption_enabled
+
+    - name: "Log backup verification results"
+      lineinfile:
+        path: "{{ backup_root }}/logs/backup_verification.log"
+        line: "{{ ansible_date_time.iso8601 }}|{{ inventory_hostname }}|{{ backup_type }}|{{ backup_file_stat.stat.size | default(0) }}|{{ backup_file_stat.stat.checksum | default('N/A') }}|SUCCESS"
+        create: yes
+
+    # ================================
+    # Cleanup Old Backups
+    # ================================
+
+    - name: "Clean up old full backups"
+      find:
+        paths: "{{ local_backup_dir }}"
+        patterns: "tintas_full_*.tar.gz*"
+        age: "{{ full_backup_retention }}d"
+      register: old_full_backups
+
+    - name: "Remove old full backups"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_full_backups.files }}"
+
+    - name: "Clean up old incremental backups"
+      find:
+        paths: "{{ local_backup_dir }}"
+        patterns: "tintas_incremental_*.tar.gz*"
+        age: "{{ incremental_backup_retention }}d"
+      register: old_incremental_backups
+
+    - name: "Remove old incremental backups"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_incremental_backups.files }}"
+
+    - name: "Clean up old database backups"
+      find:
+        paths: "{{ local_backup_dir }}/database"
+        patterns: "tintas_*.sql.gz"
+        age: "{{ database_backup_retention }}d"
+      register: old_database_backups
+
+    - name: "Remove old database backups"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_database_backups.files }}"
+
+    # ================================
+    # Backup Reporting
+    # ================================
+
+    - name: "Calculate backup duration"
+      set_fact:
+        backup_duration: "{{ ansible_date_time.epoch | int - backup_start_time | int }}"
+
+    - name: "Generate backup report"
+      set_fact:
+        backup_report:
+          server: "{{ inventory_hostname }}"
+          backup_type: "{{ backup_type }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          duration: "{{ backup_duration }}s"
+          size: "{{ backup_file_stat.stat.size | default(0) | filesizeformat }}"
+          checksum: "{{ backup_file_stat.stat.checksum | default('N/A') }}"
+          remote_backup: "{{ remote_backup_enabled }}"
+          encryption: "{{ backup_encryption_enabled }}"
+
+    - name: "Log backup completion"
+      lineinfile:
+        path: "{{ backup_root }}/logs/backup_history.log"
+        line: "{{ ansible_date_time.iso8601 }}|{{ inventory_hostname }}|{{ backup_type }}|{{ backup_duration }}|{{ backup_file_stat.stat.size | default(0) }}|SUCCESS"
+        create: yes
+
+    - name: "Send backup completion notification"
+      mail:
+        subject: "[Atalaia Tintas] Backup Completed - {{ backup_type }} - {{ backup_timestamp }}"
+        to: "{{ notification_email }}"
+        body: |
+          Backup completed successfully on {{ inventory_hostname }}
+          
+          Backup Details:
+          - Type: {{ backup_type }}
+          - Timestamp: {{ ansible_date_time.iso8601 }}
+          - Duration: {{ backup_duration }}s
+          - Size: {{ backup_file_stat.stat.size | default(0) | filesizeformat }}
+          - Checksum: {{ backup_file_stat.stat.checksum | default('N/A') }}
+          - Encryption: {{ backup_encryption_enabled | ternary('Enabled', 'Disabled') }}
+          - Remote Backup: {{ remote_backup_enabled | ternary('Enabled', 'Disabled') }}
+          
+          {% if remote_backup_enabled and s3_bucket %}
+          Remote backup location: s3://{{ s3_bucket }}/tintas/{{ inventory_hostname }}/{{ backup_type }}/
+          {% endif %}
+          
+          Local backup location: {{ local_backup_dir }}/
+      ignore_errors: yes
+
+  # ================================
+  # Error Handling
+  # ================================
+
+  rescue:
+    - name: "Log backup failure"
+      lineinfile:
+        path: "{{ backup_root }}/logs/backup_history.log"
+        line: "{{ ansible_date_time.iso8601 }}|{{ inventory_hostname }}|{{ backup_type }}|0|0|FAILED"
+        create: yes
+
+    - name: "Send backup failure notification"
+      mail:
+        subject: "[Atalaia Tintas] Backup FAILED - {{ backup_type }} - {{ backup_timestamp }}"
+        to: "{{ notification_email }}"
+        body: |
+          Backup FAILED on {{ inventory_hostname }}
+          
+          Backup Type: {{ backup_type }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          
+          Please check backup logs for details:
+          {{ backup_root }}/logs/backup_history.log
+          
+          Manual intervention may be required.
+      ignore_errors: yes
+
+    - name: "Fail the playbook after cleanup"
+      fail:
+        msg: "Backup operation failed"

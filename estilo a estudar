@@ -1,0 +1,79 @@
+O sistema utiliza temas baseados em variáveis raiz. Para o seu projeto, recomendo adotar estas paletas para manter o padrão "SaaS Profissional":
+
+Paleta Light (Padrão)
+Primary Color: #0073EA (Azul Monday)
+
+Primary Hover: #0060B9
+
+Selected Background: #DEECFB
+
+Highlight Color: #F0F4FF
+
+Paleta Dark
+Primary Color: #0073EA
+
+Selected Background: #4B4E69
+
+Hover Background: #37394D
+
+2. Tipografia
+O código revela uma hierarquia de fontes robusta para suporte internacional e legibilidade:
+
+Principal (Brand): Figtree (Moderna, geométrica, excelente para UI).
+
+Secundária/Fallback: Poppins e Roboto.
+
+Especificações de Peso:
+
+Regular: 400
+
+Medium: 500 (usado em textos de loader/onboarding).
+
+Bold: 700.
+
+Line-height base: 1.5 (para garantir legibilidade em densidade alta de dados).
+
+3. Estrutura de Layout (DOM Architecture)
+O Monday utiliza uma estrutura de "camadas" (layers). Para o Geta, você pode replicar esta hierarquia para facilitar a manutenção de modais e painéis:
+
+#application: O container principal com display: flex.
+
+#surface: A área de trabalho onde o conteúdo principal reside.
+
+#first-level: O wrapper da navegação lateral e conteúdo.
+
+Portals: O código usa diversos containers no final do body para evitar problemas de z-index:
+
+#system-modal-container (Modais)
+
+#slide-panel-container (Painéis laterais estilo "Drawer")
+
+#tooltips-container (Tooltips e Popovers)
+
+4. Estratégia de Performance (Front-end)
+Como você trabalha com Azure e .NET, observe como o Monday otimiza o carregamento:
+
+Preloading: Eles utilizam <link rel="preload" as="fetch"> para endpoints críticos como dados do usuário e variáveis de ambiente antes mesmo do JS principal carregar.
+
+Deferring Init: O uso de window.mondayHelpers.deferredInit sugere que eles carregam o núcleo da aplicação e adiam (defer) módulos pesados (como gráficos ou editores) até que sejam necessários.
+
+Microfrontends: O código aponta para o uso de Microfrontends (https://microfrontends.monday.com)
+
+Exemplo de CSS Base para suas novas páginas:CSSbody {
+    font-family: "Figtree", "Poppins", sans-serif;
+    background-color: var(--primary-highlighted-color);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+.main-button {
+    background-color: #0073EA;
+    color: white;
+    border-radius: 4px;
+    padding: 8px 16px;
+    transition: background 0.2s ease;
+}
+
+.main-button:hover {
+    background-color: #0060B9;
+}

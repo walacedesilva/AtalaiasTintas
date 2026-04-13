@@ -1,0 +1,522 @@
+---
+# ================================================================
+# Ansible Deployment Playbook for Atalaia Tintas Paint Store System
+# ================================================================
+#
+# This playbook orchestrates blue-green deployments across multiple servers,
+# ensuring zero-downtime deployments with comprehensive health checks and
+# automatic rollback capabilities.
+#
+# Usage:
+#   ansible-playbook -i inventory/production deploy.yml
+#   ansible-playbook -i inventory/staging deploy.yml --extra-vars="rollback=true"
+#   ansible-playbook -i inventory/development deploy.yml --check
+#
+# Author: Atalaia Tintas DevOps Team
+# Version: 1.0.0
+
+- name: "Atalaia Tintas Blue-Green Deployment"
+  hosts: tintas_web
+  become: yes
+  gather_facts: yes
+  serial: 1  # Deploy one server at a time for safety
+  
+  vars:
+    # Deployment configuration
+    deployment_user: "tintas"
+    deployment_group: "tintas"
+    project_root: "/opt/atalaias_tintas"
+    backend_dir: "{{ project_root }}/backend"
+    venv_path: "{{ project_root }}/venv"
+    
+    # Git repository settings
+    git_repo: "https://github.com/atalaiastintas/paint-store-system.git"
+    git_branch: "{{ deployment_branch | default('main') }}"
+    
+    # Blue-green deployment settings
+    current_environment: "{{ ansible_local.tintas.current_env | default('blue') }}"
+    target_environment: "{{ 'green' if current_environment == 'blue' else 'blue' }}"
+    
+    # Health check settings
+    health_check_timeout: 300
+    health_check_retries: 30
+    health_check_delay: 10
+    
+    # Service configuration
+    nginx_config_path: "/etc/nginx/sites-available/tintas"
+    supervisor_config_path: "/etc/supervisor/conf.d/tintas.conf"
+    
+    # Notification settings
+    notification_email: "{{ vault_notification_email | default('admin@atalaiastintas.com') }}"
+    slack_webhook: "{{ vault_slack_webhook | default('') }}"
+    
+    # Database settings
+    db_backup_retention_days: 7
+    
+    # Rollback mode (set via command line: --extra-vars="rollback=true")
+    rollback: false
+
+  vars_files:
+    - ../vars/{{ env }}.yml
+    - ../vars/vault.yml
+
+  tasks:
+    # ================================
+    # Pre-deployment Setup and Validation
+    # ================================
+    
+    - name: "Create deployment timestamp"
+      set_fact:
+        deployment_id: "deploy_{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}"
+        deployment_start_time: "{{ ansible_date_time.epoch }}"
+
+    - name: "Display deployment information"
+      debug:
+        msg:
+          - "Deployment ID: {{ deployment_id }}"
+          - "Current Environment: {{ current_environment }}"
+          - "Target Environment: {{ target_environment }}"  
+          - "Rollback Mode: {{ rollback }}"
+          - "Git Branch: {{ git_branch }}"
+          - "Server: {{ inventory_hostname }}"
+
+    - name: "Create deployment log directory"
+      file:
+        path: "/var/log/tintas/deployments"
+        state: directory
+        owner: "{{ deployment_user }}"
+        group: "{{ deployment_group }}"
+        mode: '0755'
+
+    - name: "Check deployment user exists"
+      user:
+        name: "{{ deployment_user }}"
+        state: present
+        home: "{{ project_root }}"
+        shell: /bin/bash
+        groups:
+          - www-data
+          - supervisor
+
+    - name: "Validate current server status"
+      command: "systemctl is-active nginx"
+      register: nginx_status
+      failed_when: false
+      changed_when: false
+
+    - name: "Fail if Nginx is not running"
+      fail:
+        msg: "Nginx is not running on {{ inventory_hostname }}"
+      when: nginx_status.stdout != "active"
+
+    # ================================
+    # Rollback Logic (Skip Normal Deployment)
+    # ================================
+    
+    - block:
+        - name: "Rollback: Determine rollback target environment"
+          set_fact:
+            rollback_target: "{{ current_environment == 'blue' | ternary('green', 'blue') }}"
+
+        - name: "Rollback: Start target environment services"
+          supervisorctl:
+            name: "tintas_{{ rollback_target }}:*"
+            state: started
+          become_user: "{{ deployment_user }}"
+
+        - name: "Rollback: Wait for services to be ready"
+          wait_for:
+            port: "{{ rollback_target == 'blue' | ternary('8000', '8002') }}"
+            host: "127.0.0.1"
+            timeout: 60
+
+        - name: "Rollback: Perform health check"
+          uri:
+            url: "http://127.0.0.1:{{ rollback_target == 'blue' | ternary('8000', '8002') }}/health/"
+            method: GET
+            status_code: 200
+          register: rollback_health_check
+          retries: "{{ health_check_retries }}"
+          delay: "{{ health_check_delay }}"
+
+        - name: "Rollback: Switch Nginx upstream to target environment"
+          replace:
+            path: "{{ nginx_config_path }}"
+            regexp: 'upstream tintas_active \{[^}]*\}'
+            replace: |
+              upstream tintas_active {
+                  {% if rollback_target == 'blue' %}
+                  server 127.0.0.1:8000 max_fails=3 fail_timeout=30s;
+                  server 127.0.0.1:8001 max_fails=3 fail_timeout=30s backup;
+                  {% else %}
+                  server 127.0.0.1:8002 max_fails=3 fail_timeout=30s;
+                  server 127.0.0.1:8003 max_fails=3 fail_timeout=30s backup;
+                  {% endif %}
+                  keepalive 32;
+              }
+          notify: reload nginx
+
+        - name: "Rollback: Update local deployment facts"
+          copy:
+            content: |
+              {
+                "current_env": "{{ rollback_target }}",
+                "deployment_id": "{{ deployment_id }}",
+                "rollback": true,
+                "timestamp": "{{ ansible_date_time.iso8601 }}"
+              }
+            dest: "/etc/ansible/facts.d/tintas.fact"
+            mode: '0644'
+
+        - name: "Rollback: Stop old environment services"
+          supervisorctl:
+            name: "tintas_{{ current_environment }}:*"
+            state: stopped
+          become_user: "{{ deployment_user }}"
+
+        - name: "Rollback: Send success notification"
+          mail:
+            subject: "[Atalaia Tintas] Rollback Success - {{ deployment_id }}"
+            to: "{{ notification_email }}"
+            body: |
+              Rollback completed successfully on {{ inventory_hostname }}
+              
+              Deployment ID: {{ deployment_id }}
+              Rollback Target: {{ rollback_target }}
+              Timestamp: {{ ansible_date_time.iso8601 }}
+          ignore_errors: yes
+
+      when: rollback | bool
+
+    - name: "End play if rollback was performed"
+      meta: end_play
+      when: rollback | bool
+
+    # ================================
+    # Normal Deployment Process
+    # ================================
+
+    - name: "Create database backup before deployment"
+      command: >
+        {{ backend_dir }}/scripts/backup.sh 
+        --database 
+        --output="/var/backups/tintas/database/pre_deploy_{{ deployment_id }}.sql"
+        --reason="pre-deployment"
+      become_user: "{{ deployment_user }}"
+      register: backup_result
+
+    - name: "Verify backup was created successfully"
+      stat:
+        path: "/var/backups/tintas/database/pre_deploy_{{ deployment_id }}.sql"
+      register: backup_file
+
+    - name: "Fail if backup creation failed"
+      fail:
+        msg: "Database backup creation failed"
+      when: not backup_file.stat.exists
+
+    - name: "Update source code from git"
+      git:
+        repo: "{{ git_repo }}"
+        dest: "{{ project_root }}"
+        version: "{{ git_branch }}"
+        force: yes
+      become_user: "{{ deployment_user }}"
+      notify: restart target environment
+
+    - name: "Install/update Python dependencies"
+      pip:
+        requirements: "{{ backend_dir }}/requirements/production.txt"
+        virtualenv: "{{ venv_path }}"
+        virtualenv_python: python3.11
+      become_user: "{{ deployment_user }}"
+
+    - name: "Run database migrations"
+      django_manage:
+        command: migrate
+        app_path: "{{ backend_dir }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "tintas_system.settings.production"
+      become_user: "{{ deployment_user }}"
+      environment:
+        DEPLOYMENT_ENV: "{{ target_environment }}"
+
+    - name: "Collect static files"
+      django_manage:
+        command: collectstatic
+        app_path: "{{ backend_dir }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "tintas_system.settings.production"
+      become_user: "{{ deployment_user }}"
+      environment:
+        DEPLOYMENT_ENV: "{{ target_environment }}"
+
+    - name: "Compress static assets"
+      django_manage:
+        command: compress
+        app_path: "{{ backend_dir }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "tintas_system.settings.production"
+      become_user: "{{ deployment_user }}"
+      environment:
+        DEPLOYMENT_ENV: "{{ target_environment }}"
+      ignore_errors: yes  # Compression might not be available
+
+    - name: "Start target environment services"
+      supervisorctl:
+        name: "tintas_{{ target_environment }}:*"
+        state: started
+      become_user: "{{ deployment_user }}"
+
+    - name: "Wait for target environment to be ready"
+      wait_for:
+        port: "{{ target_environment == 'blue' | ternary('8000', '8002') }}"
+        host: "127.0.0.1"
+        timeout: "{{ health_check_timeout }}"
+
+    # ================================
+    # Health Checks
+    # ================================
+
+    - name: "Perform comprehensive health check on target environment"
+      uri:
+        url: "http://127.0.0.1:{{ target_environment == 'blue' | ternary('8000', '8002') }}/health/"
+        method: GET
+        status_code: 200
+        timeout: 30
+      register: health_check_result
+      retries: "{{ health_check_retries }}"
+      delay: "{{ health_check_delay }}"
+
+    - name: "Check API endpoints"
+      uri:
+        url: "http://127.0.0.1:{{ target_environment == 'blue' | ternary('8000', '8002') }}/api/auth/profile/"
+        method: GET
+        status_code: [200, 401]  # 401 is OK (not authenticated)
+        timeout: 15
+      register: api_check_result
+      retries: 5
+      delay: 5
+
+    - name: "Check database connectivity through Django"
+      django_manage:
+        command: "shell -c 'from django.db import connection; connection.ensure_connection(); print(\"DB OK\")'"
+        app_path: "{{ backend_dir }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "tintas_system.settings.production"
+      become_user: "{{ deployment_user }}"
+      environment:
+        DEPLOYMENT_ENV: "{{ target_environment }}"
+      register: db_check_result
+
+    - name: "Check Celery workers"
+      command: >
+        {{ venv_path }}/bin/python -m celery 
+        --app=tintas_system.celery:app inspect active
+      args:
+        chdir: "{{ backend_dir }}"
+      become_user: "{{ deployment_user }}"
+      environment:
+        DEPLOYMENT_ENV: "{{ target_environment }}"
+      register: celery_check_result
+      failed_when: false
+
+    # ================================  
+    # Traffic Switching
+    # ================================
+
+    - name: "Backup current Nginx configuration"
+      copy:
+        src: "{{ nginx_config_path }}"
+        dest: "{{ nginx_config_path }}.backup.{{ deployment_id }}"
+        remote_src: yes
+        backup: yes
+
+    - name: "Switch Nginx upstream to target environment"
+      replace:
+        path: "{{ nginx_config_path }}"
+        regexp: 'upstream tintas_active \{[^}]*\}'
+        replace: |
+          upstream tintas_active {
+              {% if target_environment == 'blue' %}
+              server 127.0.0.1:8000 max_fails=3 fail_timeout=30s;
+              server 127.0.0.1:8001 max_fails=3 fail_timeout=30s backup;
+              {% else %}
+              server 127.0.0.1:8002 max_fails=3 fail_timeout=30s;
+              server 127.0.0.1:8003 max_fails=3 fail_timeout=30s backup;
+              {% endif %}
+              keepalive 32;
+          }
+      notify: reload nginx
+
+    - name: "Test Nginx configuration"
+      command: "nginx -t"
+      register: nginx_test_result
+
+    - name: "Reload Nginx with new configuration"
+      meta: flush_handlers
+
+    - name: "Post-switch health check"
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}/health/"
+        method: GET
+        status_code: 200
+        timeout: 30
+      register: post_switch_health_check
+      retries: 10
+      delay: 3
+
+    # ================================
+    # Cleanup and Finalization
+    # ================================
+
+    - name: "Stop old environment services"
+      supervisorctl:
+        name: "tintas_{{ current_environment }}:*"
+        state: stopped
+      become_user: "{{ deployment_user }}"
+
+    - name: "Update local deployment facts"
+      copy:
+        content: |
+          {
+            "current_env": "{{ target_environment }}",
+            "previous_env": "{{ current_environment }}",
+            "deployment_id": "{{ deployment_id }}",
+            "git_branch": "{{ git_branch }}",
+            "rollback": false,
+            "timestamp": "{{ ansible_date_time.iso8601 }}"
+          }
+        dest: "/etc/ansible/facts.d/tintas.fact"
+        mode: '0644'
+
+    - name: "Clean up old Nginx configuration backups"
+      shell: |
+        find {{ nginx_config_path | dirname }} -name "tintas.backup.*" -type f | 
+        sort -r | tail -n +6 | xargs rm -f
+      ignore_errors: yes
+
+    - name: "Clean up old deployment logs"
+      shell: |
+        find /var/log/tintas/deployments -name "deploy_*.log" -type f |
+        sort -r | tail -n +31 | xargs rm -f
+      ignore_errors: yes
+
+    - name: "Record deployment success"
+      lineinfile:
+        path: "/var/log/tintas/deployment_history.log"
+        line: "{{ ansible_date_time.iso8601 }}|{{ target_environment }}|{{ deployment_id }}|SUCCESS|{{ inventory_hostname }}"
+        create: yes
+        owner: "{{ deployment_user }}"
+        group: "{{ deployment_group }}"
+        mode: '0644'
+
+    - name: "Calculate deployment duration"
+      set_fact:
+        deployment_duration: "{{ ansible_date_time.epoch | int - deployment_start_time | int }}"
+
+    - name: "Send deployment success notification"
+      mail:
+        subject: "[Atalaia Tintas] Deployment Success - {{ deployment_id }}"
+        to: "{{ notification_email }}"
+        body: |
+          Deployment completed successfully on {{ inventory_hostname }}
+          
+          Deployment ID: {{ deployment_id }}
+          Environment: {{ target_environment }}
+          Git Branch: {{ git_branch }}
+          Duration: {{ deployment_duration }}s
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          
+          Health Check Results:
+          - Application: {{ health_check_result.status }} 
+          - API: {{ api_check_result.status }}
+          - Database: OK
+          - Celery: {{ celery_check_result.rc == 0 | ternary('OK', 'WARNING') }}
+          
+          Post-switch verification: {{ post_switch_health_check.status }}
+      ignore_errors: yes
+
+  # ================================
+  # Error Handling and Rollback
+  # ================================
+
+  rescue:
+    - name: "Log deployment error"
+      debug:
+        msg: "Deployment failed, initiating automatic rollback"
+
+    - name: "Restore Nginx configuration"
+      copy:
+        src: "{{ nginx_config_path }}.backup.{{ deployment_id }}"
+        dest: "{{ nginx_config_path }}"
+        remote_src: yes
+      when: "nginx_config_path is defined"
+
+    - name: "Reload Nginx with restored configuration"
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: "Start original environment services"
+      supervisorctl:
+        name: "tintas_{{ current_environment }}:*"
+        state: started
+      become_user: "{{ deployment_user }}"
+
+    - name: "Stop failed target environment services"
+      supervisorctl:
+        name: "tintas_{{ target_environment }}:*"
+        state: stopped
+      become_user: "{{ deployment_user }}"
+      ignore_errors: yes
+
+    - name: "Record deployment failure"
+      lineinfile:
+        path: "/var/log/tintas/deployment_history.log"
+        line: "{{ ansible_date_time.iso8601 }}|{{ target_environment }}|{{ deployment_id }}|FAILED|{{ inventory_hostname }}"
+        create: yes
+        owner: "{{ deployment_user }}"
+        group: "{{ deployment_group }}"
+        mode: '0644'
+
+    - name: "Send deployment failure notification"
+      mail:
+        subject: "[Atalaia Tintas] Deployment FAILED - {{ deployment_id }}"
+        to: "{{ notification_email }}"
+        body: |
+          Deployment FAILED on {{ inventory_hostname }}
+          
+          Deployment ID: {{ deployment_id }}
+          Target Environment: {{ target_environment }}
+          Git Branch: {{ git_branch }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          
+          Automatic rollback has been initiated.
+          Original environment ({{ current_environment }}) should be restored.
+          
+          Please check deployment logs for details:
+          /var/log/tintas/deployments/{{ deployment_id }}.log
+      ignore_errors: yes
+
+    - name: "Fail the playbook after cleanup"
+      fail:
+        msg: "Deployment failed, rollback completed"
+
+  # ================================
+  # Handlers
+  # ================================
+
+  handlers:
+    - name: restart target environment
+      supervisorctl:
+        name: "tintas_{{ target_environment }}:*"
+        state: restarted
+      become_user: "{{ deployment_user }}"
+      listen: "restart target environment"
+
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded
+      listen: "reload nginx"

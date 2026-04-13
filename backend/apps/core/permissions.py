@@ -149,6 +149,175 @@ class IsOperator(permissions.BasePermission):
         return BusinessPermissions.user_has_role(request.user, BusinessRole.OPERATOR)
 
 
+class HasStoreAccess(permissions.BasePermission):
+    """
+    Permissão para verificar acesso específico à loja
+    """
+    
+    def has_permission(self, request, view):
+        if not BusinessPermissions.user_has_role(request.user, BusinessRole.VIEWER):
+            return False
+            
+        # Administradores têm acesso a todas as lojas
+        if BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+            return True
+            
+        # Se há um parâmetro de loja na view, verifica permissão específica
+        loja_id = getattr(view, 'loja_id', None) or request.data.get('loja_id')
+        if loja_id:
+            return self._check_store_permission(request.user, loja_id)
+            
+        return True
+    
+    def _check_store_permission(self, user, loja_id):
+        """Verifica permissão específica para uma loja"""
+        try:
+            from apps.companies.models import UsuarioLoja, Loja
+            loja = Loja.objects.get(id=loja_id)
+            usuario_loja = UsuarioLoja.objects.get(
+                usuario=user, 
+                loja=loja, 
+                ativo=True
+            )
+            return True
+        except (UsuarioLoja.DoesNotExist, Loja.DoesNotExist):
+            return False
+
+
+class CanManageInventory(permissions.BasePermission):
+    """
+    Permissão específica para gerenciamento de estoque
+    """
+    
+    def has_permission(self, request, view):
+        return (
+            BusinessPermissions.user_has_role(request.user, BusinessRole.OPERATOR) or
+            BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN)
+        )
+
+
+class CanSell(permissions.BasePermission):
+    """
+    Permissão específica para realizar vendas
+    """
+    
+    def has_permission(self, request, view):
+        return (
+            BusinessPermissions.user_has_role(request.user, BusinessRole.VENDOR) or
+            BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN)
+        )
+
+
+class CanAccessFinancial(permissions.BasePermission):
+    """
+    Permissão para acessar informações financeiras
+    """
+    
+    def has_permission(self, request, view):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            getattr(request.user, 'ativo', True) and
+            (getattr(request.user, 'pode_acessar_financeiro', False) or
+             BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN))
+        )
+
+
+# Decorators para função-based views
+from functools import wraps
+from django.http import HttpResponseForbidden
+
+
+def require_role(*roles):
+    """
+    Decorator que exige um ou mais roles específicos
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not BusinessPermissions.user_has_any_role(request.user, roles):
+                return HttpResponseForbidden("Permissão negada: role insuficiente")
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def require_store_access(loja_param='loja_id'):
+    """
+    Decorator que exige acesso específico a uma loja
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            loja_id = kwargs.get(loja_param) or request.GET.get(loja_param)
+            
+            if loja_id and not BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+                has_access = HasStoreAccess()._check_store_permission(request.user, loja_id)
+                if not has_access:
+                    return HttpResponseForbidden("Permissão negada: sem acesso a esta loja")
+                    
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+class TintasBusinessPermissions:
+    """
+    Classe utilitária para verificações específicas do negócio de tintas
+    """
+    
+    @staticmethod
+    def can_create_tintometric_formula(user):
+        """Verifica se usuário pode criar fórmulas tintométricas"""
+        return BusinessPermissions.user_has_role(user, BusinessRole.OPERATOR)
+    
+    @staticmethod
+    def can_produce_paint(user, loja=None):
+        """Verifica se usuário pode produzir tintas"""
+        if not (BusinessPermissions.user_has_role(user, BusinessRole.VENDOR) or
+                BusinessPermissions.user_has_role(user, BusinessRole.OPERATOR)):
+            return False
+            
+        if loja and not BusinessPermissions.user_has_role(user, BusinessRole.ADMIN):
+            return HasStoreAccess()._check_store_permission(user, loja.id)
+            
+        return True
+    
+    @staticmethod
+    def can_adjust_prices(user):
+        """Verifica se usuário pode ajustar preços"""
+        return (
+            getattr(user, 'pode_acessar_financeiro', False) or
+            BusinessPermissions.user_has_role(user, BusinessRole.ADMIN)
+        )
+    
+    @staticmethod
+    def can_give_discount(user, loja=None, amount=0):
+        """Verifica se usuário pode dar desconto e qual o limite"""
+        if not BusinessPermissions.user_has_role(user, BusinessRole.VENDOR):
+            return False, 0
+            
+        if BusinessPermissions.user_has_role(user, BusinessRole.ADMIN):
+            return True, 100  # Admin pode dar até 100% de desconto
+            
+        if loja:
+            try:
+                from apps.companies.models import UsuarioLoja
+                usuario_loja = UsuarioLoja.objects.get(
+                    usuario=user, 
+                    loja=loja, 
+                    ativo=True
+                )
+                if usuario_loja.pode_dar_desconto:
+                    limit = usuario_loja.limite_desconto_percentual or 0
+                    can_give = amount <= limit
+                    return can_give, limit
+            except UsuarioLoja.DoesNotExist:
+                pass
+                
+        return False, 0
+
+
 class IsViewer(permissions.BasePermission):
     """
     Permissão básica para visualização (todos os usuários ativos)

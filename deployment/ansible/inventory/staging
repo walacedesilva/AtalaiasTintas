@@ -1,0 +1,461 @@
+# ================================================================
+# Ansible Inventory Configuration for Staging Environment
+# Atalaia Tintas Paint Store System  
+# ================================================================
+#
+# This inventory defines the staging environment setup with
+# multi-server configuration that mirrors production for testing
+# deployments, performance testing, and user acceptance testing.
+#
+# Environment: Staging
+# Purpose: Pre-production testing, UAT, performance testing
+# Infrastructure: Multi-server setup mirroring production
+# Domain: staging.atalaiastintas.com
+#
+# Usage:
+#   ansible-playbook -i inventory/staging deploy.yml
+#   ansible-playbook -i inventory/staging backup.yml
+#   ansible-playbook -i inventory/staging monitoring.yml
+
+[all:vars]
+# Environment configuration
+env=staging
+domain_name=staging.atalaiastintas.com
+deployment_branch=staging
+
+# Connection settings
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/tintas_staging_key
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+ansible_become=yes
+ansible_become_method=sudo
+
+# Project paths
+project_root=/opt/atalaias_tintas
+virtual_env_path={{ project_root }}/venv
+backend_dir={{ project_root }}/backend
+
+# Python configuration
+python_version=3.11
+pip_requirements_file={{ backend_dir }}/requirements/staging.txt
+
+# ================================
+# Web Application Servers
+# ================================
+
+[tintas_web]
+# Staging web servers - 2 servers for load testing
+staging-web-01 ansible_host=10.0.1.10 ansible_port=22
+staging-web-02 ansible_host=10.0.1.11 ansible_port=22
+
+[tintas_web:vars]
+# Blue-green deployment ports
+blue_port=8000
+green_port=8002
+nginx_port=80
+
+# Application settings
+debug_mode=false
+log_level=info
+static_files_debug=false
+
+# Performance settings (production-like)
+gunicorn_workers=4
+celery_concurrency=4
+gunicorn_timeout=120
+keepalive_timeout=30
+
+# Memory and resource limits
+max_requests=1000
+max_requests_jitter=100
+worker_memory_limit=500M
+
+# ================================
+# Database Servers
+# ================================
+
+[tintas_db]
+# Staging database server with read replica
+staging-db-01 ansible_host=10.0.2.10 postgresql_role=primary
+staging-db-02 ansible_host=10.0.2.11 postgresql_role=replica
+
+[tintas_db:vars]
+# PostgreSQL configuration
+postgresql_version=15
+postgresql_port=5432
+postgresql_max_connections=200
+postgresql_shared_buffers=512MB
+postgresql_effective_cache_size=1GB
+postgresql_work_mem=4MB
+
+# Database credentials (staging - use vault in real implementation)
+postgresql_databases:
+  - name: tintas_staging
+    owner: tintas_user
+    encoding: UTF8
+    locale: en_US.UTF-8
+    template: template0
+
+postgresql_users:
+  - name: tintas_user
+    password: "{{ vault_staging_db_password }}"
+    databases: ["tintas_staging"]
+    privileges: ALL
+  - name: tintas_readonly
+    password: "{{ vault_staging_readonly_password }}"
+    databases: ["tintas_staging"]
+    privileges: SELECT
+
+# Replication settings
+postgresql_replication_enabled=true
+postgresql_replication_user=replicator
+postgresql_replication_password="{{ vault_replication_password }}"
+
+# Backup settings
+db_backup_enabled=true
+db_backup_retention_days=14
+db_backup_schedule="0 2 * * *"
+db_backup_compression=true
+
+# ================================
+# Cache Servers (Redis Cluster)
+# ================================
+
+[tintas_cache]
+# Redis cluster for staging
+staging-cache-01 ansible_host=10.0.3.10 redis_role=master
+staging-cache-02 ansible_host=10.0.3.11 redis_role=replica
+
+[tintas_cache:vars]
+# Redis configuration
+redis_port=6379
+redis_maxmemory=1GB
+redis_maxmemory_policy=allkeys-lru
+redis_save_schedule="900 1 300 10 60 10000"
+redis_timeout=300
+
+# Redis cluster settings
+redis_cluster_enabled=true
+redis_sentinel_enabled=true
+redis_sentinel_port=26379
+
+# Session and cache settings
+redis_databases:
+  - id: 0
+    purpose: "sessions"
+  - id: 1
+    purpose: "cache"
+  - id: 2
+    purpose: "celery_broker"
+  - id: 3
+    purpose: "celery_result"
+
+# ================================
+# Monitoring Servers
+# ================================
+
+[tintas_monitoring]
+# Dedicated monitoring server for staging
+staging-monitor-01 ansible_host=10.0.4.10
+
+[tintas_monitoring:vars]
+# Monitoring configuration
+prometheus_retention=30d
+prometheus_storage_size=10GB
+grafana_admin_user=admin
+grafana_admin_password="{{ vault_grafana_admin_password }}"
+
+# Alerting configuration
+alert_email=staging-alerts@atalaiastintas.com
+alert_slack_webhook="{{ vault_slack_webhook }}"
+alert_pagerduty_key=""
+
+# Monitoring thresholds (production-like)
+cpu_alert_threshold=80
+memory_alert_threshold=85
+disk_alert_threshold=90
+response_time_threshold=2000
+
+# Business metrics monitoring
+enable_business_metrics=true
+enable_performance_profiling=true
+enable_error_tracking=true
+
+# ================================
+# Load Balancers
+# ================================
+
+[tintas_lb]
+# HAProxy load balancer for staging
+staging-lb-01 ansible_host=10.0.5.10
+
+[tintas_lb:vars]
+# HAProxy configuration
+haproxy_enabled=true
+haproxy_stats_enabled=true
+haproxy_stats_port=8404
+haproxy_stats_user=admin
+haproxy_stats_password="{{ vault_haproxy_stats_password }}"
+
+# Load balancing settings
+balance_algorithm=roundrobin
+health_check_interval=2s
+health_check_timeout=5s
+max_connections=1000
+
+# SSL settings (staging certificates)
+ssl_certificate_path=/etc/ssl/certs/staging.atalaiastintas.com.crt
+ssl_certificate_key_path=/etc/ssl/private/staging.atalaiastintas.com.key
+ssl_protocols="TLSv1.2 TLSv1.3"
+ssl_ciphers="ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM"
+
+# ================================
+# Message Queue / Task Processing
+# ================================
+
+[tintas_queue]
+# Dedicated Celery workers for staging
+staging-worker-01 ansible_host=10.0.6.10 celery_role=worker
+staging-worker-02 ansible_host=10.0.6.11 celery_role=worker
+
+[tintas_queue:vars]
+# Celery configuration
+celery_worker_concurrency=6
+celery_max_tasks_per_child=1000
+celery_worker_prefetch_multiplier=4
+
+# Queue configuration
+celery_queues:
+  - name: default
+    routing_key: default
+    priority: 1
+  - name: high_priority
+    routing_key: high_priority  
+    priority: 10
+  - name: paint_calculations
+    routing_key: paint_calculations
+    priority: 5
+  - name: notifications
+    routing_key: notifications
+    priority: 3
+
+# Beat scheduler settings
+celery_beat_enabled=true
+celery_beat_schedule_file=/var/lib/celery/celerybeat-schedule
+
+# ================================
+# Staging Specific Groups
+# ================================
+
+[staging:children]
+tintas_web
+tintas_db
+tintas_cache
+tintas_monitoring
+tintas_lb
+tintas_queue
+
+[staging:vars]
+# Staging environment variables
+DJANGO_SETTINGS_MODULE=tintas_system.settings.staging
+DEBUG=False
+ALLOWED_HOSTS=staging.atalaiastintas.com,10.0.1.10,10.0.1.11
+
+# Database connection
+DATABASE_URL=postgresql://tintas_user:{{ vault_staging_db_password }}@10.0.2.10:5432/tintas_staging
+DATABASE_REPLICA_URL=postgresql://tintas_readonly:{{ vault_staging_readonly_password }}@10.0.2.11:5432/tintas_staging
+
+# Redis configuration
+REDIS_URL=redis://10.0.3.10:6379/0
+REDIS_CACHE_URL=redis://10.0.3.10:6379/1
+CELERY_BROKER_URL=redis://10.0.3.10:6379/2
+CELERY_RESULT_BACKEND=redis://10.0.3.10:6379/3
+
+# Security settings
+SECRET_KEY="{{ vault_django_secret_key }}"
+JWT_SECRET_KEY="{{ vault_jwt_secret_key }}"
+ENCRYPTION_KEY="{{ vault_encryption_key }}"
+
+# Email settings (staging SMTP)
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST={{ vault_smtp_host }}
+EMAIL_PORT={{ vault_smtp_port }}
+EMAIL_HOST_USER={{ vault_smtp_user }}
+EMAIL_HOST_PASSWORD={{ vault_smtp_password }}
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=noreply@staging.atalaiastintas.com
+
+# File storage (S3 staging bucket)
+DEFAULT_FILE_STORAGE=storages.backends.s3boto3.S3Boto3Storage
+STATICFILES_STORAGE=storages.backends.s3boto3.S3StaticStorage
+AWS_STORAGE_BUCKET_NAME=tintas-staging-media
+AWS_S3_REGION_NAME=us-east-1
+AWS_ACCESS_KEY_ID="{{ vault_aws_access_key }}"
+AWS_SECRET_ACCESS_KEY="{{ vault_aws_secret_key }}"
+
+# Celery settings
+CELERY_TASK_ALWAYS_EAGER=False
+CELERY_TASK_SERIALIZER=json
+CELERY_RESULT_SERIALIZER=json
+CELERY_ACCEPT_CONTENT=['json']
+CELERY_TIMEZONE=America/Sao_Paulo
+
+# Logging configuration
+LOG_LEVEL=INFO
+ENABLE_SQL_LOGGING=False
+ENABLE_REQUEST_LOGGING=True
+SENTRY_DSN="{{ vault_sentry_dsn }}"
+
+# Caching
+CACHE_TTL_DEFAULT=300
+CACHE_TTL_LONG=3600
+CACHE_TTL_SHORT=60
+
+# Paint store specific settings
+ENABLE_COLOR_MIXING_API=True
+ENABLE_INVENTORY_WEBHOOKS=True
+ENABLE_MARKETPLACE_INTEGRATION=True
+MARKETPLACE_API_TIMEOUT=30
+
+# ================================
+# AWS/Cloud Infrastructure
+# ================================
+
+[aws_instances]
+# AWS EC2 instances for staging
+staging-web-01 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+staging-web-02 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+staging-db-01 ec2_instance_type=t3.large ec2_ami=ami-0c02fb55956c7d316
+staging-db-02 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+staging-cache-01 ec2_instance_type=t3.small ec2_ami=ami-0c02fb55956c7d316
+staging-cache-02 ec2_instance_type=t3.small ec2_ami=ami-0c02fb55956c7d316
+staging-monitor-01 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+staging-lb-01 ec2_instance_type=t3.small ec2_ami=ami-0c02fb55956c7d316
+staging-worker-01 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+staging-worker-02 ec2_instance_type=t3.medium ec2_ami=ami-0c02fb55956c7d316
+
+[aws_instances:vars]
+# AWS specific settings
+aws_region=us-east-1
+aws_vpc_id=vpc-staging-tintas
+aws_subnet_id=subnet-staging-private
+aws_security_groups=["sg-tintas-staging", "sg-ssh-access"]
+aws_key_name=tintas-staging-keypair
+
+# EBS volume configuration
+ebs_optimized=true
+ebs_volume_type=gp3
+ebs_volume_size=50
+ebs_encrypted=true
+
+# ================================
+# Staging Deployment Configuration
+# ================================
+
+[all:vars]
+# Deployment settings
+deployment_strategy=blue_green
+deployment_health_check_timeout=180
+deployment_rollback_enabled=true
+deployment_notification_enabled=true
+
+# Pre-deployment validations
+enable_database_migration_check=true
+enable_static_file_collection=true
+enable_dependency_validation=true
+
+# Backup settings
+backup_enabled=true
+backup_schedule_full="0 2 * * 0"      # Weekly full backup
+backup_schedule_incremental="0 2 * * 1-6"  # Daily incremental Mon-Sat
+backup_retention_days=30
+backup_compression_enabled=true
+backup_encryption_enabled=true
+backup_remote_storage=s3://tintas-staging-backups
+
+# Monitoring settings
+monitoring_enabled=true
+health_check_interval=60
+metrics_retention_days=30
+log_retention_days=30
+alert_evaluation_interval=1m
+
+# Security settings
+enable_csrf_protection=true
+enable_cors_headers=true
+cors_allow_all_origins=false
+cors_allowed_origins=["https://staging.atalaiastintas.com"]
+secure_ssl_redirect=true
+session_cookie_secure=true
+csrf_cookie_secure=true
+
+# Rate limiting
+rate_limit_enabled=true
+rate_limit_per_minute=300
+rate_limit_burst=500
+
+# Paint store staging features
+enable_test_data_endpoints=true
+enable_performance_testing=true
+enable_load_testing_mode=true
+enable_staging_webhooks=true
+webhook_base_url=https://staging.atalaiastintas.com/webhooks/
+
+# Integration testing
+enable_marketplace_sandbox=true
+enable_payment_test_mode=true
+enable_email_testing=true
+
+# ================================
+# Load Testing Configuration
+# ================================
+
+[load_testing:vars]
+# Load testing parameters for staging validation
+concurrent_users=50
+test_duration=300  # 5 minutes
+ramp_up_time=60    # 1 minute
+think_time=5       # seconds between requests
+
+# Test scenarios
+paint_order_percentage=40
+color_matching_percentage=30
+inventory_check_percentage=20
+admin_operations_percentage=10
+
+# Performance targets
+target_response_time=2000  # milliseconds
+target_throughput=100      # requests per second
+error_rate_threshold=1     # percent
+
+# ================================================================
+# Staging Environment Commands
+# ================================================================
+#
+# 1. Deploy to staging:
+#    ansible-playbook -i inventory/staging deploy.yml
+#
+# 2. Run backup:
+#    ansible-playbook -i inventory/staging backup.yml --extra-vars="backup_type=full"
+#
+# 3. Setup monitoring:
+#    ansible-playbook -i inventory/staging monitoring.yml
+#
+# 4. Check service status:
+#    ansible-playbook -i inventory/staging monitoring.yml --extra-vars="action=check"
+#
+# 5. Rollback deployment:
+#    ansible-playbook -i inventory/staging deploy.yml --extra-vars="rollback=true"
+#
+# 6. Access services:
+#    - Application: https://staging.atalaiastintas.com
+#    - API: https://staging.atalaiastintas.com/api/
+#    - Admin: https://staging.atalaiastintas.com/admin/
+#    - Monitoring: http://10.0.4.10:9090 (Prometheus)
+#    - Dashboard: http://10.0.4.10:3000 (Grafana)
+#    - Load Balancer Stats: http://10.0.5.10:8404/stats
+#
+# 7. Load testing:
+#    ansible-playbook -i inventory/staging load_test.yml
+#
+# ================================================================

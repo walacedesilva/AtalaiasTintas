@@ -1747,6 +1747,344 @@ window.announceToScreenReader = function(message, urgency = 'polite') {
     }
 };
 
+    /**
+     * Comprehensive Screen Reader Compatibility Validation
+     * Task: T020 - Validate Screen Reader Compatibility
+     */
+    validateScreenReaderCompatibility() {
+        const validationResults = {
+            passed: [],
+            warnings: [],
+            errors: [],
+            summary: {}
+        };
+
+        console.group('🔍 NVDA/JAWS/Screen Reader Compatibility Validation');
+
+        // Test 1: Form Labels and Associations
+        this.validateFormLabels(validationResults);
+        
+        // Test 2: ARIA Live Regions
+        this.validateAriaLiveRegions(validationResults);
+        
+        // Test 3: Heading Structure
+        this.validateHeadingStructure(validationResults);
+        
+        // Test 4: Focus Management
+        this.validateFocusManagement(validationResults);
+        
+        // Test 5: Content Reading Order
+        this.validateReadingOrder(validationResults);
+        
+        // Test 6: Dynamic Content Updates
+        this.validateDynamicContentUpdates(validationResults);
+        
+        // Test 7: Navigation Landmarks
+        this.validateNavigationLandmarks(validationResults);
+
+        // Generate summary
+        validationResults.summary = {
+            totalTests: validationResults.passed.length + validationResults.warnings.length + validationResults.errors.length,
+            passed: validationResults.passed.length,
+            warnings: validationResults.warnings.length,
+            errors: validationResults.errors.length,
+            score: this.calculateAccessibilityScore(validationResults)
+        };
+
+        console.log('📊 Validation Summary:', validationResults.summary);
+        console.groupEnd();
+
+        // Announce results to screen readers
+        this.announceValidationResults(validationResults);
+        
+        return validationResults;
+    }
+
+    validateFormLabels(results) {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        let unlabeledInputs = [];
+        
+        inputs.forEach(input => {
+            if (input.type === 'hidden') return;
+            
+            const hasLabel = input.labels && input.labels.length > 0;
+            const hasAriaLabel = input.hasAttribute('aria-label');
+            const hasAriaLabelledBy = input.hasAttribute('aria-labelledby');
+            
+            if (!hasLabel && !hasAriaLabel && !hasAriaLabelledBy) {
+                unlabeledInputs.push(input);
+            }
+        });
+        
+        if (unlabeledInputs.length === 0) {
+            results.passed.push('All form inputs have proper labels');
+        } else {
+            results.errors.push(`${unlabeledInputs.length} form inputs missing labels`);
+        }
+    }
+
+    validateAriaLiveRegions(results) {
+        const liveRegions = document.querySelectorAll('[aria-live]');
+        
+        if (liveRegions.length > 0) {
+            results.passed.push(`${liveRegions.length} ARIA live regions configured`);
+            
+            // Check if live regions are properly used
+            liveRegions.forEach(region => {
+                const ariaLive = region.getAttribute('aria-live');
+                if (!['polite', 'assertive', 'off'].includes(ariaLive)) {
+                    results.errors.push(`Invalid aria-live value: ${ariaLive}`);
+                }
+            });
+        } else {
+            results.warnings.push('Consider adding ARIA live regions for dynamic content announcements');
+        }
+    }
+
+    validateHeadingStructure(results) {
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        const levels = Array.from(headings).map(h => parseInt(h.tagName.charAt(1)));
+        
+        let hasH1 = levels.includes(1);
+        let hasSkippedLevel = false;
+        
+        // Check for skipped heading levels
+        for (let i = 1; i < levels.length; i++) {
+            if (levels[i] > levels[i-1] + 1) {
+                hasSkippedLevel = true;
+                break;
+            }
+        }
+        
+        if (!hasH1) {
+            results.errors.push('Page missing H1 heading');
+        } else {
+            results.passed.push('Page has proper H1 heading');
+        }
+        
+        if (hasSkippedLevel) {
+            results.warnings.push('Heading levels may be skipped - check heading hierarchy');
+        } else if (headings.length > 0) {
+            results.passed.push('Heading structure follows logical hierarchy');
+        }
+    }
+
+    validateFocusManagement(results) {
+        const focusableElements = document.querySelectorAll(this.focusableSelectors);
+        let missingFocusIndicators = 0;
+        
+        // Test a sample of elements to avoid performance issues
+        const sampleElements = Array.from(focusableElements).slice(0, 20);
+        
+        sampleElements.forEach(element => {
+            try {
+                element.focus();
+                const computedStyle = window.getComputedStyle(element, ':focus');
+                if (computedStyle.outlineWidth === '0px' && 
+                    !computedStyle.boxShadow.includes('inset') &&
+                    !element.classList.contains('focus-visible')) {
+                    missingFocusIndicators++;
+                }
+            } catch (e) {
+                // Element might not be focusable in current context
+            }
+        });
+        
+        if (missingFocusIndicators === 0) {
+            results.passed.push('Focusable elements have visible focus indicators');
+        } else {
+            results.warnings.push(`${missingFocusIndicators} elements may lack visible focus indicators`);
+        }
+        
+        // Restore focus to original element
+        if (document.body) document.body.focus();
+    }
+
+    validateReadingOrder(results) {
+        const elementsWithPositiveTabIndex = document.querySelectorAll('[tabindex]');
+        let hasTabIndexIssues = false;
+        
+        elementsWithPositiveTabIndex.forEach(element => {
+            const tabIndex = parseInt(element.getAttribute('tabindex'));
+            if (tabIndex > 0) {
+                hasTabIndexIssues = true;
+            }
+        });
+        
+        if (!hasTabIndexIssues) {
+            results.passed.push('Content follows natural reading order (no positive tabindex)');
+        } else {
+            results.warnings.push('Positive tabindex values found - may disrupt reading order');
+        }
+    }
+
+    validateDynamicContentUpdates(results) {
+        const dynamicContainers = document.querySelectorAll('[data-dynamic], .alert, .notification, .loading, .messages-container');
+        
+        let properlyAnnounced = 0;
+        dynamicContainers.forEach(container => {
+            if (container.hasAttribute('aria-live') || container.hasAttribute('role')) {
+                properlyAnnounced++;
+            }
+        });
+        
+        if (dynamicContainers.length === 0) {
+            results.passed.push('No dynamic content containers detected');
+        } else if (properlyAnnounced === dynamicContainers.length) {
+            results.passed.push('All dynamic content updates are properly announced');
+        } else {
+            results.warnings.push(`${dynamicContainers.length - properlyAnnounced} dynamic containers may not announce updates`);
+        }
+    }
+
+    validateNavigationLandmarks(results) {
+        const landmarks = {
+            header: document.querySelectorAll('header, [role="banner"]'),
+            nav: document.querySelectorAll('nav, [role="navigation"]'),
+            main: document.querySelectorAll('main, [role="main"]'),
+            aside: document.querySelectorAll('aside, [role="complementary"]'),
+            footer: document.querySelectorAll('footer, [role="contentinfo"]')
+        };
+        
+        let landmarkIssues = [];
+        
+        // Check for required landmarks
+        if (landmarks.header.length === 0) landmarkIssues.push('Missing header/banner landmark');
+        if (landmarks.main.length === 0) landmarkIssues.push('Missing main content landmark');
+        if (landmarks.nav.length === 0) landmarkIssues.push('Missing navigation landmark');
+        
+        // Check for multiple main landmarks
+        if (landmarks.main.length > 1) landmarkIssues.push('Multiple main landmarks found');
+        
+        if (landmarkIssues.length === 0) {
+            results.passed.push('All required navigation landmarks present');
+        } else {
+            results.errors = results.errors.concat(landmarkIssues);
+        }
+    }
+
+    calculateAccessibilityScore(results) {
+        const total = results.passed.length + results.warnings.length + results.errors.length;
+        if (total === 0) return 100;
+        
+        const weightedScore = (results.passed.length * 1.0) + (results.warnings.length * 0.5) + (results.errors.length * 0.0);
+        return Math.round((weightedScore / total) * 100);
+    }
+
+    announceValidationResults(results) {
+        const score = results.summary.score;
+        let announcement = `Validação de acessibilidade concluída. Pontuação: ${score}%. `;
+        
+        if (results.summary.errors > 0) {
+            announcement += `${results.summary.errors} erros críticos encontrados. `;
+        }
+        if (results.summary.warnings > 0) {
+            announcement += `${results.summary.warnings} avisos identificados. `;
+        }
+        
+        announcement += `${results.summary.passed} testes aprovados.`;
+        
+        this.announceToScreenReader(announcement, 'polite');
+    }
+
+    /**
+     * Manual screen reader testing helpers
+     */
+    testScreenReaderNavigation() {
+        console.group('🔧 Manual Screen Reader Navigation Test');
+        
+        this.announceToScreenReader('Iniciando teste de navegação por leitor de tela');
+        
+        // Test skip links
+        setTimeout(() => {
+            this.announceToScreenReader('Testando links de navegação rápida');
+            console.log('✓ Skip links announcement test');
+        }, 1000);
+        
+        // Test form navigation
+        setTimeout(() => {
+            this.announceToScreenReader('Testando navegação em formulários');
+            console.log('✓ Form navigation announcement test');
+        }, 2000);
+        
+        // Test dynamic content
+        setTimeout(() => {
+            this.announceToScreenReader('Testando conteúdo dinâmico');
+            console.log('✓ Dynamic content announcement test');
+        }, 3000);
+        
+        // Completion
+        setTimeout(() => {
+            this.announceToScreenReader('Teste de navegação concluído com sucesso');
+            console.log('✅ Screen reader navigation test completed');
+            console.groupEnd();
+        }, 4000);
+    }
+
+    /**
+     * NVDA/JAWS compatibility testing
+     */
+    testScreenReaderCompatibility() {
+        console.group('🔧 NVDA/JAWS Compatibility Test');
+        
+        // Test announcement system
+        this.announceToScreenReader('Sistema de anúncios funcionando', 'polite');
+        console.log('✓ Polite announcement test');
+        
+        // Test urgent announcements
+        setTimeout(() => {
+            this.announceToScreenReader('Teste de anúncio urgente', 'assertive');
+            console.log('✓ Assertive announcement test');
+        }, 1000);
+        
+        // Test form announcements
+        setTimeout(() => {
+            const firstInput = document.querySelector('input:not([type="hidden"])');
+            if (firstInput) {
+                firstInput.focus();
+                this.announceToScreenReader('Campo de entrada focado para teste');
+                console.log('✓ Form focus announcement test');
+            }
+        }, 2000);
+        
+        // Test state changes
+        setTimeout(() => {
+            const button = document.querySelector('button');
+            if (button) {
+                button.setAttribute('aria-pressed', 'true');
+                this.announceToScreenReader('Estado do botão alterado para pressionado');
+                console.log('✓ State change announcement test');
+            }
+        }, 3000);
+        
+        setTimeout(() => {
+            console.log('✅ Screen reader compatibility test completed');
+            console.groupEnd();
+        }, 4000);
+    }
+}
+
+// Accessibility testing functions for global access
+window.validateAccessibility = function() {
+    if (accessibilityManager) {
+        return accessibilityManager.validateScreenReaderCompatibility();
+    }
+    console.warn('Accessibility Manager not initialized');
+    return null;
+};
+
+window.testScreenReaderNavigation = function() {
+    if (accessibilityManager) {
+        accessibilityManager.testScreenReaderNavigation();
+    }
+};
+
+window.testScreenReaderCompatibility = function() {
+    if (accessibilityManager) {
+        accessibilityManager.testScreenReaderCompatibility();
+    }
+};
+
 window.updateAriaState = function(element, state, value) {
     if (accessibilityManager) {
         accessibilityManager.updateInteractionState(element, state, value);

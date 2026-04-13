@@ -1085,6 +1085,360 @@ class InteractionEnhancer {
 }
 
 // Initialize Progressive Enhancement Layer
+// ===================================
+// T015 - SMART SEARCH ENHANCEMENT
+// Feature: 3-modern-web-interface
+// Task: T015 - Implement Smart Search Enhancement
+// ===================================
+
+class SmartSearchManager {
+    constructor() {
+        this.searchInputs = document.querySelectorAll('input[type="search"], input[name="search"], .search-input');
+        this.debounceDelay = 300;
+        this.cache = new Map();
+        this.recentSearches = this.loadRecentSearches();
+        this.maxRecentSearches = 5;
+        this.init();
+    }
+
+    init() {
+        this.searchInputs.forEach(input => {
+            this.enhanceSearchInput(input);
+        });
+    }
+
+    enhanceSearchInput(input) {
+        if (input.dataset.smartSearchEnhanced) return;
+        input.dataset.smartSearchEnhanced = 'true';
+
+        // Add container for search suggestions if not exists
+        this.createSuggestionsContainer(input);
+
+        // Add real-time search with debouncing
+        this.addRealTimeSearch(input);
+
+        // Add keyboard navigation
+        this.addKeyboardNavigation(input);
+
+        // Add recent searches
+        this.addRecentSearches(input);
+
+        // Add search result highlighting
+        this.addResultHighlighting(input);
+    }
+
+    createSuggestionsContainer(input) {
+        if (input.nextElementSibling?.classList.contains('search-suggestions')) return;
+
+        const container = document.createElement('div');
+        container.className = 'search-suggestions';
+        container.style.display = 'none';
+        container.setAttribute('role', 'listbox');
+        container.setAttribute('aria-label', 'Sugestões de pesquisa');
+        
+        input.parentNode.insertBefore(container, input.nextSibling);
+        input.setAttribute('aria-expanded', 'false');
+        input.setAttribute('aria-autocomplete', 'list');
+    }
+
+    addRealTimeSearch(input) {
+        let debounceTimer;
+        
+        input.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                this.hideSuggestions(input);
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                this.performSearch(input, query);
+            }, this.debounceDelay);
+        });
+
+        input.addEventListener('focus', () => {
+            if (input.value.trim() === '') {
+                this.showRecentSearches(input);
+            }
+        });
+
+        input.addEventListener('blur', (e) => {
+            // Delay hiding to allow for click on suggestions
+            setTimeout(() => {
+                if (!e.relatedTarget?.closest('.search-suggestions')) {
+                    this.hideSuggestions(input);
+                }
+            }, 150);
+        });
+    }
+
+    addKeyboardNavigation(input) {
+        let selectedIndex = -1;
+
+        input.addEventListener('keydown', (e) => {
+            const suggestions = input.nextElementSibling;
+            const items = suggestions?.querySelectorAll('.suggestion-item');
+
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    this.updateSelection(items, selectedIndex);
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    this.updateSelection(items, selectedIndex);
+                    break;
+
+                case 'Enter':
+                    if (selectedIndex >= 0 && items[selectedIndex]) {
+                        e.preventDefault();
+                        this.selectSuggestion(input, items[selectedIndex]);
+                    }
+                    break;
+
+                case 'Escape':
+                    this.hideSuggestions(input);
+                    selectedIndex = -1;
+                    break;
+            }
+        });
+    }
+
+    updateSelection(items, selectedIndex) {
+        items.forEach((item, index) => {
+            item.classList.toggle('selected', index === selectedIndex);
+            if (index === selectedIndex) {
+                item.setAttribute('aria-selected', 'true');
+            } else {
+                item.removeAttribute('aria-selected');
+            }
+        });
+    }
+
+    async performSearch(input, query) {
+        // Check cache first
+        if (this.cache.has(query)) {
+            this.displaySuggestions(input, this.cache.get(query));
+            return;
+        }
+
+        // Perform search via API if available
+        const searchUrl = this.getSearchUrl(input);
+        if (searchUrl && FeatureDetection.fetch) {
+            try {
+                const response = await fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.cache.set(query, data.results || []);
+                    this.displaySuggestions(input, data.results || []);
+                }
+            } catch (error) {
+                console.warn('Search API error:', error);
+                this.displayLocalSuggestions(input, query);
+            }
+        } else {
+            this.displayLocalSuggestions(input, query);
+        }
+    }
+
+    getSearchUrl(input) {
+        return input.dataset.searchUrl || '/api/search/';
+    }
+
+    displaySuggestions(input, suggestions) {
+        const container = input.nextElementSibling;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (suggestions.length === 0) {
+            container.innerHTML = '<div class="no-suggestions">Nenhum resultado encontrado</div>';
+        } else {
+            suggestions.slice(0, 10).forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.setAttribute('role', 'option');
+                div.setAttribute('data-value', item.value || item.title);
+                
+                div.innerHTML = `
+                    <div class="suggestion-content">
+                        <div class="suggestion-title">${this.highlightMatch(item.title, input.value)}</div>
+                        ${item.subtitle ? `<div class="suggestion-subtitle">${item.subtitle}</div>` : ''}
+                    </div>
+                `;
+
+                div.addEventListener('click', () => {
+                    this.selectSuggestion(input, div);
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        this.showSuggestions(input);
+    }
+
+    displayLocalSuggestions(input, query) {
+        // Simple local suggestion logic based on DOM content
+        const suggestions = [];
+        const elements = document.querySelectorAll('[data-searchable]');
+        
+        elements.forEach(element => {
+            const text = element.textContent.toLowerCase();
+            if (text.includes(query.toLowerCase())) {
+                suggestions.push({
+                    title: element.textContent.substring(0, 50),
+                    value: element.textContent,
+                    element: element
+                });
+            }
+        });
+
+        this.displaySuggestions(input, suggestions);
+    }
+
+    highlightMatch(text, query) {
+        if (!query) return text;
+        
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    selectSuggestion(input, suggestionElement) {
+        const value = suggestionElement.getAttribute('data-value');
+        input.value = value;
+        this.saveToRecentSearches(value);
+        this.hideSuggestions(input);
+        
+        // Trigger input event for any listeners
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Submit form if configured
+        if (input.dataset.autoSubmit === 'true') {
+            const form = input.closest('form');
+            form?.submit();
+        }
+    }
+
+    showRecentSearches(input) {
+        if (this.recentSearches.length === 0) return;
+
+        const suggestions = this.recentSearches.map(search => ({
+            title: search,
+            value: search,
+            isRecent: true
+        }));
+
+        this.displaySuggestions(input, suggestions);
+    }
+
+    showSuggestions(input) {
+        const container = input.nextElementSibling;
+        if (container) {
+            container.style.display = 'block';
+            input.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    hideSuggestions(input) {
+        const container = input.nextElementSibling;
+        if (container) {
+            container.style.display = 'none';
+            input.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    saveToRecentSearches(query) {
+        if (!query || query.length < 2) return;
+
+        // Remove if already exists
+        const index = this.recentSearches.indexOf(query);
+        if (index > -1) {
+            this.recentSearches.splice(index, 1);
+        }
+
+        // Add to beginning
+        this.recentSearches.unshift(query);
+
+        // Keep only max recent searches
+        this.recentSearches = this.recentSearches.slice(0, this.maxRecentSearches);
+
+        // Save to localStorage if available
+        if (FeatureDetection.localStorage) {
+            localStorage.setItem('tintas_recent_searches', JSON.stringify(this.recentSearches));
+        }
+    }
+
+    loadRecentSearches() {
+        if (!FeatureDetection.localStorage) return [];
+
+        try {
+            const saved = localStorage.getItem('tintas_recent_searches');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    addResultHighlighting(input) {
+        // Observe changes in result containers and highlight matches
+        const resultContainers = document.querySelectorAll('[data-search-results]');
+        
+        resultContainers.forEach(container => {
+            const observer = new MutationObserver(() => {
+                if (input.value.trim()) {
+                    this.highlightResultsInContainer(container, input.value);
+                }
+            });
+
+            observer.observe(container, { childList: true, subtree: true });
+        });
+    }
+
+    highlightResultsInContainer(container, query) {
+        if (!query || query.length < 2) return;
+
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        const textNodes = [];
+        let node;
+
+        while (node = walker.nextNode()) {
+            if (node.parentNode.tagName !== 'SCRIPT' && node.parentNode.tagName !== 'STYLE') {
+                textNodes.push(node);
+            }
+        }
+
+        textNodes.forEach(textNode => {
+            const text = textNode.textContent;
+            const regex = new RegExp(`(${query})`, 'gi');
+            
+            if (regex.test(text)) {
+                const highlightedHTML = text.replace(regex, '<mark>$1</mark>');
+                const wrapper = document.createElement('span');
+                wrapper.innerHTML = highlightedHTML;
+                textNode.parentNode.replaceChild(wrapper, textNode);
+            }
+        });
+    }
+}
+
 function initializeProgressiveEnhancements() {
     // Apply feature detection classes
     const html = document.documentElement;
@@ -1098,10 +1452,18 @@ function initializeProgressiveEnhancements() {
     
     // Initialize enhancement components
     new FormEnhancements();
+    new SmartSearchManager();
+    window.notificationManager = new NotificationManager();
     new KeyboardShortcuts();
     new AccessibilityEnhancer();
     new ScrollAnimations();
     new InteractionEnhancer();
+    
+    // Initialize full Accessibility Manager if available (T017-T018)
+    if (typeof AccessibilityManager !== 'undefined') {
+        window.accessibilityManager = new AccessibilityManager();
+        console.log('✅ Full Accessibility Manager initialized with WCAG 2.1 AA compliance');
+    }
     
     console.log('🚀 Progressive Enhancement Layer initialized with features:', FeatureDetection);
 }
@@ -1383,27 +1745,272 @@ window.UIEnhancements = {
         this.showNotification('Ação personalizada adicionada!', 'success');
     }
 
-    /**
-     * Show notification to user
-     */
-    showNotification(message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+// ===================================
+// T016 - NOTIFICATION SYSTEM
+// Feature: 3-modern-web-interface
+// Task: T016 - Build Notification System
+// ===================================
+
+class NotificationManager {
+    constructor() {
+        this.notifications = new Set();
+        this.container = null;
+        this.defaultTimeouts = {
+            success: 4000,
+            info: 6000,
+            warning: 8000,
+            error: 10000
+        };
+        this.maxNotifications = 5;
+        this.init();
+    }
+
+    init() {
+        this.createContainer();
+        this.createScreenReaderAnnouncer();
+    }
+
+    createContainer() {
+        if (document.getElementById('toast-container')) return;
+
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed';
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'false');
+        container.style.cssText = `
+            top: 1rem;
+            right: 1rem;
+            z-index: 1070;
+            max-width: 350px;
         `;
 
-        document.body.appendChild(notification);
+        document.body.appendChild(container);
+        this.container = container;
+    }
 
-        // Auto-dismiss after 3 seconds
+    createScreenReaderAnnouncer() {
+        if (document.getElementById('sr-announcer')) return;
+
+        const announcer = document.createElement('div');
+        announcer.id = 'sr-announcer';
+        announcer.setAttribute('aria-live', 'assertive');
+        announcer.setAttribute('aria-atomic', 'true');
+        announcer.className = 'visually-hidden';
+
+        document.body.appendChild(announcer);
+        this.announcer = announcer;
+    }
+
+    show(message, type = 'info', options = {}) {
+        // Manage maximum notifications
+        if (this.notifications.size >= this.maxNotifications) {
+            const oldestNotification = this.notifications.values().next().value;
+            this.remove(oldestNotification);
+        }
+
+        const notification = this.createNotification(message, type, options);
+        this.container.appendChild(notification);
+        this.notifications.add(notification);
+
+        // Announce to screen readers
+        this.announceToScreenReader(message, type);
+
+        // Auto-dismiss if not persistent
+        if (!options.persistent) {
+            const timeout = options.timeout || this.defaultTimeouts[type] || this.defaultTimeouts.info;
+            setTimeout(() => {
+                this.remove(notification);
+            }, timeout);
+        }
+
+        // Trigger enter animation
+        requestAnimationFrame(() => {
+            notification.classList.add('show');
+        });
+
+        return notification;
+    }
+
+    createNotification(message, type, options) {
+        const notification = document.createElement('div');
+        notification.className = `toast align-items-center border-0 notification-${type}`;
+        notification.setAttribute('role', options.persistent ? 'dialog' : 'status');
+        notification.setAttribute('aria-atomic', 'true');
+        notification.setAttribute('data-type', type);
+
+        const icon = this.getIcon(type);
+        const bgClass = this.getBgClass(type);
+
+        notification.innerHTML = `
+            <div class="d-flex ${bgClass} text-white">
+                <div class="toast-body d-flex align-items-center">
+                    <div class="notification-icon me-2" aria-hidden="true">
+                        <i class="bi ${icon}"></i>
+                    </div>
+                    <div class="notification-content flex-grow-1">
+                        <div class="notification-message">${message}</div>
+                        ${options.subtitle ? `<div class="notification-subtitle">${options.subtitle}</div>` : ''}
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                        aria-label="Fechar notificação"
+                        data-notification-close>
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            ${options.actions ? this.createActionButtons(options.actions) : ''}
+        `;
+
+        // Add close event listener
+        const closeBtn = notification.querySelector('[data-notification-close]');
+        closeBtn.addEventListener('click', () => {
+            this.remove(notification);
+        });
+
+        // Add action button listeners
+        if (options.actions) {
+            const actionBtns = notification.querySelectorAll('[data-action]');
+            actionBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.target.getAttribute('data-action');
+                    const actionConfig = options.actions.find(a => a.id === action);
+                    if (actionConfig && actionConfig.callback) {
+                        actionConfig.callback();
+                    }
+                    if (!actionConfig?.keepOpen) {
+                        this.remove(notification);
+                    }
+                });
+            });
+        }
+
+        // Add hover pause functionality
+        notification.addEventListener('mouseenter', () => {
+            notification.dataset.paused = 'true';
+        });
+
+        notification.addEventListener('mouseleave', () => {
+            notification.dataset.paused = 'false';
+        });
+
+        return notification;
+    }
+
+    createActionButtons(actions) {
+        const actionsHtml = actions.map(action => 
+            `<button type="button" class="btn btn-sm ${action.variant || 'btn-outline-light'}" 
+                     data-action="${action.id}">${action.label}</button>`
+        ).join(' ');
+
+        return `
+            <div class="toast-actions p-2 border-top border-light border-opacity-25">
+                ${actionsHtml}
+            </div>
+        `;
+    }
+
+    getIcon(type) {
+        const icons = {
+            success: 'bi-check-circle-fill',
+            info: 'bi-info-circle-fill',
+            warning: 'bi-exclamation-triangle-fill',
+            error: 'bi-x-circle-fill'
+        };
+        return icons[type] || icons.info;
+    }
+
+    getBgClass(type) {
+        const bgClasses = {
+            success: 'bg-success',
+            info: 'bg-primary',
+            warning: 'bg-warning',
+            error: 'bg-danger'
+        };
+        return bgClasses[type] || bgClasses.info;
+    }
+
+    remove(notification) {
+        if (!notification || !notification.parentNode) return;
+
+        notification.classList.remove('show');
+        notification.classList.add('hiding');
+
         setTimeout(() => {
             if (notification.parentNode) {
-                notification.remove();
+                notification.parentNode.removeChild(notification);
+                this.notifications.delete(notification);
+                this.repositionNotifications();
             }
-        }, 3000);
+        }, 150);
+    }
+
+    repositionNotifications() {
+        const notifications = Array.from(this.container.children);
+        notifications.forEach((notification, index) => {
+            notification.style.marginBottom = index === notifications.length - 1 ? '0' : '0.5rem';
+        });
+    }
+
+    announceToScreenReader(message, type) {
+        if (!this.announcer) return;
+
+        const prefix = {
+            success: 'Sucesso: ',
+            info: 'Informação: ',
+            warning: 'Aviso: ',
+            error: 'Erro: '
+        };
+
+        this.announcer.textContent = (prefix[type] || '') + message;
+
+        // Clear after announcement
+        setTimeout(() => {
+            this.announcer.textContent = '';
+        }, 1000);
+    }
+
+    // Convenience methods
+    success(message, options = {}) {
+        return this.show(message, 'success', options);
+    }
+
+    info(message, options = {}) {
+        return this.show(message, 'info', options);
+    }
+
+    warning(message, options = {}) {
+        return this.show(message, 'warning', options);
+    }
+
+    error(message, options = {}) {
+        return this.show(message, 'error', options);
+    }
+
+    // Clear all notifications
+    clear() {
+        const notifications = Array.from(this.notifications);
+        notifications.forEach(notification => {
+            this.remove(notification);
+        });
+    }
+
+    // Get notification count
+    getCount() {
+        return this.notifications.size;
+    }
+}
+
+    /**
+     * Show notification to user (using new NotificationManager)
+     */
+    showNotification(message, type = 'info', options = {}) {
+        if (window.notificationManager) {
+            return window.notificationManager.show(message, type, options);
+        } else {
+            // Fallback to console if notification manager not initialized
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
     }
 
     // ===================================

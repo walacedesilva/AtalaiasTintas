@@ -1,0 +1,631 @@
+# ================================================================
+# Ansible Inventory Configuration for Production Environment
+# Atalaia Tintas Paint Store System
+# ================================================================
+#
+# This inventory defines the production environment setup with
+# high-availability, multi-server configuration designed for
+# maximum uptime, performance, and security for the paint store system.
+#
+# Environment: Production
+# Purpose: Live customer-facing paint store operations
+# Infrastructure: High-availability multi-server cluster
+# Domain: atalaiastintas.com
+#
+# Security Note: This file contains server IPs and configuration.
+# Sensitive data is stored in vault files and environment variables.
+#
+# Usage:
+#   ansible-playbook -i inventory/production deploy.yml --ask-vault-pass
+#   ansible-playbook -i inventory/production backup.yml --vault-password-file .vault_pass
+#   ansible-playbook -i inventory/production monitoring.yml --vault-id prod@.vault_pass
+
+[all:vars]
+# Environment configuration
+env=production
+domain_name=atalaiastintas.com
+deployment_branch=main
+
+# Connection settings (production security)
+ansible_user=deploy
+ansible_ssh_private_key_file=~/.ssh/tintas_production_key
+ansible_ssh_common_args='-o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts_production'
+ansible_become=yes
+ansible_become_method=sudo
+
+# Project paths
+project_root=/opt/atalaias_tintas
+virtual_env_path={{ project_root }}/venv
+backend_dir={{ project_root }}/backend
+
+# Python configuration
+python_version=3.11
+pip_requirements_file={{ backend_dir }}/requirements/production.txt
+
+# ================================
+# Web Application Servers (High Availability)
+# ================================
+
+[tintas_web]
+# Production web servers - 4 servers across 2 availability zones
+prod-web-01 ansible_host=10.0.1.10 ansible_port=22 availability_zone=us-east-1a
+prod-web-02 ansible_host=10.0.1.11 ansible_port=22 availability_zone=us-east-1a
+prod-web-03 ansible_host=10.0.1.20 ansible_port=22 availability_zone=us-east-1b
+prod-web-04 ansible_host=10.0.1.21 ansible_port=22 availability_zone=us-east-1b
+
+[tintas_web:vars]
+# Blue-green deployment ports
+blue_port=8000
+green_port=8002
+nginx_port=80
+https_port=443
+
+# Application settings (production optimized)
+debug_mode=false
+log_level=warning
+static_files_debug=false
+secure_ssl_redirect=true
+
+# Performance settings (production tuned)
+gunicorn_workers=8
+celery_concurrency=8
+gunicorn_timeout=60
+keepalive_timeout=5
+max_requests=5000
+max_requests_jitter=500
+
+# Memory and resource limits
+worker_memory_limit=1GB
+worker_cpu_limit=1.0
+process_priority=-5
+
+# Security settings
+enable_security_middleware=true
+secure_browser_xss_filter=true
+secure_content_type_nosniff=true
+x_frame_options=DENY
+
+# ================================
+# Database Servers (Master-Slave Replication)
+# ================================
+
+[tintas_db]
+# Production database cluster with read replicas
+prod-db-master ansible_host=10.0.2.10 postgresql_role=primary
+prod-db-replica-01 ansible_host=10.0.2.11 postgresql_role=replica
+prod-db-replica-02 ansible_host=10.0.2.12 postgresql_role=replica
+
+[tintas_db:vars]
+# PostgreSQL configuration (production optimized)
+postgresql_version=15
+postgresql_port=5432
+postgresql_max_connections=300
+postgresql_shared_buffers=2GB
+postgresql_effective_cache_size=6GB
+postgresql_work_mem=16MB
+postgresql_maintenance_work_mem=256MB
+postgresql_wal_buffers=16MB
+postgresql_checkpoint_completion_target=0.9
+
+# Database credentials (production - vault encrypted)
+postgresql_databases:
+  - name: tintas_production
+    owner: tintas_app
+    encoding: UTF8
+    locale: en_US.UTF-8
+    template: template0
+
+postgresql_users:
+  - name: tintas_app
+    password: "{{ vault_production_db_password }}"
+    databases: ["tintas_production"]
+    privileges: ALL
+  - name: tintas_readonly
+    password: "{{ vault_production_readonly_password }}"
+    databases: ["tintas_production"]
+    privileges: SELECT
+  - name: tintas_backup
+    password: "{{ vault_backup_db_password }}"
+    databases: ["tintas_production"]
+    privileges: SELECT,USAGE
+
+# High availability and replication
+postgresql_replication_enabled=true
+postgresql_replication_user=replicator
+postgresql_replication_password="{{ vault_replication_password }}"
+postgresql_hot_standby=on
+postgresql_archive_mode=on
+postgresql_archive_command="aws s3 cp %p s3://tintas-prod-wal-archive/%f"
+
+# Backup settings (production grade)
+db_backup_enabled=true
+db_backup_retention_days=90
+db_backup_schedule_full="0 2 * * 0"     # Weekly full backup
+db_backup_schedule_incremental="0 2 * * 1-6"  # Daily incremental
+db_backup_compression=true
+db_backup_encryption=true
+db_backup_s3_bucket=tintas-prod-db-backups
+
+# ================================
+# Cache Servers (Redis Cluster)
+# ================================
+
+[tintas_cache]
+# Redis cluster for high availability caching
+prod-cache-01 ansible_host=10.0.3.10 redis_role=master redis_cluster_id=1
+prod-cache-02 ansible_host=10.0.3.11 redis_role=replica redis_cluster_id=1
+prod-cache-03 ansible_host=10.0.3.12 redis_role=master redis_cluster_id=2
+prod-cache-04 ansible_host=10.0.3.13 redis_role=replica redis_cluster_id=2
+prod-cache-05 ansible_host=10.0.3.14 redis_role=master redis_cluster_id=3
+prod-cache-06 ansible_host=10.0.3.15 redis_role=replica redis_cluster_id=3
+
+[tintas_cache:vars]
+# Redis configuration (production cluster)
+redis_port=6379
+redis_maxmemory=4GB
+redis_maxmemory_policy=allkeys-lru
+redis_save_schedule="900 1 300 10 60 10000"
+redis_timeout=300
+redis_tcp_keepalive=300
+
+# Redis cluster settings
+redis_cluster_enabled=true
+redis_cluster_config_file=/etc/redis/nodes.conf
+redis_cluster_node_timeout=15000
+redis_cluster_require_full_coverage=yes
+
+# Redis Sentinel for failover
+redis_sentinel_enabled=true
+redis_sentinel_port=26379
+redis_sentinel_quorum=2
+redis_sentinel_down_after_milliseconds=5000
+redis_sentinel_failover_timeout=180000
+
+# Security
+redis_auth_password="{{ vault_redis_password }}"
+redis_protected_mode=yes
+redis_bind_interface=10.0.3.0/24
+
+# Performance tuning
+redis_hz=10
+redis_dynamic_hz=yes
+redis_latency_monitor_threshold=100
+
+# ================================
+# Monitoring Servers (Redundant)
+# ================================
+
+[tintas_monitoring]
+# Dedicated monitoring cluster
+prod-monitor-01 ansible_host=10.0.4.10 monitoring_role=primary
+prod-monitor-02 ansible_host=10.0.4.11 monitoring_role=secondary
+
+[tintas_monitoring:vars]
+# Monitoring configuration (production grade)
+prometheus_retention=90d
+prometheus_storage_size=100GB
+prometheus_scrape_interval=15s
+prometheus_evaluation_interval=15s
+grafana_admin_user=admin
+grafana_admin_password="{{ vault_grafana_admin_password }}"
+
+# High availability monitoring
+prometheus_cluster_enabled=true
+alertmanager_cluster_enabled=true
+grafana_database_type=mysql
+grafana_database_host=prod-monitor-db.internal
+grafana_database_name=grafana_prod
+grafana_database_user=grafana
+grafana_database_password="{{ vault_grafana_db_password }}"
+
+# Alerting configuration (production alerts)
+alert_email=alerts@atalaiastintas.com
+alert_slack_webhook="{{ vault_slack_webhook }}"
+alert_pagerduty_key="{{ vault_pagerduty_key }}"
+alert_opsgenie_key="{{ vault_opsgenie_key }}"
+
+# Critical thresholds for production
+cpu_alert_threshold=70
+memory_alert_threshold=75
+disk_alert_threshold=85
+response_time_threshold=1000
+error_rate_threshold=1
+availability_threshold=99.9
+
+# External monitoring
+external_monitoring_enabled=true
+uptime_monitoring_providers=["pingdom", "newrelic", "datadog"]
+
+# ================================
+# Load Balancers (High Availability)
+# ================================
+
+[tintas_lb]
+# HAProxy cluster with keepalived
+prod-lb-01 ansible_host=10.0.5.10 lb_role=primary keepalived_priority=150
+prod-lb-02 ansible_host=10.0.5.11 lb_role=backup keepalived_priority=100
+
+[tintas_lb:vars]
+# HAProxy configuration (production)
+haproxy_enabled=true
+haproxy_stats_enabled=true
+haproxy_stats_port=8404
+haproxy_stats_user=admin
+haproxy_stats_password="{{ vault_haproxy_stats_password }}"
+haproxy_stats_uri=/haproxy_stats
+
+# Load balancing (production optimized)
+balance_algorithm=leastconn
+health_check_interval=2s
+health_check_timeout=5s
+health_check_retries=3
+max_connections=10000
+timeout_connect=5s
+timeout_client=50s
+timeout_server=50s
+
+# SSL/TLS configuration (production certificates)
+ssl_certificate_path=/etc/ssl/certs/atalaiastintas.com.crt
+ssl_certificate_key_path=/etc/ssl/private/atalaiastintas.com.key
+ssl_protocols="TLSv1.2 TLSv1.3"
+ssl_ciphers="ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305"
+ssl_prefer_server_ciphers=on
+ssl_session_cache="shared:SSL:10m"
+ssl_session_timeout=10m
+
+# HSTS and security headers
+enable_hsts=true
+hsts_max_age=31536000
+enable_security_headers=true
+
+# Rate limiting (production)
+rate_limit_enabled=true
+rate_limit_per_minute=1000
+rate_limit_burst=2000
+rate_limit_status_code=429
+
+# ================================
+# Message Queue / Task Processing
+# ================================
+
+[tintas_queue]
+# Dedicated Celery workers for different task types
+prod-worker-general-01 ansible_host=10.0.6.10 celery_queues=["default", "notifications"]
+prod-worker-general-02 ansible_host=10.0.6.11 celery_queues=["default", "notifications"]
+prod-worker-paint-01 ansible_host=10.0.6.20 celery_queues=["paint_calculations", "color_matching"]
+prod-worker-paint-02 ansible_host=10.0.6.21 celery_queues=["paint_calculations", "color_matching"]
+prod-worker-reports-01 ansible_host=10.0.6.30 celery_queues=["reports", "data_export"]
+
+[tintas_queue:vars]
+# Celery configuration (production)
+celery_worker_concurrency=8
+celery_max_tasks_per_child=1000
+celery_worker_prefetch_multiplier=1
+celery_task_soft_time_limit=300
+celery_task_time_limit=600
+celery_worker_disable_rate_limits=false
+
+# Queue configuration with priorities
+celery_queues:
+  - name: high_priority
+    routing_key: high_priority
+    priority: 10
+    max_length: 100000
+  - name: default
+    routing_key: default  
+    priority: 5
+    max_length: 500000
+  - name: paint_calculations
+    routing_key: paint_calculations
+    priority: 7
+    max_length: 200000
+  - name: color_matching
+    routing_key: color_matching
+    priority: 8
+    max_length: 100000
+  - name: notifications
+    routing_key: notifications
+    priority: 6
+    max_length: 300000
+  - name: reports
+    routing_key: reports
+    priority: 3
+    max_length: 50000
+  - name: data_export
+    routing_key: data_export
+    priority: 2
+    max_length: 10000
+
+# Beat scheduler settings (HA)
+celery_beat_enabled=true
+celery_beat_schedule_file=/var/lib/celery/celerybeat-schedule
+celery_beat_pid_file=/var/run/celery/celerybeat.pid
+celery_beat_log_level=info
+
+# ================================
+# CDN and Edge Servers
+# ================================
+
+[tintas_cdn]
+# CloudFront distribution endpoints
+cloudfront-edge-01 ansible_host=d123456789.cloudfront.net cdn_role=primary
+cloudfront-edge-02 ansible_host=d987654321.cloudfront.net cdn_role=backup
+
+[tintas_cdn:vars]
+# CDN configuration
+cdn_enabled=true
+cdn_cache_ttl_static=31536000  # 1 year for static assets
+cdn_cache_ttl_dynamic=300      # 5 minutes for dynamic content
+cdn_gzip_enabled=true
+cdn_http2_enabled=true
+
+# Origin settings
+cdn_origin_domain=atalaiastintas.com
+cdn_origin_protocol_policy=https-only
+cdn_viewer_protocol_policy=redirect-to-https
+
+# ================================
+# Database Connection Pooling
+# ================================
+
+[tintas_pgpool]
+# PgPool-II for connection pooling and load balancing
+prod-pgpool-01 ansible_host=10.0.7.10 pgpool_role=primary
+prod-pgpool-02 ansible_host=10.0.7.11 pgpool_role=standby
+
+[tintas_pgpool:vars]
+# PgPool configuration
+pgpool_port=5433
+pgpool_max_pool=100
+pgpool_child_life_time=300
+pgpool_connection_life_time=0
+pgpool_client_idle_limit=0
+
+# Load balancing for read queries
+pgpool_load_balance_mode=on
+pgpool_master_slave_mode=on
+pgpool_master_slave_sub_mode=stream
+
+# ================================
+# Production Environment Groups
+# ================================
+
+[production:children]
+tintas_web
+tintas_db
+tintas_cache
+tintas_monitoring
+tintas_lb
+tintas_queue
+tintas_cdn
+tintas_pgpool
+
+[production:vars]
+# Production environment variables (vault encrypted)
+DJANGO_SETTINGS_MODULE=tintas_system.settings.production
+DEBUG=False
+ALLOWED_HOSTS=atalaiastintas.com,www.atalaiastintas.com,.atalaiastintas.com
+
+# Database connections (with connection pooling)
+DATABASE_URL=postgresql://tintas_app:{{ vault_production_db_password }}@prod-pgpool-01:5433/tintas_production
+DATABASE_REPLICA_URLS=postgresql://tintas_readonly:{{ vault_production_readonly_password }}@prod-pgpool-01:5433/tintas_production
+
+# Redis cluster configuration
+REDIS_CLUSTER_NODES=10.0.3.10:6379,10.0.3.11:6379,10.0.3.12:6379,10.0.3.13:6379,10.0.3.14:6379,10.0.3.15:6379
+REDIS_PASSWORD="{{ vault_redis_password }}"
+REDIS_URL=redis://:{{ vault_redis_password }}@prod-cache-01:6379/0
+CELERY_BROKER_URL=redis://:{{ vault_redis_password }}@prod-cache-01:6379/2
+CELERY_RESULT_BACKEND=redis://:{{ vault_redis_password }}@prod-cache-01:6379/3
+
+# Security settings (production grade)
+SECRET_KEY="{{ vault_django_secret_key }}"
+JWT_SECRET_KEY="{{ vault_jwt_secret_key }}"
+ENCRYPTION_KEY="{{ vault_encryption_key }}"
+SECURE_SSL_REDIRECT=True
+SECURE_HSTS_SECONDS=31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=True
+SECURE_FRAME_DENY=True
+
+# Email settings (production SMTP)
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST="{{ vault_smtp_host }}"
+EMAIL_PORT="{{ vault_smtp_port }}"
+EMAIL_HOST_USER="{{ vault_smtp_user }}"
+EMAIL_HOST_PASSWORD="{{ vault_smtp_password }}"
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=noreply@atalaiastintas.com
+SERVER_EMAIL=server@atalaiastintas.com
+
+# File storage (S3 production with CDN)
+DEFAULT_FILE_STORAGE=storages.backends.s3boto3.S3Boto3Storage
+STATICFILES_STORAGE=storages.backends.s3boto3.S3ManifestStaticStorage
+AWS_STORAGE_BUCKET_NAME=tintas-production-media
+AWS_S3_REGION_NAME=us-east-1
+AWS_ACCESS_KEY_ID="{{ vault_aws_access_key }}"
+AWS_SECRET_ACCESS_KEY="{{ vault_aws_secret_key }}"
+AWS_S3_CUSTOM_DOMAIN=d123456789.cloudfront.net
+AWS_S3_OBJECT_PARAMETERS={'CacheControl': 'max-age=31536000'}
+
+# Celery settings (production optimized)
+CELERY_TASK_ALWAYS_EAGER=False
+CELERY_TASK_SERIALIZER=json
+CELERY_RESULT_SERIALIZER=json
+CELERY_ACCEPT_CONTENT=['json']
+CELERY_TIMEZONE=America/Sao_Paulo
+CELERY_ENABLE_UTC=True
+CELERY_TASK_COMPRESSION=gzip
+CELERY_RESULT_COMPRESSION=gzip
+
+# Logging configuration (production)
+LOG_LEVEL=ERROR
+ENABLE_SQL_LOGGING=False
+ENABLE_REQUEST_LOGGING=False
+SENTRY_DSN="{{ vault_sentry_dsn }}"
+SENTRY_ENVIRONMENT=production
+
+# Performance settings
+CACHE_TTL_DEFAULT=3600
+CACHE_TTL_LONG=86400
+CACHE_TTL_SHORT=300
+SESSION_CACHE_ALIAS=sessions
+SESSION_ENGINE=django.contrib.sessions.backends.cache
+
+# Paint store production settings
+ENABLE_COLOR_MIXING_API=True
+ENABLE_INVENTORY_WEBHOOKS=True
+ENABLE_MARKETPLACE_INTEGRATION=True
+MARKETPLACE_API_TIMEOUT=10
+INVENTORY_SYNC_INTERVAL=300
+
+# External integrations (production)
+PAYMENT_GATEWAY_ENDPOINT="{{ vault_payment_gateway_url }}"
+PAYMENT_GATEWAY_API_KEY="{{ vault_payment_gateway_key }}"
+ERP_INTEGRATION_ENDPOINT="{{ vault_erp_endpoint }}"
+ERP_API_KEY="{{ vault_erp_api_key }}"
+
+# ================================
+# Production Infrastructure (AWS)
+# ================================
+
+[aws_instances]
+# Production EC2 instances with auto-scaling
+prod-web-01 ec2_instance_type=c5.2xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-web-02 ec2_instance_type=c5.2xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-web-03 ec2_instance_type=c5.2xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-web-04 ec2_instance_type=c5.2xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-db-master ec2_instance_type=r5.2xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-db-replica-01 ec2_instance_type=r5.xlarge ec2_ami=ami-0c02fb55956c7d316
+prod-db-replica-02 ec2_instance_type=r5.xlarge ec2_ami=ami-0c02fb55956c7d316
+
+[aws_instances:vars]
+# AWS production configuration
+aws_region=us-east-1
+aws_vpc_id=vpc-production-tintas
+aws_subnet_ids=["subnet-prod-private-1a", "subnet-prod-private-1b"]
+aws_security_groups=["sg-tintas-production", "sg-database", "sg-cache"]
+aws_key_name=tintas-production-keypair
+
+# EBS configuration (production)
+ebs_optimized=true
+ebs_volume_type=gp3
+ebs_volume_size=200
+ebs_iops=3000
+ebs_encrypted=true
+ebs_kms_key_id="{{ vault_aws_kms_key }}"
+
+# Auto Scaling Groups
+asg_min_size=2
+asg_max_size=10
+asg_desired_capacity=4
+asg_health_check_type=ELB
+asg_health_check_grace_period=300
+
+# ================================
+# Production Deployment Configuration
+# ================================
+
+[all:vars]
+# Deployment settings (production grade)
+deployment_strategy=blue_green
+deployment_health_check_timeout=300
+deployment_rollback_enabled=true
+deployment_notification_enabled=true
+deployment_approval_required=true
+
+# Pre-deployment validations (strict)
+enable_database_migration_check=true
+enable_static_file_collection=true
+enable_dependency_validation=true
+enable_security_scan=true
+enable_performance_test=true
+
+# Backup settings (comprehensive)
+backup_enabled=true
+backup_schedule_full="0 1 * * 0"      # Weekly full backup
+backup_schedule_incremental="0 1 * * 1-6"  # Daily incremental Mon-Sat  
+backup_schedule_transaction_log="*/15 * * * *"  # 15-minute WAL backups
+backup_retention_days=365
+backup_compression_enabled=true
+backup_encryption_enabled=true
+backup_remote_storage=s3://tintas-prod-backups
+backup_cross_region_replication=true
+
+# Monitoring (comprehensive production monitoring)
+monitoring_enabled=true
+health_check_interval=30
+metrics_retention_days=90
+log_retention_days=90
+alert_evaluation_interval=30s
+enable_distributed_tracing=true
+enable_apm_monitoring=true
+
+# Security (production hardened)
+enable_csrf_protection=true
+enable_cors_headers=true
+cors_allow_all_origins=false
+cors_allowed_origins=["https://atalaiastintas.com", "https://www.atalaiastintas.com"]
+secure_ssl_redirect=true
+session_cookie_secure=true
+csrf_cookie_secure=true
+enable_2fa_admin=true
+password_complexity_required=true
+
+# Rate limiting (production)
+rate_limit_enabled=true
+rate_limit_per_minute=600
+rate_limit_burst=1000
+rate_limit_by_ip=true
+rate_limit_by_user=true
+
+# CDN and caching
+cdn_enabled=true
+cache_headers_enabled=true
+static_asset_versioning=true
+image_optimization_enabled=true
+
+# Paint store production features
+enable_real_time_inventory=true
+enable_advanced_analytics=true
+enable_customer_portal=true
+enable_mobile_app_api=true
+enable_b2b_integration=true
+
+# Compliance and auditing
+enable_audit_logging=true
+enable_gdpr_compliance=true
+enable_data_retention_policies=true
+enable_access_logging=true
+
+# ================================================================
+# Production Environment Commands
+# ================================================================
+#
+# SECURITY WARNING: Always use vault encryption for production!
+#
+# 1. Deploy to production (with approval):
+#    ansible-playbook -i inventory/production deploy.yml --ask-vault-pass --check
+#    ansible-playbook -i inventory/production deploy.yml --ask-vault-pass
+#
+# 2. Emergency rollback:
+#    ansible-playbook -i inventory/production deploy.yml --extra-vars="rollback=true" --ask-vault-pass
+#
+# 3. Full system backup:
+#    ansible-playbook -i inventory/production backup.yml --extra-vars="backup_type=full" --ask-vault-pass
+#
+# 4. Health check all services:
+#    ansible-playbook -i inventory/production monitoring.yml --extra-vars="action=check" --ask-vault-pass
+#
+# 5. Scale web tier:
+#    ansible-playbook -i inventory/production scale.yml --extra-vars="web_instances=6" --ask-vault-pass
+#
+# 6. Access production services:
+#    - Application: https://atalaiastintas.com
+#    - Admin: https://atalaiastintas.com/admin/ (requires VPN + 2FA)
+#    - Monitoring: https://monitoring.atalaiastintas.com (internal network only)
+#
+# 7. Emergency procedures documented in:
+#    - docs/operations/emergency_procedures.md
+#    - docs/operations/disaster_recovery.md
+#
+# ================================================================

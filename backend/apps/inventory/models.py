@@ -1,8 +1,11 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model
 from apps.core.models import TimeStampedModel
 from apps.companies.models import Empresa, Loja
 import uuid
+
+User = get_user_model()
 
 
 class Categoria(TimeStampedModel):
@@ -62,32 +65,16 @@ class Marca(TimeStampedModel):
 
 
 class UnidadeMedida(TimeStampedModel):
-    """Unidades de medida com sistema de conversão"""
-    
-    nome = models.CharField(max_length=50)
-    sigla = models.CharField(max_length=10, unique=True)
+    """Measurement units for multi-unit support"""
+    codigo = models.CharField(max_length=10, unique=True)  # L, ML, LATA, GALON
+    nome = models.CharField(max_length=50)  # Litro, Mililitro, Lata, Galão
+    sigla = models.CharField(max_length=5)  # L, ml, lt, gl
     tipo = models.CharField(max_length=20, choices=[
-        ('volume', 'Volume'),
-        ('peso', 'Peso'),
-        ('unidade', 'Unidade'),
-        ('metro', 'Metro'),
-        ('area', 'Área')
+        ('VOLUME', 'Volume'),
+        ('PESO', 'Peso'), 
+        ('UNIDADE', 'Unidade'),
+        ('AREA', 'Área')
     ])
-    
-    # Para conversões automáticas
-    unidade_base = models.ForeignKey(
-        'self', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='derivadas'
-    )
-    fator_conversao = models.DecimalField(
-        max_digits=12, 
-        decimal_places=6, 
-        default=1,
-        help_text="Fator para converter para a unidade base"
-    )
     
     def __str__(self):
         return f"{self.nome} ({self.sigla})"
@@ -95,6 +82,52 @@ class UnidadeMedida(TimeStampedModel):
     class Meta:
         verbose_name = 'Unidade de Medida'
         verbose_name_plural = 'Unidades de Medida'
+
+
+class ProdutoUnidade(TimeStampedModel):
+    """Product-specific unit configurations with conversions"""
+    produto = models.ForeignKey('ProdutoVariacao', on_delete=models.CASCADE)
+    unidade = models.ForeignKey(UnidadeMedida, on_delete=models.CASCADE)
+    unidade_base = models.BooleanField(default=False)  # One base unit per product
+    fator_conversao = models.DecimalField(max_digits=10, decimal_places=6, default=1)
+    preco_diferenciado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    ativa = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.produto} - {self.unidade}"
+    
+    class Meta:
+        unique_together = ['produto', 'unidade']
+        verbose_name = 'Produto Unidade'
+        verbose_name_plural = 'Produtos Unidades'
+
+
+class EstoqueReserva(TimeStampedModel):
+    """Temporary stock reservations during checkout"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    produto = models.ForeignKey('ProdutoVariacao', on_delete=models.CASCADE)
+    quantidade_reservada = models.DecimalField(max_digits=10, decimal_places=4)
+    unidade = models.ForeignKey(UnidadeMedida, on_delete=models.CASCADE)
+    sessao_checkout = models.CharField(max_length=100)  # Session or cart ID
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    expira_em = models.DateTimeField()  # 30 minutes from creation
+    venda = models.ForeignKey('sales.Venda', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Status tracking
+    STATUS_CHOICES = [
+        ('ATIVA', 'Ativa'),
+        ('CONFIRMADA', 'Confirmada'),
+        ('EXPIRADA', 'Expirada'),
+        ('CANCELADA', 'Cancelada')
+    ]
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='ATIVA')
+    
+    def __str__(self):
+        return f"Reserva {self.produto} - {self.quantidade_reservada} {self.unidade}"
+    
+    class Meta:
+        verbose_name = 'Reserva de Estoque'
+        verbose_name_plural = 'Reservas de Estoque'
 
 
 class ProdutoBase(TimeStampedModel):
@@ -258,38 +291,46 @@ class EstoqueLoja(TimeStampedModel):
 
 
 class MovimentacaoEstoque(TimeStampedModel):
-    """Histórico de movimentações de estoque"""
+    """Complete stock movement history with multi-unit support"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    produto = models.ForeignKey('ProdutoVariacao', on_delete=models.CASCADE)
     
-    TIPOS_MOVIMENTO = [
-        ('ENTRADA', 'Entrada'),
-        ('SAIDA', 'Saída'),
-        ('AJUSTE', 'Ajuste'),
-        ('TRANSFERENCIA', 'Transferência'),
-        ('PERDA', 'Perda'),
-        ('PRODUCAO', 'Produção'),  # Para tintas manipuladas
+    TIPOS_MOVIMENTACAO = [
+        ('ENTRADA_COMPRA', 'Entrada por Compra'),
+        ('ENTRADA_AJUSTE', 'Entrada por Ajuste'),  
+        ('ENTRADA_TRANSFERENCIA', 'Entrada por Transferência'),
+        ('ENTRADA_DEVOLUCAO', 'Entrada por Devolução'),
+        ('SAIDA_VENDA', 'Saída por Venda'),
+        ('SAIDA_AJUSTE', 'Saída por Ajuste'),
+        ('SAIDA_TRANSFERENCIA', 'Saída por Transferência'),
+        ('SAIDA_PERDA', 'Saída por Perda'),
+        ('RESERVA', 'Reserva Temporária'),
+        ('LIBERACAO_RESERVA', 'Liberação de Reserva'),
     ]
+    tipo_movimentacao = models.CharField(max_length=30, choices=TIPOS_MOVIMENTACAO)
     
-    estoque_loja = models.ForeignKey(
-        EstoqueLoja, 
-        on_delete=models.CASCADE,
-        related_name='movimentacoes'
-    )
+    # Quantities in both original and base units
+    quantidade_original = models.DecimalField(max_digits=10, decimal_places=4)
+    unidade_original = models.ForeignKey(UnidadeMedida, on_delete=models.PROTECT, related_name='movimentacoes_origem')
+    quantidade_base = models.DecimalField(max_digits=10, decimal_places=4)  # Converted to base unit
+    unidade_base = models.ForeignKey(UnidadeMedida, on_delete=models.PROTECT, related_name='movimentacoes_base')
     
-    tipo_movimento = models.CharField(max_length=20, choices=TIPOS_MOVIMENTO)
-    quantidade = models.DecimalField(max_digits=10, decimal_places=2)
-    quantidade_anterior = models.DecimalField(max_digits=10, decimal_places=2)
-    quantidade_posterior = models.DecimalField(max_digits=10, decimal_places=2)
+    # Stock levels before/after
+    estoque_antes = models.DecimalField(max_digits=10, decimal_places=4, null=True)
+    estoque_depois = models.DecimalField(max_digits=10, decimal_places=4, null=True)
     
-    # Dados do movimento
-    documento = models.CharField(max_length=100, null=True, blank=True)
-    observacoes = models.TextField(null=True, blank=True)
+    # References
+    venda = models.ForeignKey('sales.Venda', on_delete=models.CASCADE, null=True, blank=True)
+    nfe = models.ForeignKey('fiscal.NotaFiscalEletronica', on_delete=models.SET_NULL, null=True, blank=True)
+    reserva = models.ForeignKey(EstoqueReserva, on_delete=models.SET_NULL, null=True, blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     
-    # Usuário responsável
-    usuario = models.ForeignKey(
-        'core.User', 
-        on_delete=models.PROTECT,
-        related_name='movimentacoes_estoque'
-    )
+    # Documentation
+    observacoes = models.TextField(blank=True)
+    documento_referencia = models.CharField(max_length=100, blank=True)  # NF fornecedor, etc.
+    
+    def __str__(self):
+        return f"{self.tipo_movimentacao} - {self.produto} - {self.quantidade_original}"
     
     class Meta:
         verbose_name = 'Movimentação de Estoque'

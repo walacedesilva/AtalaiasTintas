@@ -21,29 +21,58 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # Celery beat schedule for periodic tasks
+# Task: T046 - Setup Celery beat scheduler for automated monitoring
 app.conf.beat_schedule = {
-    # System health check every 5 minutes
-    'system-health-check': {
-        'task': 'apps.monitoring.tasks.check_system_health',
+    # System health checks every 5 minutes
+    'run-health-checks': {
+        'task': 'apps.monitoring.tasks.run_health_checks',
         'schedule': 300.0,  # 5 minutes
+        'options': {'queue': 'monitoring'}
     },
     
-    # Database backup every day at 2 AM
-    'daily-database-backup': {
-        'task': 'apps.core.tasks.create_database_backup',
+    # Process alert notifications every 2 minutes
+    'process-alerts': {
+        'task': 'apps.monitoring.tasks.process_alert_notifications',
+        'schedule': 120.0,  # 2 minutes  
+        'options': {'queue': 'monitoring'}
+    },
+    
+    # Full database backup daily at 2 AM
+    'daily-full-backup': {
+        'task': 'apps.monitoring.tasks.create_scheduled_backup',
         'schedule': crontab(hour=2, minute=0),
+        'kwargs': {'backup_type': 'full'},
+        'options': {'queue': 'monitoring'}
     },
     
-    # Cleanup old logs every week
-    'weekly-log-cleanup': {
-        'task': 'apps.monitoring.tasks.cleanup_old_logs',
-        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Sunday 3 AM
+    # Incremental backup every 4 hours
+    'incremental-backup': {
+        'task': 'apps.monitoring.tasks.create_scheduled_backup',
+        'schedule': crontab(minute=0, hour='*/4'),
+        'kwargs': {'backup_type': 'incremental'},
+        'options': {'queue': 'monitoring'}
     },
     
-    # Check disk space every hour
-    'hourly-disk-check': {
-        'task': 'apps.monitoring.tasks.check_disk_space',
-        'schedule': 3600.0,  # 1 hour
+    # Cleanup old backups daily at 1 AM
+    'cleanup-old-backups': {
+        'task': 'apps.monitoring.tasks.cleanup_old_backups',
+        'schedule': crontab(hour=1, minute=0),
+        'options': {'queue': 'monitoring'}
+    },
+    
+    # Cleanup old monitoring data weekly on Sunday at 3 AM
+    'cleanup-monitoring-data': {
+        'task': 'apps.monitoring.tasks.cleanup_old_monitoring_data',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),
+        'options': {'queue': 'monitoring'}
+    },
+    
+    # Generate daily health report at 6 AM
+    'daily-health-report': {
+        'task': 'apps.monitoring.tasks.generate_health_summary_report',
+        'schedule': crontab(hour=6, minute=0),
+        'kwargs': {'hours': 24},
+        'options': {'queue': 'monitoring'}
     },
 }
 

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'django_redis',
+    'django_celery_beat',  # Celery Beat for periodic tasks
     
     # Local applications
     'apps.core',
@@ -174,6 +175,27 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
+
+# Celery Beat Scheduler Configuration
+# Task: T046 - Setup Celery beat scheduler for automated monitoring
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Monitoring-specific settings for health checks and alerts
+MONITORING_HEALTH_RETENTION_DAYS = config('MONITORING_HEALTH_RETENTION_DAYS', default=30, cast=int)
+MONITORING_ALERT_RETENTION_DAYS = config('MONITORING_ALERT_RETENTION_DAYS', default=90, cast=int)
+
+# Alert notification settings
+ALERTS_EMAIL_ENABLED = config('ALERTS_EMAIL_ENABLED', default=True, cast=bool)
+ALERTS_SMS_ENABLED = config('ALERTS_SMS_ENABLED', default=False, cast=bool)
+ALERTS_PUSH_ENABLED = config('ALERTS_PUSH_ENABLED', default=False, cast=bool)
+
+# Backup configuration
+BACKUP_DIR = config('BACKUP_DIR', default=os.path.join(BASE_DIR.parent, 'backups'))
+BACKUP_RETENTION_DAYS = config('BACKUP_RETENTION_DAYS', default=30, cast=int)
+
+# Admin notification settings
+ALERT_ADMIN_EMAILS = config('ALERT_ADMIN_EMAILS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+ALERT_ADMIN_PHONES = config('ALERT_ADMIN_PHONES', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
 # Logging Configuration
 LOGGING = {

@@ -1,0 +1,341 @@
+# ================================================================
+# Ansible Inventory Configuration for Development Environment
+# Atalaia Tintas Paint Store System
+# ================================================================
+#
+# This inventory defines the development environment setup with
+# single-server configuration for cost-effective development and testing.
+#
+# Environment: Development
+# Purpose: Local development, feature testing, integration testing
+# Infrastructure: Single server running all services
+# Domain: dev.atalaiastintas.local or localhost
+#
+# Usage:
+#   ansible-playbook -i inventory/development deploy.yml
+#   ansible-playbook -i inventory/development backup.yml
+#   ansible-playbook -i inventory/development monitoring.yml
+
+[all:vars]
+# Environment configuration
+env=development
+domain_name=dev.atalaiastintas.local
+deployment_branch=develop
+
+# Connection settings
+ansible_user=vagrant
+ansible_ssh_private_key_file=~/.ssh/tintas_dev_key
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+ansible_become=yes
+ansible_become_method=sudo
+
+# Project paths
+project_root=/opt/atalaias_tintas
+virtual_env_path={{ project_root }}/venv
+backend_dir={{ project_root }}/backend
+
+# Python configuration  
+python_version=3.11
+pip_requirements_file={{ backend_dir }}/requirements/development.txt
+
+# ================================
+# Web Application Servers
+# ================================
+
+[tintas_web]
+# Development server - runs both blue and green environments
+dev-app-01 ansible_host=192.168.56.10 ansible_port=22
+
+[tintas_web:vars]
+# Blue-green deployment ports
+blue_port=8000
+green_port=8002
+nginx_port=80
+
+# Application settings
+debug_mode=true
+log_level=debug
+static_files_debug=true
+
+# Performance settings (development optimized)
+gunicorn_workers=2
+celery_concurrency=2
+gunicorn_timeout=300
+
+# ================================
+# Database Servers
+# ================================
+
+[tintas_db]
+# Same server as web for development
+dev-app-01 ansible_host=192.168.56.10
+
+[tintas_db:vars]
+# PostgreSQL configuration
+postgresql_version=15
+postgresql_port=5432
+postgresql_max_connections=100
+postgresql_shared_buffers=128MB
+
+# Database credentials (development only - not for production!)
+postgresql_databases:
+  - name: tintas_dev
+    owner: tintas_user
+    encoding: UTF8
+    locale: en_US.UTF-8
+    template: template0
+
+postgresql_users:
+  - name: tintas_user
+    password: dev_password_123
+    databases: ["tintas_dev"]
+    privileges: ALL
+
+# Backup settings
+db_backup_enabled=true
+db_backup_retention_days=3
+db_backup_schedule="0 2 * * *"
+
+# ================================
+# Cache Servers (Redis)
+# ================================
+
+[tintas_cache]
+# Same server for development
+dev-app-01 ansible_host=192.168.56.10
+
+[tintas_cache:vars]
+# Redis configuration  
+redis_port=6379
+redis_maxmemory=512mb
+redis_maxmemory_policy=allkeys-lru
+redis_save_schedule="900 1 300 10 60 10000"
+
+# Session and cache settings
+redis_databases:
+  - id: 0
+    purpose: "sessions"
+  - id: 1  
+    purpose: "cache"
+  - id: 2
+    purpose: "celery_broker"
+  - id: 3
+    purpose: "celery_result"
+
+# ================================  
+# Monitoring Servers
+# ================================
+
+[tintas_monitoring]
+# Same server for development monitoring
+dev-app-01 ansible_host=192.168.56.10
+
+[tintas_monitoring:vars]
+# Monitoring configuration
+prometheus_retention=7d
+prometheus_storage_size=1GB
+grafana_admin_user=admin
+grafana_admin_password=dev_admin_123
+
+# Alerting (development - email only)
+alert_email=dev-alerts@atalaiastintas.local
+alert_slack_webhook=""
+alert_pagerduty_key=""
+
+# Monitoring thresholds (relaxed for development)
+cpu_alert_threshold=90
+memory_alert_threshold=90
+disk_alert_threshold=95
+response_time_threshold=5000
+
+# ================================
+# Load Balancers / Reverse Proxies
+# ================================
+
+[tintas_lb]
+# Same server runs Nginx
+dev-app-01 ansible_host=192.168.56.10
+
+[tintas_lb:vars]
+# Nginx configuration
+nginx_worker_processes=2
+nginx_worker_connections=1024
+nginx_client_max_body_size=10M
+
+# SSL settings (development - self-signed)
+ssl_certificate_path=/etc/ssl/certs/tintas-dev.crt
+ssl_certificate_key_path=/etc/ssl/private/tintas-dev.key
+ssl_protocols="TLSv1.2 TLSv1.3"
+
+# Rate limiting (relaxed for development)
+rate_limit_zone_size=1m
+rate_limit_requests_per_minute=1000
+
+# ================================
+# Development Specific Groups
+# ================================
+
+[development:children]
+tintas_web
+tintas_db
+tintas_cache
+tintas_monitoring
+tintas_lb
+
+[development:vars]
+# Development environment variables
+DJANGO_SETTINGS_MODULE=tintas_system.settings.development
+DEBUG=True
+ALLOWED_HOSTS=dev.atalaiastintas.local,localhost,127.0.0.1,192.168.56.10
+
+# Database connection
+DATABASE_URL=postgresql://tintas_user:dev_password_123@localhost:5432/tintas_dev
+
+# Redis connection  
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/2
+CELERY_RESULT_BACKEND=redis://localhost:6379/3
+
+# Security settings (development only!)
+SECRET_KEY=dev_secret_key_not_for_production_123456789
+JWT_SECRET_KEY=jwt_dev_secret_not_for_production
+ENCRYPTION_KEY=dev_encryption_key_32_chars_long
+
+# Email settings (development - console backend)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEFAULT_FROM_EMAIL=noreply@dev.atalaiastintas.local
+
+# File storage (local for development)
+MEDIA_ROOT={{ project_root }}/media
+STATIC_ROOT={{ project_root }}/static
+FILE_UPLOAD_MAX_MEMORY_SIZE=5242880
+
+# Celery settings
+CELERY_TASK_ALWAYS_EAGER=False
+CELERY_TASK_EAGER_PROPAGATES=True
+CELERY_WORKER_CONCURRENCY=2
+
+# Logging configuration  
+LOG_LEVEL=DEBUG
+ENABLE_SQL_LOGGING=True
+ENABLE_REQUEST_LOGGING=True
+
+# Development tools
+ENABLE_DEBUG_TOOLBAR=True
+ENABLE_PROFILING=True
+ENABLE_SHELL_PLUS=True
+
+# Paint store specific settings
+ENABLE_COLOR_MIXING_SIMULATOR=True
+ENABLE_INVENTORY_MOCK_DATA=True
+ENABLE_TEST_WEBHOOKS=True
+
+# ================================
+# Development Infrastructure  
+# ================================
+
+[vagrant_boxes]
+# Vagrant VM configuration for local development
+dev-app-01 vagrant_box="ubuntu/jammy64" vagrant_memory=2048 vagrant_cpus=2
+
+[vagrant_boxes:vars]
+# Vagrant specific settings
+vagrant_network_type=private_network
+vagrant_ip=192.168.56.10
+vagrant_hostname=dev-tintas-01
+
+# Port forwarding for development access
+vagrant_forwarded_ports:
+  - guest: 80
+    host: 8080
+    description: "Nginx web server"
+  - guest: 8000
+    host: 8000  
+    description: "Django development server (blue)"
+  - guest: 8002
+    host: 8002
+    description: "Django development server (green)"
+  - guest: 5432
+    host: 5432
+    description: "PostgreSQL database"
+  - guest: 6379
+    host: 6379
+    description: "Redis cache"
+  - guest: 9090
+    host: 9090
+    description: "Prometheus monitoring"
+  - guest: 3000
+    host: 3000
+    description: "Grafana dashboard"
+
+# ================================
+# Development Deployment Configuration
+# ================================
+
+[all:vars]
+# Deployment settings for development
+deployment_strategy=blue_green
+deployment_health_check_timeout=60
+deployment_rollback_enabled=true
+deployment_notification_enabled=false
+
+# Backup settings
+backup_enabled=true
+backup_schedule_full="0 23 * * 0"    # Weekly full backup
+backup_schedule_incremental="0 1 * * *"  # Daily incremental
+backup_retention_days=7
+backup_compression_enabled=true
+backup_encryption_enabled=false  # Disabled for development
+
+# Monitoring settings
+monitoring_enabled=true
+health_check_interval=30
+metrics_retention_days=7
+log_retention_days=14
+
+# Security settings (development - relaxed)
+enable_csrf_protection=true
+enable_cors_headers=true
+cors_allow_all_origins=true  # Development only!
+cors_allowed_origins=["http://localhost:3000", "http://192.168.56.10"]
+
+# Development utilities
+enable_django_extensions=true
+enable_werkzeug_debugger=true
+enable_ipython_shell=true
+
+# Paint store development features
+enable_sample_data_generation=true
+enable_color_palette_import=true
+enable_inventory_csv_import=true
+enable_test_customer_accounts=true
+
+# ================================================================
+# Development Quick Start Commands
+# ================================================================
+#
+# 1. Start Vagrant VM:
+#    vagrant up
+#
+# 2. Deploy application:
+#    ansible-playbook -i inventory/development deploy.yml
+#
+# 3. Setup monitoring:
+#    ansible-playbook -i inventory/development monitoring.yml
+#
+# 4. Create backup:
+#    ansible-playbook -i inventory/development backup.yml
+#
+# 5. Access services:
+#    - Application: http://localhost:8080
+#    - API: http://localhost:8080/api/
+#    - Admin: http://localhost:8080/admin/
+#    - Prometheus: http://localhost:9090
+#    - Grafana: http://localhost:3000 (admin/dev_admin_123)
+#
+# 6. SSH into server:
+#    vagrant ssh
+#    # or
+#    ssh -i ~/.ssh/tintas_dev_key vagrant@192.168.56.10
+#
+# ================================================================

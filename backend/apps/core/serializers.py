@@ -6,7 +6,8 @@ Handles data serialization/deserialization for API endpoints.
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import User, UserProfile, UserSession, AuditLog, UserPreferences
+from .models import User, UserProfile, UserSession, AuditLog, UserPreferences, BackupRecord, Configuracao
+import json
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -34,49 +35,6 @@ class UserSerializer(serializers.ModelSerializer):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
 
 
-class LoginSerializer(serializers.Serializer):
-    """
-    Serializer for user login authentication
-    """
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True)
-    
-    def validate_username(self, value):
-        """Validate username is not empty"""
-        if not value.strip():
-            raise serializers.ValidationError("Username cannot be empty")
-        return value.strip()
-    
-    def validate_password(self, value):
-        """Validate password is not empty"""
-        if not value:
-            raise serializers.ValidationError("Password cannot be empty")
-        return value
-
-
-class ChangePasswordSerializer(serializers.Serializer):
-    """
-    Serializer for password change functionality
-    """
-    old_password = serializers.CharField(required=True, write_only=True)
-    new_password = serializers.CharField(required=True, write_only=True)
-    confirm_password = serializers.CharField(required=True, write_only=True)
-    
-    def validate_new_password(self, value):
-        """Validate new password using Django's password validators"""
-        try:
-            validate_password(value)
-        except ValidationError as e:
-            raise serializers.ValidationError(e.messages)
-        return value
-    
-    def validate(self, attrs):
-        """Validate that new passwords match"""
-        if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError("New passwords do not match")
-        return attrs
-
-
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for UserProfile model
@@ -84,159 +42,156 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = [
-            'cargo', 'setor', 'data_admissao', 'meta_vendas_mensal', 
-            'comissao_percentual', 'tema_sistema', 'notificacoes_email', 
-            'notificacoes_push', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ['bio', 'avatar', 'theme_preference', 'language_preference']
 
 
 class UserSessionSerializer(serializers.ModelSerializer):
     """
-    Serializer for UserSession model - safe fields for user display
+    Serializer for UserSession model - read only
     """
-    duration_minutes = serializers.SerializerMethodField()
-    device_info = serializers.SerializerMethodField()
+    user_name = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
         model = UserSession
         fields = [
-            'id', 'ip_address', 'login_time', 'last_activity', 
-            'logout_time', 'is_active', 'location_city', 
-            'location_country', 'duration_minutes', 'device_info'
+            'id', 'user_name', 'session_key', 'ip_address', 
+            'user_agent', 'is_active', 'created_at', 'last_activity'
         ]
         read_only_fields = '__all__'
-    
-    def get_duration_minutes(self, obj):
-        """Return session duration in minutes"""
-        duration = obj.duration()
-        return int(duration.total_seconds() / 60)
-    
-    def get_device_info(self, obj):
-        """Return simplified device info"""
-        user_agent = obj.user_agent or ''
-        
-        # Simple device detection
-        if 'Mobile' in user_agent or 'Android' in user_agent or 'iPhone' in user_agent:
-            device_type = 'Mobile'
-        elif 'Tablet' in user_agent or 'iPad' in user_agent:
-            device_type = 'Tablet'  
-        else:
-            device_type = 'Desktop'
-            
-        # Simple browser detection
-        browser = 'Unknown'
-        if 'Chrome' in user_agent:
-            browser = 'Chrome'
-        elif 'Firefox' in user_agent:
-            browser = 'Firefox'
-        elif 'Safari' in user_agent and 'Chrome' not in user_agent:
-            browser = 'Safari'
-        elif 'Edge' in user_agent:
-            browser = 'Edge'
-            
-        return {
-            'type': device_type,
-            'browser': browser
-        }
 
 
 class UserPreferencesSerializer(serializers.ModelSerializer):
     """
-    Serializer for UserPreferences model.
-    
-    Feature: 3-modern-web-interface
-    Task: T007 - User Preferences API Endpoints
+    Complete serializer for UserPreferences - includes validation
     """
-    
-    quick_actions_count = serializers.SerializerMethodField()
     
     class Meta:
         model = UserPreferences
         fields = [
-            'id', 'user', 'theme', 'density', 'quick_actions',
-            'sidebar_collapsed', 'show_breadcrumbs', 'high_contrast',
-            'reduce_motion', 'quick_actions_count', 'created_at', 'updated_at'
+            'id', 'user', 'theme', 'language', 'currency', 'timezone', 'date_format', 
+            'time_format', 'decimal_places', 'notifications_email', 'notifications_push',
+            'notifications_sms', 'dashboard_layout', 'quick_actions', 'default_view',
+            'items_per_page', 'auto_logout_time', 'show_tooltips', 'compact_mode',
+            'keyboard_shortcuts', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'quick_actions_count']
-    
-    def get_quick_actions_count(self, obj):
-        """Return count of configured quick actions"""
-        return len(obj.quick_actions) if obj.quick_actions else 0
-    
-    def validate_quick_actions(self, value):
-        """
-        Validate quick_actions JSON structure
-        """
-        if value is None:
-            return value
-            
-        if not isinstance(value, list):
-            raise serializers.ValidationError("Quick actions must be a list")
-        
-        # Validate each quick action item
-        for i, action in enumerate(value):
-            if not isinstance(action, dict):
-                raise serializers.ValidationError(f"Quick action {i} must be an object")
-            
-            required_fields = ['action', 'label', 'icon']
-            for field in required_fields:
-                if field not in action:
-                    raise serializers.ValidationError(
-                        f"Quick action {i} missing required field: {field}"
-                    )
-                if not isinstance(action[field], str) or not action[field].strip():
-                    raise serializers.ValidationError(
-                        f"Quick action {i} field '{field}' must be a non-empty string"
-                    )
-        
-        # Limit number of quick actions
-        if len(value) > 10:
-            raise serializers.ValidationError("Maximum of 10 quick actions allowed")
-        
-        return value
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
     
     def validate_theme(self, value):
         """Validate theme choice"""
-        valid_themes = [choice[0] for choice in UserPreferences.THEME_CHOICES]
+        valid_themes = ['light', 'dark', 'auto']
         if value not in valid_themes:
-            raise serializers.ValidationError(f"Invalid theme. Choose from: {valid_themes}")
+            raise serializers.ValidationError(f"Theme must be one of: {', '.join(valid_themes)}")
         return value
     
-    def validate_density(self, value):
-        """Validate density choice"""
-        valid_densities = [choice[0] for choice in UserPreferences.DENSITY_CHOICES]
-        if value not in valid_densities:
-            raise serializers.ValidationError(f"Invalid density. Choose from: {valid_densities}")
+    def validate_language(self, value):
+        """Validate language choice"""
+        valid_languages = ['pt_BR', 'en_US', 'es_ES']
+        if value not in valid_languages:
+            raise serializers.ValidationError(f"Language must be one of: {', '.join(valid_languages)}")
         return value
     
-    def update(self, instance, validated_data):
-        """
-        Custom update to handle quick_actions merging logic
-        """
-        # If quick_actions is being updated and is empty, restore defaults
-        if 'quick_actions' in validated_data and not validated_data['quick_actions']:
-            validated_data['quick_actions'] = instance.get_default_quick_actions()
+    def validate_currency(self, value):
+        """Validate currency choice"""
+        valid_currencies = ['BRL', 'USD', 'EUR']
+        if value not in valid_currencies:
+            raise serializers.ValidationError(f"Currency must be one of: {', '.join(valid_currencies)}")
+        return value
+    
+    def validate_timezone(self, value):
+        """Validate timezone choice"""
+        # Basic timezone validation - could be expanded with pytz
+        valid_timezones = [
+            'America/Sao_Paulo', 'America/New_York', 'Europe/London', 
+            'UTC', 'America/Los_Angeles'
+        ]
+        if value not in valid_timezones:
+            raise serializers.ValidationError(f"Timezone must be one of: {', '.join(valid_timezones)}")
+        return value
+    
+    def validate_date_format(self, value):
+        """Validate date format choice"""
+        valid_formats = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']
+        if value not in valid_formats:
+            raise serializers.ValidationError(f"Date format must be one of: {', '.join(valid_formats)}")
+        return value
+    
+    def validate_time_format(self, value):
+        """Validate time format choice"""
+        valid_formats = ['24h', '12h']
+        if value not in valid_formats:
+            raise serializers.ValidationError(f"Time format must be one of: {', '.join(valid_formats)}")
+        return value
+    
+    def validate_decimal_places(self, value):
+        """Validate decimal places"""
+        if value < 0 or value > 6:
+            raise serializers.ValidationError("Decimal places must be between 0 and 6")
+        return value
+    
+    def validate_dashboard_layout(self, value):
+        """Validate dashboard layout choice"""
+        valid_layouts = ['grid', 'list', 'cards', 'minimal']
+        if value not in valid_layouts:
+            raise serializers.ValidationError(f"Dashboard layout must be one of: {', '.join(valid_layouts)}")
+        return value
+    
+    def validate_quick_actions(self, value):
+        """Validate quick actions list"""
+        valid_actions = [
+            'new_sale', 'check_inventory', 'create_client', 'generate_report',
+            'mix_paint', 'process_return', 'view_notifications', 'backup_data'
+        ]
         
-        return super().update(instance, validated_data)
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Quick actions must be a list")
+        
+        for action in value:
+            if action not in valid_actions:
+                raise serializers.ValidationError(f"Invalid quick action: {action}")
+        
+        if len(value) > 8:  # Maximum 8 quick actions
+            raise serializers.ValidationError("Maximum 8 quick actions allowed")
+        
+        return value
+    
+    def validate_default_view(self, value):
+        """Validate default view choice"""
+        valid_views = ['dashboard', 'sales', 'inventory', 'reports', 'clients']
+        if value not in valid_views:
+            raise serializers.ValidationError(f"Default view must be one of: {', '.join(valid_views)}")
+        return value
+    
+    def validate_items_per_page(self, value):
+        """Validate items per page"""
+        valid_counts = [10, 25, 50, 100, 200]
+        if value not in valid_counts:
+            raise serializers.ValidationError(f"Items per page must be one of: {', '.join(map(str, valid_counts))}")
+        return value
+    
+    def validate_auto_logout_time(self, value):
+        """Validate auto logout time in minutes"""
+        if value < 5 or value > 480:  # 5 minutes to 8 hours
+            raise serializers.ValidationError("Auto logout time must be between 5 and 480 minutes")
+        return value
 
 
 class UserPreferencesUpdateSerializer(serializers.ModelSerializer):
     """
-    Specialized serializer for partial updates to user preferences.
-    Allows updating individual preference sections independently.
+    Partial update serializer for UserPreferences
     """
     
     class Meta:
         model = UserPreferences
         fields = [
-            'theme', 'density', 'quick_actions', 'sidebar_collapsed',
-            'show_breadcrumbs', 'high_contrast', 'reduce_motion'
+            'theme', 'language', 'currency', 'timezone', 'date_format', 
+            'time_format', 'decimal_places', 'notifications_email', 'notifications_push',
+            'notifications_sms', 'dashboard_layout', 'quick_actions', 'default_view',
+            'items_per_page', 'auto_logout_time', 'show_tooltips', 'compact_mode',
+            'keyboard_shortcuts'
         ]
     
     def validate_quick_actions(self, value):
-        """Reuse validation from main serializer"""
+        """Use parent serializer validation"""
         serializer = UserPreferencesSerializer()
         return serializer.validate_quick_actions(value)
 
@@ -411,3 +366,146 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'ip_address', 'request_path', 'request_method', 'created_at'
         ]
         read_only_fields = '__all__'
+
+
+class BackupRecordSerializer(serializers.ModelSerializer):
+    """
+    Serializer for BackupRecord model
+    """
+    backup_type_display = serializers.CharField(source='get_backup_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    initiated_by_username = serializers.CharField(source='initiated_by.username', read_only=True)
+    file_size_mb = serializers.SerializerMethodField()
+    duration_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = BackupRecord
+        fields = [
+            'id', 'backup_id', 'backup_type', 'backup_type_display', 'status', 'status_display',
+            'filename', 'file_path', 'file_size', 'file_size_mb', 'checksum', 'compression_type',
+            'retention_days', 'initiated_by', 'initiated_by_username', 'is_automated',
+            'created_at', 'started_at', 'completed_at', 'duration_seconds', 'duration_display',
+            'error_message', 'error_details', 'is_archived', 'archive_location'
+        ]
+        read_only_fields = [
+            'id', 'backup_id', 'file_size', 'checksum', 'created_at', 'started_at',
+            'completed_at', 'duration_seconds', 'error_message', 'error_details'
+        ]
+    
+    def get_file_size_mb(self, obj):
+        """Return file size in MB"""
+        if obj.file_size:
+            return round(obj.file_size / (1024 * 1024), 2)
+        return None
+    
+    def get_duration_display(self, obj):
+        """Return human readable duration"""
+        if obj.duration_seconds:
+            minutes, seconds = divmod(obj.duration_seconds, 60)
+            if minutes > 0:
+                return f"{minutes}m {seconds}s"
+            return f"{seconds}s"
+        return None
+
+
+class ConfiguracaoSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Configuracao (system configuration) model
+    Task: T045 - Configuration management views
+    """
+    tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
+    valor_parsed = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Configuracao
+        fields = [
+            'id', 'chave', 'valor', 'valor_parsed', 'tipo', 'tipo_display',
+            'descricao', 'categoria', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_valor_parsed(self, obj):
+        """Return the parsed value according to its type"""
+        try:
+            return obj.get_valor()
+        except (ValueError, json.JSONDecodeError):
+            return obj.valor
+    
+    def validate_valor(self, value):
+        """Validate value according to its type"""
+        tipo = self.initial_data.get('tipo', '')
+        
+        if tipo == 'integer':
+            try:
+                int(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("Value must be a valid integer")
+        
+        elif tipo == 'float':
+            try:
+                float(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("Value must be a valid decimal number")
+        
+        elif tipo == 'boolean':
+            if str(value).lower() not in ['true', 'false', '1', '0', 'sim', 'não', 'yes', 'no']:
+                raise serializers.ValidationError("Value must be a valid boolean (true/false)")
+        
+        elif tipo == 'json':
+            try:
+                json.loads(value)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError("Value must be valid JSON")
+        
+        return value
+    
+    def validate_chave(self, value):
+        """Validate configuration key uniqueness"""
+        if self.instance:
+            # Update case - exclude current instance
+            if Configuracao.objects.exclude(id=self.instance.id).filter(chave=value).exists():
+                raise serializers.ValidationError("Configuration key must be unique")
+        else:
+            # Create case
+            if Configuracao.objects.filter(chave=value).exists():
+                raise serializers.ValidationError("Configuration key must be unique")
+        return value
+
+
+class ConfiguracaoUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating configuration values only
+    """
+    
+    class Meta:
+        model = Configuracao
+        fields = ['valor', 'descricao']
+    
+    def validate_valor(self, value):
+        """Validate value according to configuration type"""
+        if self.instance:
+            tipo = self.instance.tipo
+            
+            if tipo == 'integer':
+                try:
+                    int(value)
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError("Value must be a valid integer")
+            
+            elif tipo == 'float':
+                try:
+                    float(value)
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError("Value must be a valid decimal number")
+            
+            elif tipo == 'boolean':
+                if str(value).lower() not in ['true', 'false', '1', '0', 'sim', 'não', 'yes', 'no']:
+                    raise serializers.ValidationError("Value must be a valid boolean")
+            
+            elif tipo == 'json':
+                try:
+                    json.loads(value)
+                except json.JSONDecodeError:
+                    raise serializers.ValidationError("Value must be valid JSON")
+        
+        return value

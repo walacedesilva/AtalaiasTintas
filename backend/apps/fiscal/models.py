@@ -1,9 +1,12 @@
 from django.db import models
 from django.core.validators import RegexValidator
+from django.contrib.auth import get_user_model
 from apps.core.models import TimeStampedModel
 from apps.companies.models import Empresa, Loja
 from apps.sales.models import Venda
 import uuid
+
+User = get_user_model()
 
 
 class ConfiguracaoFiscal(TimeStampedModel):
@@ -319,3 +322,97 @@ class ContingenciaFiscal(TimeStampedModel):
         verbose_name = 'Contingência Fiscal'
         verbose_name_plural = 'Contingências Fiscais'
         ordering = ['-created_at']
+
+
+# Enhanced models for inventory-fiscal integration (T005-T006)
+
+class NotaFiscalEletronica(TimeStampedModel):
+    """Enhanced NFe model with automation support"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    
+    # Basic NFe data
+    numero = models.IntegerField(null=True, blank=True)  # SEFAZ assigned
+    serie = models.IntegerField(default=1)
+    chave_acesso = models.CharField(max_length=44, null=True, blank=True, unique=True)
+    
+    # Business references
+    venda = models.OneToOneField('sales.Venda', on_delete=models.CASCADE, related_name='nfe')
+    empresa = models.ForeignKey('companies.Empresa', on_delete=models.CASCADE)
+    loja = models.ForeignKey('companies.Loja', on_delete=models.CASCADE)
+    cliente = models.ForeignKey('sales.Cliente', on_delete=models.CASCADE)
+    
+    # Emission control
+    TIPOS_EMISSAO = [
+        ('AUTOMATICA_B2B', 'Automática B2B'),
+        ('MANUAL_B2C', 'Manual B2C'),
+        ('MANUAL_CORRECAO', 'Manual Correção'),
+    ]
+    tipo_emissao = models.CharField(max_length=20, choices=TIPOS_EMISSAO)
+    
+    STATUS_CHOICES = [
+        ('RASCUNHO', 'Rascunho'),
+        ('VALIDANDO', 'Validando Dados'),
+        ('ENVIANDO', 'Enviando para SEFAZ'),
+        ('AUTORIZADA', 'Autorizada'),
+        ('REJEITADA', 'Rejeitada'),
+        ('CANCELADA', 'Cancelada'),
+        ('ERRO_TECNICO', 'Erro Técnico'),
+        ('AGUARDANDO_RETRY', 'Aguardando Retry Manual'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='RASCUNHO')
+    
+    # SEFAZ integration
+    protocolo_autorizacao = models.CharField(max_length=20, null=True, blank=True)
+    data_autorizacao = models.DateTimeField(null=True, blank=True)
+    xml_enviado = models.TextField(null=True, blank=True)
+    xml_retorno = models.TextField(null=True, blank=True)
+    pdf_nfe = models.FileField(upload_to='nfe/pdfs/', null=True, blank=True)
+    
+    # Error handling
+    tentativas_envio = models.IntegerField(default=0)
+    ultima_tentativa = models.DateTimeField(null=True, blank=True)
+    erro_ultimo = models.TextField(null=True, blank=True)
+    
+    # Retry control for failed automatic emissions
+    requer_retry_manual = models.BooleanField(default=False)
+    retry_agendado_para = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"NFe {self.numero} - {self.venda}"
+    
+    class Meta:
+        verbose_name = 'Nota Fiscal Eletrônica'
+        verbose_name_plural = 'Notas Fiscais Eletrônicas'
+        ordering = ['-created_at']
+
+
+class ItemNotaFiscalEletronica(TimeStampedModel):
+    """NFe line items with multi-unit support"""
+    nfe = models.ForeignKey(NotaFiscalEletronica, on_delete=models.CASCADE, related_name='itens')
+    produto = models.ForeignKey('inventory.ProdutoVariacao', on_delete=models.CASCADE)
+    
+    # Product identification
+    codigo_produto = models.CharField(max_length=60)  # Internal code
+    descricao = models.CharField(max_length=120)
+    ncm = models.CharField(max_length=8)  # Fiscal classification
+    
+    # Quantities and units
+    quantidade = models.DecimalField(max_digits=10, decimal_places=4)
+    unidade_comercial = models.CharField(max_length=6)  # Unit sold to customer
+    unidade_tributaria = models.CharField(max_length=6)  # Unit for tax calculation
+    
+    # Pricing
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=4)
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Tax details (simplified for paint store)
+    aliquota_icms = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    valor_icms = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    def __str__(self):
+        return f"{self.codigo_produto} - {self.descricao}"
+    
+    class Meta:
+        verbose_name = 'Item NFe'
+        verbose_name_plural = 'Itens NFe'
+        ordering = ['id']

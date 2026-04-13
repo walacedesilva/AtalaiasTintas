@@ -13,6 +13,13 @@ router = DefaultRouter()
 # Task: T007 - User Preferences API Endpoints
 router.register(r'preferences', views.UserPreferencesViewSet, basename='user-preferences')
 
+# Feature: 2-core-infrastructure
+# Task: T032 & T033 - User Management Views
+router.register(r'users', views.UserManagementViewSet, basename='user-management')
+
+# Task: T045 - Configuration Management Views
+router.register(r'config', views.ConfiguracaoViewSet, basename='configuration')
+
 app_name = 'core'
 
 urlpatterns = [
@@ -22,13 +29,10 @@ urlpatterns = [
     path('auth/profile/', views.UserProfileView.as_view(), name='user_profile'),
     path('auth/change-password/', views.ChangePasswordView.as_view(), name='change_password'),
     
-    # Demo Pages
-    # Feature: 3-modern-web-interface | Task: T009 - Typography Scale System
-    path('demo/typography/', views.typography_demo, name='typography-demo'),
-    # Feature: 3-modern-web-interface | Task: T010 - Form Components Styling
-    path('demo/forms/', views.forms_demo, name='forms-demo'),
-    # Feature: 3-modern-web-interface | Task: T014 - Progressive Enhancement Layer
-    path('demo/progressive-enhancement/', views.progressive_enhancement_test, name='progressive-enhancement-test'),
+    # Deployment coordination endpoints (Task T060)
+    path('deployment/status/', views.DeploymentStatusView.as_view(), name='deployment_status'),
+    path('deployment/health/', views.DeploymentHealthView.as_view(), name='deployment_health'),
+    path('deployment/lock/', views.DeploymentLockView.as_view(), name='deployment_lock'),
     
     # Include router URLs
     path('', include(router.urls)),
