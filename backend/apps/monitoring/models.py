@@ -35,10 +35,10 @@ class SystemHealth(TimeStampedModel):
     STATUS_DOWN = 'DOWN'
     
     STATUS_CHOICES = [
-        (STATUS_HEALTHY, 'Healthy'),
-        (STATUS_WARNING, 'Warning'),
-        (STATUS_CRITICAL, 'Critical'),
-        (STATUS_DOWN, 'Down'),
+        (STATUS_HEALTHY, 'Saudável'),
+        (STATUS_WARNING, 'Aviso'),
+        (STATUS_CRITICAL, 'Crítico'),
+        (STATUS_DOWN, 'Inativo'),
     ]
     
     # System component types
@@ -52,88 +52,88 @@ class SystemHealth(TimeStampedModel):
     COMPONENT_EXTERNAL_API = 'EXTERNAL_API'
     
     COMPONENT_CHOICES = [
-        (COMPONENT_DATABASE, 'Database'),
-        (COMPONENT_REDIS, 'Redis Cache'),
-        (COMPONENT_API, 'API Services'),
-        (COMPONENT_CELERY, 'Background Tasks'),
-        (COMPONENT_DISK, 'Disk Storage'),
-        (COMPONENT_MEMORY, 'Memory Usage'),
-        (COMPONENT_CPU, 'CPU Usage'),
-        (COMPONENT_EXTERNAL_API, 'External APIs'),
+        (COMPONENT_DATABASE, 'Banco de Dados'),
+        (COMPONENT_REDIS, 'Cache Redis'),
+        (COMPONENT_API, 'Serviços de API'),
+        (COMPONENT_CELERY, 'Tarefas em Segundo Plano'),
+        (COMPONENT_DISK, 'Armazenamento em Disco'),
+        (COMPONENT_MEMORY, 'Uso de Memória'),
+        (COMPONENT_CPU, 'Uso de CPU'),
+        (COMPONENT_EXTERNAL_API, 'APIs Externas'),
     ]
     
     # Core fields
     component = models.CharField(
         max_length=50,
         choices=COMPONENT_CHOICES,
-        help_text="System component being monitored"
+        help_text="Componente do sistema sendo monitorado"
     )
     
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        help_text="Current health status"
+        help_text="Status de saúde atual"
     )
     
     # Performance metrics
     response_time = models.FloatField(
         null=True, blank=True,
         validators=[MinValueValidator(0.0)],
-        help_text="Response time in milliseconds"
+        help_text="Tempo de resposta em milissegundos"
     )
     
     cpu_usage = models.FloatField(
         null=True, blank=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
-        help_text="CPU usage percentage"
+        help_text="Percentual de uso de CPU"
     )
     
     memory_usage = models.FloatField(
         null=True, blank=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
-        help_text="Memory usage percentage"
+        help_text="Percentual de uso de memória"
     )
     
     disk_usage = models.FloatField(
         null=True, blank=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
-        help_text="Disk usage percentage"
+        help_text="Percentual de uso de disco"
     )
     
     # Connection metrics
     active_connections = models.IntegerField(
         null=True, blank=True,
         validators=[MinValueValidator(0)],
-        help_text="Number of active connections"
+        help_text="Número de conexões ativas"
     )
     
     queue_size = models.IntegerField(
         null=True, blank=True,
         validators=[MinValueValidator(0)],
-        help_text="Queue size for background tasks"
+        help_text="Tamanho da fila de tarefas em segundo plano"
     )
     
     # Error tracking
     error_count = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0)],
-        help_text="Number of errors in this check interval"
+        help_text="Número de erros neste intervalo de verificação"
     )
     
     error_message = models.TextField(
         null=True, blank=True,
-        help_text="Last error message if any"
+        help_text="Última mensagem de erro, se houver"
     )
     
     # Additional metadata
     check_timestamp = models.DateTimeField(
         default=timezone.now,
-        help_text="When this health check was performed"
+        help_text="Quando esta verificação de saúde foi realizada"
     )
     
     additional_data = models.JSONField(
         null=True, blank=True,
-        help_text="Additional metrics and metadata"
+        help_text="Métricas adicionais e metadados"
     )
     
     class Meta:
@@ -143,8 +143,8 @@ class SystemHealth(TimeStampedModel):
             models.Index(fields=['status', 'check_timestamp']),
             models.Index(fields=['check_timestamp']),
         ]
-        verbose_name = 'Health Check'
-        verbose_name_plural = 'Health Checks'
+        verbose_name = 'Verificação de Saúde'
+        verbose_name_plural = 'Verificações de Saúde'
     
     def __str__(self):
         return f"{self.get_component_display()} - {self.get_status_display()} ({self.check_timestamp})"
@@ -191,10 +191,10 @@ class AlertNotification(TimeStampedModel):
     SEVERITY_CRITICAL = 'CRITICAL'
     
     SEVERITY_CHOICES = [
-        (SEVERITY_INFO, 'Information'),
-        (SEVERITY_WARNING, 'Warning'),
-        (SEVERITY_ERROR, 'Error'),
-        (SEVERITY_CRITICAL, 'Critical'),
+        (SEVERITY_INFO, 'Informação'),
+        (SEVERITY_WARNING, 'Aviso'),
+        (SEVERITY_ERROR, 'Erro'),
+        (SEVERITY_CRITICAL, 'Crítico'),
     ]
     
     # Alert types
@@ -207,13 +207,13 @@ class AlertNotification(TimeStampedModel):
     TYPE_API_ERROR = 'API_ERROR'
     
     TYPE_CHOICES = [
-        (TYPE_SYSTEM_HEALTH, 'System Health'),
-        (TYPE_BACKUP_FAILURE, 'Backup Failure'),
-        (TYPE_SECURITY_ALERT, 'Security Alert'),
-        (TYPE_PERFORMANCE, 'Performance Issue'),
-        (TYPE_DISK_SPACE, 'Disk Space'),
-        (TYPE_DATABASE_ERROR, 'Database Error'),
-        (TYPE_API_ERROR, 'API Error'),
+        (TYPE_SYSTEM_HEALTH, 'Saúde do Sistema'),
+        (TYPE_BACKUP_FAILURE, 'Falha de Backup'),
+        (TYPE_SECURITY_ALERT, 'Alerta de Segurança'),
+        (TYPE_PERFORMANCE, 'Problema de Desempenho'),
+        (TYPE_DISK_SPACE, 'Espaço em Disco'),
+        (TYPE_DATABASE_ERROR, 'Erro no Banco de Dados'),
+        (TYPE_API_ERROR, 'Erro de API'),
     ]
     
     # Alert status
@@ -223,39 +223,39 @@ class AlertNotification(TimeStampedModel):
     STATUS_SUPPRESSED = 'SUPPRESSED'
     
     STATUS_CHOICES = [
-        (STATUS_ACTIVE, 'Active'), 
-        (STATUS_ACKNOWLEDGED, 'Acknowledged'),
-        (STATUS_RESOLVED, 'Resolved'),
-        (STATUS_SUPPRESSED, 'Suppressed'),
+        (STATUS_ACTIVE, 'Ativo'), 
+        (STATUS_ACKNOWLEDGED, 'Reconhecido'),
+        (STATUS_RESOLVED, 'Resolvido'),
+        (STATUS_SUPPRESSED, 'Suprimido'),
     ]
     
     # Core fields
     title = models.CharField(
         max_length=200,
-        help_text="Brief alert title"
+        help_text="Título breve do alerta"
     )
     
     message = models.TextField(
-        help_text="Detailed alert message"
+        help_text="Mensagem detalhada do alerta"
     )
     
     alert_type = models.CharField(
         max_length=50,
         choices=TYPE_CHOICES,
-        help_text="Type of alert"
+        help_text="Tipo de alerta"
     )
     
     severity = models.CharField(
         max_length=20,
         choices=SEVERITY_CHOICES,
-        help_text="Alert severity level"
+        help_text="Nível de severidade do alerta"
     )
     
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default=STATUS_ACTIVE,
-        help_text="Current alert status"
+        help_text="Status atual do alerta"
     )
     
     # Related objects
@@ -264,7 +264,7 @@ class AlertNotification(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='alerts',
-        help_text="Related health check if applicable"
+        help_text="Verificação de saúde relacionada, se aplicável"
     )
     
     affected_user = models.ForeignKey(
@@ -272,7 +272,7 @@ class AlertNotification(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='alerts_received',
-        help_text="User affected by this alert"
+        help_text="Usuário afetado por este alerta"
     )
     
     # Alert management
@@ -281,12 +281,12 @@ class AlertNotification(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='alerts_acknowledged',
-        help_text="User who acknowledged the alert"
+        help_text="Usuário que reconheceu o alerta"
     )
     
     acknowledged_at = models.DateTimeField(
         null=True, blank=True,
-        help_text="When the alert was acknowledged"
+        help_text="Quando o alerta foi reconhecido"
     )
     
     resolved_by = models.ForeignKey(
@@ -294,45 +294,45 @@ class AlertNotification(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='alerts_resolved',
-        help_text="User who resolved the alert"
+        help_text="Usuário que resolveu o alerta"
     )
     
     resolved_at = models.DateTimeField(
         null=True, blank=True,
-        help_text="When the alert was resolved"
+        help_text="Quando o alerta foi resolvido"
     )
     
     resolution_notes = models.TextField(
         null=True, blank=True,
-        help_text="Notes about how the alert was resolved"
+        help_text="Notas sobre como o alerta foi resolvido"
     )
     
     # Metadata
     source_component = models.CharField(
         max_length=100,
         null=True, blank=True,
-        help_text="System component that generated this alert"
+        help_text="Componente do sistema que gerou este alerta"
     )
     
     metadata = models.JSONField(
         null=True, blank=True,
-        help_text="Additional alert metadata"
+        help_text="Metadados adicionais do alerta"
     )
     
     # Notification flags
     email_sent = models.BooleanField(
         default=False,
-        help_text="Whether email notification was sent"
+        help_text="Se a notificação por e-mail foi enviada"
     )
     
     sms_sent = models.BooleanField(
         default=False,
-        help_text="Whether SMS notification was sent"
+        help_text="Se a notificação por SMS foi enviada"
     )
     
     push_sent = models.BooleanField(
         default=False,
-        help_text="Whether push notification was sent"
+        help_text="Se a notificação push foi enviada"
     )
     
     class Meta:
@@ -343,8 +343,8 @@ class AlertNotification(TimeStampedModel):
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['affected_user', 'status']),
         ]
-        verbose_name = 'Alert Notification'
-        verbose_name_plural = 'Alert Notifications'
+        verbose_name = 'Notificação de Alerta'
+        verbose_name_plural = 'Notificações de Alerta'
     
     def __str__(self):
         return f"{self.get_severity_display()}: {self.title}"

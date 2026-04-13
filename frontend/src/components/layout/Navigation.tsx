@@ -25,10 +25,10 @@ export default function Navigation(): React.ReactElement {
   const { data: stats } = useDashboardStats();
 
   const navItems: NavItem[] = [
-    { path: '/dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
+    { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
     { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
     { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
-    { path: '/formulas',   label: 'FÃ³rmulas',         icon: FlaskConical },
+    { path: '/formulas',   label: 'Fórmulas',          icon: FlaskConical },
     { path: '/mixtures',   label: 'Misturas',         icon: Layers,       badge: stats?.misturas_hoje },
     {
       path: '/inventory',
@@ -44,7 +44,7 @@ export default function Navigation(): React.ReactElement {
     <nav
       id="navigation"
       className="custom-scrollbar fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-slate-900 border-r border-slate-800 overflow-y-auto flex flex-col"
-      aria-label="NavegaÃ§Ã£o principal"
+      aria-label="Navegação principal"
     >
       <div className="flex-1 p-4 space-y-1">
         {/* Section label */}
@@ -86,7 +86,7 @@ export default function Navigation(): React.ReactElement {
         {/* Quick actions */}
         <div className="pt-4">
           <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            AÃ§Ãµes RÃ¡pidas
+            Ações Rápidas
           </p>
           <NavLink
             to="/mixtures?action=new"
@@ -113,7 +113,7 @@ export default function Navigation(): React.ReactElement {
           </p>
           {[
             { label: 'Misturas Hoje',    value: stats.misturas_hoje,    danger: false },
-            { label: 'Templates Ativos', value: stats.total_templates,  danger: false },
+            { label: 'Modelos Ativos',   value: stats.total_templates,  danger: false },
             { label: 'Estoque Baixo',    value: stats.estoque_baixo,    danger: stats.estoque_baixo > 0 },
             { label: 'Etiquetas Hoje',   value: stats.etiquetas_geradas, danger: false },
           ].map(({ label, value, danger }) => (

@@ -80,11 +80,11 @@ class UserPreferencesInline(admin.StackedInline):
     """
     model = UserPreferences
     can_delete = False
-    verbose_name = "Interface Preferences"
-    verbose_name_plural = "Interface Preferences"
+    verbose_name = "Preferências de Interface"
+    verbose_name_plural = "Preferências de Interface"
     
     fieldsets = (
-        ('Visual Theme', {
+        ('Tema Visual', {
             'fields': ('theme', 'density', 'high_contrast'),
             'classes': ('wide',)
         }),
@@ -92,10 +92,10 @@ class UserPreferencesInline(admin.StackedInline):
             'fields': ('sidebar_collapsed', 'show_breadcrumbs', 'reduce_motion'),
             'classes': ('wide',)
         }),
-        ('Quick Actions', {
+        ('Ações Rápidas', {
             'fields': ('quick_actions',),
             'classes': ('collapse', 'wide'),
-            'description': 'JSON configuration for personalized quick actions'
+            'description': 'Configuração JSON para ações rápidas personalizadas'
         }),
     )
 
@@ -237,7 +237,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         ('Preferências de Sistema', {
             'fields': ('tema_sistema', 'notificacoes_email', 'notificacoes_push')
         }),
-        ('Metadata', {
+        ('Metadados', {
             'fields': ('created_at', 'updated_at'),
             'classes': ['collapse']
         }),
@@ -270,7 +270,7 @@ class UserSessionAdmin(admin.ModelAdmin):
         ('Informações de Conexão', {
             'fields': ('ip_address', 'user_agent', 'browser_info')
         }),
-        ('Timestamps', {
+        ('Registros de Data', {
             'fields': ('login_time', 'last_activity', 'logout_time'),
             'classes': ['collapse']
         }),
@@ -281,7 +281,7 @@ class UserSessionAdmin(admin.ModelAdmin):
         if obj.session_key:
             return f"{obj.session_key[:8]}..."
         return "-"
-    session_key_short.short_description = 'Session Key'
+    session_key_short.short_description = 'Chave de Sessão'
     
     def browser_display(self, obj):
         """Display browser info"""
@@ -310,90 +310,143 @@ class UserSessionAdmin(admin.ModelAdmin):
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
-    """AuditLog admin interface - Read-only for compliance"""
-    
+    """AuditLog admin - Somente leitura para conformidade"""
+
     list_display = [
-        'created_at', 'user_display', 'action', 'resource', 
-        'risk_level_display', 'success_display', 'ip_address'
+        'created_at', 'user_display', 'action_display', 'resource',
+        'description_short', 'risk_level_display', 'success_display', 'ip_address',
     ]
-    
+
     list_filter = [
         'action', 'risk_level', 'success', 'created_at',
-        'user__username'
+        'user__username',
     ]
-    
+
     search_fields = [
-        'user__username', 'resource', 'description', 'ip_address'
+        'user__username', 'resource', 'description', 'ip_address',
     ]
-    
+
     readonly_fields = [
         'user', 'session', 'action', 'resource', 'resource_id', 'description',
         'risk_level', 'success', 'ip_address', 'user_agent',
         'request_path', 'request_method', 'old_values', 'new_values',
-        'error_message', 'extra_data', 'created_at'
+        'error_message', 'extra_data', 'created_at',
     ]
-    
+
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Ação', {
-            'fields': ('created_at', 'user', 'session', 'action', 'resource', 'resource_id')
+            'fields': ('created_at', 'user', 'session', 'action', 'resource', 'resource_id'),
         }),
         ('Detalhes', {
-            'fields': ('description', 'risk_level', 'success', 'error_message')
+            'fields': ('description', 'risk_level', 'success', 'error_message'),
         }),
-        ('Informações Técnicas', {
-            'fields': ('ip_address', 'user_agent', 'request_path', 'request_method', 
-                      'old_values', 'new_values', 'extra_data'),
-            'classes': ['collapse']
+        ('Solicitação HTTP', {
+            'fields': ('ip_address', 'user_agent', 'request_path', 'request_method'),
+            'classes': ['collapse'],
+        }),
+        ('Dados Alterados', {
+            'fields': ('old_values', 'new_values', 'extra_data'),
+            'classes': ['collapse'],
         }),
     )
-    
+
+    # ── Colunas coloridas ──────────────────────────────────────────────────
+
+    _BADGE = (
+        'display:inline-block;padding:2px 9px;border-radius:9999px;'
+        'font-size:0.68rem;font-weight:600;letter-spacing:0.03em;'
+    )
+
+    _ACTION_STYLES = {
+        'LOGIN':          'background:#dbeafe;color:#1d4ed8',
+        'LOGOUT':         'background:#f1f5f9;color:#475569',
+        'CREATE':         'background:#dcfce7;color:#15803d',
+        'UPDATE':         'background:#fef9c3;color:#92400e',
+        'DELETE':         'background:#fee2e2;color:#b91c1c',
+        'VIEW':           'background:#ccfbf1;color:#0f766e',
+        'EXPORT':         'background:#ede9fe;color:#6d28d9',
+        'IMPORT':         'background:#e0e7ff;color:#3730a3',
+        'ACCESS_DENIED':  'background:#ffedd5;color:#c2410c',
+        'SECURITY_ALERT': 'background:#fce7f3;color:#9d174d',
+    }
+
+    _RISK_STYLES = {
+        'LOW':      ('background:#dcfce7;color:#15803d', '🟢 Baixo'),
+        'MEDIUM':   ('background:#fef9c3;color:#92400e', '🟡 Médio'),
+        'HIGH':     ('background:#ffedd5;color:#c2410c', '🟠 Alto'),
+        'CRITICAL': ('background:#fee2e2;color:#b91c1c', '🔴 Crítico'),
+    }
+
+    def action_display(self, obj):
+        style = self._ACTION_STYLES.get(obj.action, 'background:#f1f5f9;color:#475569')
+        return format_html(
+            '<span style="{};{}">{}</span>',
+            self._BADGE, style, obj.get_action_display(),
+        )
+    action_display.short_description = 'Ação'
+
+    def description_short(self, obj):
+        if not obj.description:
+            return '—'
+        text = obj.description
+        return (text[:75] + '…') if len(text) > 75 else text
+    description_short.short_description = 'Descrição'
+
     def user_display(self, obj):
-        """Display user with link"""
         if obj.user:
             return format_html(
                 '<a href="{}">{}</a>',
                 reverse('admin:core_user_change', args=[obj.user.pk]),
-                obj.user.username
+                obj.user.username,
             )
         return 'Sistema'
     user_display.short_description = 'Usuário'
-    
+
     def risk_level_display(self, obj):
-        """Display risk level with color"""
-        colors = {
-            'LOW': '#28a745',      # Green
-            'MEDIUM': '#ffc107',   # Yellow  
-            'HIGH': '#fd7e14',     # Orange
-            'CRITICAL': '#dc3545'  # Red
-        }
-        color = colors.get(obj.risk_level, '#6c757d')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color,
-            obj.get_risk_level_display()
+        style, label = self._RISK_STYLES.get(
+            obj.risk_level, ('background:#f1f5f9;color:#475569', obj.risk_level)
         )
-    risk_level_display.short_description = 'Nível de Risco'
-    
+        return format_html(
+            '<span style="{};{}">{}</span>',
+            self._BADGE, style, label,
+        )
+    risk_level_display.short_description = 'Risco'
+
     def success_display(self, obj):
-        """Display success status with icon"""
         if obj.success:
-            return format_html('<span style="color: green;">✓ Sucesso</span>')
-        else:
-            return format_html('<span style="color: red;">✗ Falha</span>')
+            return format_html(
+                '<span style="{};background:#dcfce7;color:#15803d;">✓ Sucesso</span>',
+                self._BADGE,
+            )
+        return format_html(
+            '<span style="{};background:#fee2e2;color:#b91c1c;">✗ Falha</span>',
+            self._BADGE,
+        )
     success_display.short_description = 'Status'
-    
+
+    # ── Botão "Voltar" no detalhe ────────────────────────────────────────
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        referrer = request.META.get('HTTP_REFERER', '')
+        # Usa o referrer quando não é a própria página de detalhe
+        if referrer and (object_id is None or f'/auditlog/{object_id}/' not in referrer):
+            extra_context['auditlog_back_url'] = referrer
+        else:
+            extra_context['auditlog_back_url'] = '../..'
+        return super().changeform_view(request, object_id, form_url, extra_context)
+
+    # ── Permissões (somente leitura) ─────────────────────────────────────
+
     def has_add_permission(self, request):
-        """Audit logs cannot be manually created"""
         return False
-    
+
     def has_delete_permission(self, request, obj=None):
-        """Audit logs cannot be deleted (compliance requirement)"""
         return False
-    
+
     def has_change_permission(self, request, obj=None):
-        """Audit logs cannot be modified (compliance requirement)"""
         return False
 
 
@@ -447,30 +500,30 @@ class UserPreferencesAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
-        ('User Information', {
+        ('Informações do Usuário', {
             'fields': ('user',),
-            'description': 'User account associated with these preferences'
+            'description': 'Conta de usuário associada a estas preferências'
         }),
-        ('Visual Preferences', {
+        ('Preferências Visuais', {
             'fields': ('theme', 'density', 'high_contrast'),
-            'description': 'Appearance and visual settings'
+            'description': 'Configurações de aparência e visuais'
         }),
-        ('Layout Preferences', {
+        ('Preferências de Layout', {
             'fields': ('sidebar_collapsed', 'show_breadcrumbs'),
-            'description': 'Navigation and layout configuration'
+            'description': 'Configuração de navegação e layout'
         }),
-        ('Accessibility', {
+        ('Acessibilidade', {
             'fields': ('reduce_motion',),
-            'description': 'Accessibility and motion preferences'
+            'description': 'Preferências de acessibilidade e movimento'
         }),
-        ('Quick Actions', {
+        ('Ações Rápidas', {
             'fields': ('quick_actions',),
-            'description': 'JSON configuration for quick action buttons',
+            'description': 'Configuração JSON para botões de ação rápida',
             'classes': ('collapse',)
         }),
-        ('Timestamps', {
+        ('Registros de Data', {
             'fields': ('created_at', 'updated_at'),
-            'description': 'Creation and modification dates',
+            'description': 'Datas de criação e modificação',
             'classes': ('collapse',)
         }),
     )

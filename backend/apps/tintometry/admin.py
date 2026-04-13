@@ -219,7 +219,7 @@ class MisturaTintaAdmin(admin.ModelAdmin):
             color,
             obj.get_situacao_display()
         )
-    situacao_display.short_description = 'Status'
+    situacao_display.short_description = 'Situação'
     
     actions = ['confirmar_misturas', 'cancelar_misturas']
     
@@ -285,7 +285,7 @@ class EstoquePigmentoAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="color: green;">✓ OK</span>'
             )
-    status_estoque.short_description = 'Status'
+    status_estoque.short_description = 'Situação do Estoque'
     
     actions = ['solicitar_reposicao', 'desativar_alertas']
     

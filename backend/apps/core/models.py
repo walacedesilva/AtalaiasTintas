@@ -14,16 +14,16 @@ class UserPreferences(models.Model):
     
     # Choices for theme preference
     THEME_CHOICES = [
-        ('light', 'Light Theme'),
-        ('dark', 'Dark Theme'),
-        ('auto', 'System Preference'),
+        ('light', 'Tema Claro'),
+        ('dark', 'Tema Escuro'),
+        ('auto', 'Preferência do Sistema'),
     ]
     
     # Choices for interface density
     DENSITY_CHOICES = [
-        ('compact', 'Compact (High density)'),
-        ('comfortable', 'Comfortable (Default)'),
-        ('spacious', 'Spacious (Low density)'),
+        ('compact', 'Compacto (Alta densidade)'),
+        ('comfortable', 'Confortável (Padrão)'),
+        ('spacious', 'Espaçoso (Baixa densidade)'),
     ]
     
     # Core relationship
@@ -31,7 +31,7 @@ class UserPreferences(models.Model):
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
         related_name='preferences',
-        help_text="User account associated with these preferences"
+        help_text="Conta do usuário associada a estas preferências"
     )
     
     # Theme preferences
@@ -39,7 +39,7 @@ class UserPreferences(models.Model):
         max_length=10,
         choices=THEME_CHOICES,
         default='light',
-        help_text="Visual theme preference for the interface"
+        help_text="Preferência de tema visual para a interface"
     )
     
     # Layout preferences
@@ -47,52 +47,52 @@ class UserPreferences(models.Model):
         max_length=15,
         choices=DENSITY_CHOICES,
         default='comfortable',
-        help_text="Interface density/spacing preference"
+        help_text="Preferência de densidade/espaçamento da interface"
     )
     
     # Quick actions configuration (stored as JSON)
     quick_actions = models.JSONField(
         default=list,
         blank=True,
-        help_text="JSON array of quick action button configurations"
+        help_text="Array JSON com configurações dos botões de ação rápida"
     )
     
     # Additional preferences for future expansion
     sidebar_collapsed = models.BooleanField(
         default=False,
-        help_text="Whether the navigation sidebar is collapsed by default"
+        help_text="Se a barra lateral de navegação está recolhida por padrão"
     )
     
     show_breadcrumbs = models.BooleanField(
         default=True,
-        help_text="Whether to display breadcrumb navigation"
+        help_text="Se deve exibir a navegação em trilha de migalhas"
     )
     
     # Accessibility preferences
     high_contrast = models.BooleanField(
         default=False,
-        help_text="Enable high contrast mode for better accessibility"
+        help_text="Ativar modo de alto contraste para melhor acessibilidade"
     )
     
     reduce_motion = models.BooleanField(
         default=False,
-        help_text="Reduce animations and motion effects"
+        help_text="Reduzir animações e efeitos de movimento"
     )
     
     # Timestamps
     created_at = models.DateTimeField(
         auto_now_add=True,
-        help_text="When these preferences were first created"
+        help_text="Quando estas preferências foram criadas pela primeira vez"
     )
     
     updated_at = models.DateTimeField(
         auto_now=True,
-        help_text="When these preferences were last modified"
+        help_text="Quando estas preferências foram modificadas pela última vez"
     )
     
     class Meta:
-        verbose_name = "User Preferences"
-        verbose_name_plural = "User Preferences"
+        verbose_name = "Preferências do Usuário"
+        verbose_name_plural = "Preferências do Usuário"
         ordering = ['-updated_at']
     
     def __str__(self):
@@ -102,7 +102,7 @@ class UserPreferences(models.Model):
         """Validate quick_actions JSON field"""
         if self.quick_actions and not isinstance(self.quick_actions, list):
             raise ValidationError({
-                'quick_actions': 'Quick actions must be a list of action configurations'
+                'quick_actions': 'As ações rápidas devem ser uma lista de configurações'
             })
     
     def get_default_quick_actions(self):
@@ -198,6 +198,8 @@ class User(AbstractUser):
     
     class Meta:
         db_table = 'auth_user'
+        verbose_name = 'Usuário'
+        verbose_name_plural = 'Usuários'
 
 
 class UserProfile(TimeStampedModel):
@@ -222,6 +224,10 @@ class UserProfile(TimeStampedModel):
     
     notificacoes_email = models.BooleanField(default=True)
     notificacoes_push = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Perfil de Usuário'
+        verbose_name_plural = 'Perfis de Usuários'
 
 
 class Configuracao(TimeStampedModel):
@@ -300,6 +306,8 @@ class UserSession(TimeStampedModel):
             models.Index(fields=['session_key']),
             models.Index(fields=['last_activity']),
         ]
+        verbose_name = 'Sessão de Usuário'
+        verbose_name_plural = 'Sessões de Usuários'
     
     def __str__(self):
         return f"{self.user.username} - {self.login_time} ({'Ativo' if self.is_active else 'Inativo'})"
@@ -639,8 +647,8 @@ class BackupRecord(TimeStampedModel):
             models.Index(fields=['is_automated', 'started_at']),
             models.Index(fields=['expires_at']),
         ]
-        verbose_name = 'Backup Record'
-        verbose_name_plural = 'Backup Records'
+        verbose_name = 'Registro de Backup'
+        verbose_name_plural = 'Registros de Backup'
     
     def __str__(self):
         return f"{self.get_backup_type_display()} - {self.filename} ({self.get_status_display()})"

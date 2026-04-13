@@ -99,9 +99,9 @@ export function PigmentCard({ pigmento, onEdit, onDelete }: PigmentCardProps): R
               type="button"
               onClick={() => onDelete(pigmento)}
               className="px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-              aria-label={`Deletar pigmento ${pigmento.nome}`}
+              aria-label={`Excluir pigmento ${pigmento.nome}`}
             >
-              Deletar
+              Excluir
             </button>
           )}
         </div>

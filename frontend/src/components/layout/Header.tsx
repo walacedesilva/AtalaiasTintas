@@ -5,10 +5,10 @@ import { APP_NAME } from '@/utils/env';
 import { User, LogOut, ChevronDown, Paintbrush } from 'lucide-react';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':  'Dashboard',
+  '/dashboard':  'Painel',
   '/pigments':   'Pigmentos',
   '/colors':     'Cores Definidas',
-  '/formulas':   'FÃ³rmulas TintomÃ©tricas',
+  '/formulas':   'Fórmulas Tintométricas',
   '/mixtures':   'Misturas',
   '/inventory':  'Controle de Estoque',
   '/labels':     'Etiquetas',
@@ -73,7 +73,7 @@ export default function Header(): React.ReactElement {
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
           aria-haspopup="true"
-          aria-label="Menu do usuÃ¡rio"
+          aria-label="Menu do usuário"
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-slate-900"
         >
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
@@ -121,7 +121,7 @@ export default function Header(): React.ReactElement {
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
                 >
                   <LogOut className="h-4 w-4" aria-hidden="true" />
-                  {logout.isPending ? 'Saindoâ€¦' : 'Sair'}
+                  {logout.isPending ? 'Saindo…' : 'Sair'}
                 </button>
               </div>
             </div>

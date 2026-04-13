@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'django_redis',
-    'django_celery_beat',  # Celery Beat for periodic tasks
+    'apps.celery_config.BeatConfigPtBr',  # Celery Beat - nome em Português
     
     # Local applications
     'apps.core',

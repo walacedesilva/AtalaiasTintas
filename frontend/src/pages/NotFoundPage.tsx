@@ -16,7 +16,7 @@ export default function NotFoundPage(): React.ReactElement {
         </p>
         <Link to="/dashboard" className="btn-primary inline-flex">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Voltar ao Dashboard
+          Voltar ao Painel
         </Link>
       </div>
     </div>

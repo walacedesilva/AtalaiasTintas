@@ -11,7 +11,7 @@ class CoreConfig(AppConfig):
     
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.core'
-    verbose_name = 'Core Application'
+    verbose_name = 'Módulo Principal'
     
     def ready(self):
         """

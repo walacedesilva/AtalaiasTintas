@@ -155,3 +155,54 @@ input[type="submit"]:hover {
   color: #64748b !important;
   font-size: 0.75rem !important;
 }
+
+/* ─── Audit Log ─────────────────────────────────────────────── */
+
+/* Coluna de descrição não quebra desnecessariamente */
+.model-auditlog .column-description_short {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges de ação e risco ficam alinhados ao centro */
+.model-auditlog .column-action_display,
+.model-auditlog .column-risk_level_display,
+.model-auditlog .column-success_display {
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* IP address em monospace */
+.model-auditlog .column-ip_address {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+/* Campos JSON legíveis no detalhe */
+.field-old_values .readonly,
+.field-new_values .readonly,
+.field-extra_data .readonly {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.78rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow-y: auto;
+  display: block;
+}
+
+/* user_agent em monospace */
+.field-user_agent .readonly {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  word-break: break-all;
+}
+

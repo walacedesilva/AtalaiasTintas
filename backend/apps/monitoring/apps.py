@@ -4,7 +4,7 @@ from django.apps import AppConfig
 class MonitoringConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.monitoring'
-    verbose_name = 'System Monitoring'
+    verbose_name = 'Monitoramento do Sistema'
     
     def ready(self):
         """

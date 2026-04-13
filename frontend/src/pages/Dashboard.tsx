@@ -90,7 +90,7 @@ export default function Dashboard(): React.ReactElement {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Templates Ativos"  value={stats?.total_templates}  icon={FlaskConical}  loading={statsLoading} />
+        <StatCard label="Modelos Ativos"  value={stats?.total_templates}  icon={FlaskConical}  loading={statsLoading} />
         <StatCard label="Misturas Hoje"     value={stats?.misturas_hoje}    icon={Layers}        loading={statsLoading} />
         <StatCard label="Estoque Baixo"     value={stats?.estoque_baixo}    icon={AlertTriangle} loading={statsLoading} danger />
         <StatCard label="Etiquetas Hoje"    value={stats?.etiquetas_geradas} icon={TrendingUp}   loading={statsLoading} />
