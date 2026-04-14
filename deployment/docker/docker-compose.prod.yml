@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - persistente
+  db:
+    image: postgres:15-alpine
+    container_name: atalaias_db
+    restart: unless-stopped
+    env_file:
+      - ../../.env.prod
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5436:5432"
+    volumes:
+      - atalaias_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis - apenas interno, sem porta exposta
+  redis:
+    image: redis:7-alpine
+    container_name: atalaias_redis
+    restart: unless-stopped
+    volumes:
+      - atalaias_redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Django Web Application com Gunicorn
+  web:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.web
+    container_name: atalaias_web
+    restart: unless-stopped
+    env_file:
+      - ../../.env.prod
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    ports:
+      - "127.0.0.1:8100:8000"
+    volumes:
+      - atalaias_media:/app/media
+      - atalaias_static:/app/static
+      - atalaias_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "cd backend &&
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        gunicorn tintas_system.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:8000/admin/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Celery Worker
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.worker
+    container_name: atalaias_worker
+    restart: unless-stopped
+    env_file:
+      - ../../.env.prod
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    volumes:
+      - atalaias_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        cd backend &&
+        celery -A tintas_system worker --loglevel=info --concurrency=2
+      "
+
+volumes:
+  atalaias_postgres_data:
+    driver: local
+  atalaias_redis_data:
+    driver: local
+  atalaias_media:
+    driver: local
+  atalaias_static:
+    driver: local
+  atalaias_logs:
+    driver: local
+
+networks:
+  default:
+    name: atalaias_network
+    driver: bridge

@@ -30,8 +30,8 @@ urlpatterns = [
     # Health check endpoints
     path('health/', include('apps.monitoring.health_urls')),
     
-    # Root redirect to admin (temporary)
-    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    # Root - será servida pelo frontend React
+    # path('', RedirectView.as_view(url='/admin/', permanent=False)),
 ]
 
 # Serve static and media files in development
