@@ -1,4 +1,5 @@
 #!/bin/bash
+# v2 - runner reiniciado para fix de permissoes
 # =============================================================================
 # Script de Auto-Deploy - Atalaia Tintas
 # Executado pelo GitHub Actions runner ao push na branch Develop
