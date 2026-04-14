@@ -9,6 +9,7 @@ jobs:
   deploy:
     name: Auto Deploy
     runs-on: [self-hosted, linux, atalaias]
+    timeout-minutes: 30
 
     steps:
       - name: Executar deploy
