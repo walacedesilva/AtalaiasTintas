@@ -1,0 +1,32 @@
+name: Deploy para Produção
+
+on:
+  push:
+    branches:
+      - Develop
+
+jobs:
+  deploy:
+    name: Auto Deploy
+    runs-on: [self-hosted, linux, atalaias]
+
+    steps:
+      - name: Executar deploy
+        run: /root/AtalaiasTintas/scripts/deploy.sh
+
+      - name: Verificar saúde do serviço
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://atalaiastintas.gabrielsanztech.com.br/)
+          ADMIN_STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://atalaiastintasadmin.gabrielsanztech.com.br/admin/)
+          echo "Frontend: $STATUS"
+          echo "Admin: $ADMIN_STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "ERRO: Frontend retornou $STATUS"
+            exit 1
+          fi
+          if [ "$ADMIN_STATUS" != "200" ]; then
+            echo "ERRO: Admin retornou $ADMIN_STATUS"
+            exit 1
+          fi
+          echo "Deploy validado com sucesso!"
