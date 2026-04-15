@@ -504,4 +504,91 @@ export interface Venda {
   cancelada: boolean;
   motivo_cancelamento: string | null;
   data_cancelamento: string | null;
+  tem_devolucao: boolean;
+}
+
+// ─── T038 — PDV / Recebíveis types ────────────────────────────────────────────
+
+export type FormaPagamento =
+  | 'DINHEIRO'
+  | 'PIX'
+  | 'CARTAO_CREDITO'
+  | 'CARTAO_DEBITO'
+  | 'CREDIARIO'
+  | 'TRANSFERENCIA';
+
+export type SituacaoRecebivel = 'ABERTO' | 'PAGO' | 'PARCIAL' | 'VENCIDO' | 'CANCELADO';
+
+export interface PagamentoVenda {
+  id: number;
+  forma: FormaPagamento;
+  valor: string;            // Decimal as string
+  valor_recebido: string | null;
+  troco: string;
+}
+
+export interface Recebivel extends BaseModel {
+  cliente: number;
+  cliente_nome: string;
+  venda: string | null;     // UUID FK
+  loja: number;
+  valor_original: string;   // Decimal as string
+  valor_pago: string;
+  valor_saldo: string;
+  data_vencimento: string;  // ISO date YYYY-MM-DD
+  situacao: SituacaoRecebivel;
+  observacoes: string | null;
+  criado_com_override: boolean;
+}
+
+export interface PDVCartItem {
+  produto_variacao_id: string;  // UUID
+  sku: string;
+  nome: string;
+  quantidade: string;           // Decimal as string
+  unidade_id: number;
+  preco_unitario: string;
+  desconto_valor: string;
+  preco_total: string;
+  estoque_disponivel: string;
+}
+
+export interface PDVCheckoutPayload {
+  loja_id: number;
+  cliente_id?: number | null;
+  itens: Array<{
+    produto_variacao_id: string;
+    quantidade: string;
+    preco_unitario: string;
+    unidade_id?: number;
+    desconto_valor?: string;
+  }>;
+  pagamentos: Array<{
+    forma: FormaPagamento;
+    valor: string;
+    valor_recebido?: string;
+  }>;
+  desconto_total?: string;
+  observacoes?: string | null;
+  override_credito?: {
+    pin: string;
+    aprovador_id: number;
+  };
+}
+
+export interface PDVCheckoutResponse {
+  pedido_id: string;
+  venda_id: string;
+  numero_venda: string;
+  troco: string;
+  recebiveis: Array<{ id: number; valor_saldo: string; data_vencimento: string }>;
+}
+
+export interface AprovarDescontoPayload {
+  percentual: string;
+  motivo: string;
+  pin: string;
+  aprovador_id: number;
+  tipo: 'TOTAL' | 'ITEM';
+  item_id?: number;
 }

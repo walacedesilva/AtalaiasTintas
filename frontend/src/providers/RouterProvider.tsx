@@ -16,9 +16,11 @@ import ProfilePage from '@/pages/profile/ProfilePage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import VendasPage from '@/pages/sales/VendasPage';
 import PedidosPage from '@/pages/sales/PedidosPage';
+import RecebiveisPage from '@/pages/sales/RecebiveisPage';
 import ClientesPage from '@/pages/customers/ClientesPage';
 import TintometryPage from '@/pages/TintometryPage';
 import PigmentStockPage from '@/pages/PigmentStockPage';
+import PDVPage from '@/pages/pdv/PDVPage';
 
 /**
  * Protected route component
@@ -137,6 +139,14 @@ const router = createBrowserRouter([
       {
         path: 'customers',
         element: <ClientesPage />
+      },
+      {
+        path: 'pdv',
+        element: <PDVPage />
+      },
+      {
+        path: 'recebiveis',
+        element: <RecebiveisPage />
       },
       {
         path: 'tintometry',

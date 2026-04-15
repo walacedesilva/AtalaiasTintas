@@ -1,10 +1,14 @@
 import { apiClient } from './client';
 import type {
+  AprovarDescontoPayload,
   Cliente,
-  PedidoVenda,
   ItemPedidoVenda,
-  Venda,
+  PDVCheckoutPayload,
+  PDVCheckoutResponse,
+  PedidoVenda,
   PaginatedResponse,
+  Recebivel,
+  Venda,
 } from '@/types';
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
@@ -77,6 +81,16 @@ export interface ItemAddPayload {
   observacoes?: string | null;
 }
 
+export interface RecebivelFilters {
+  cliente?: number | undefined;
+  situacao?: string | undefined;
+  loja?: number | undefined;
+  data_vencimento__lte?: string | undefined;
+  data_vencimento__gte?: string | undefined;
+  page?: number | undefined;
+  page_size?: number | undefined;
+}
+
 // ─── API ─────────────────────────────────────────────────────────────────────
 export const salesAPI = {
   // -----------------------------------------------------------------------
@@ -109,6 +123,10 @@ export const salesAPI = {
     async toggleAtivo(id: number): Promise<Cliente> {
       return apiClient.postData<Cliente>(`/sales/clientes/${id}/toggle-ativo/`, {});
     },
+
+    async historico(id: number, params?: { page?: number; page_size?: number }): Promise<PaginatedResponse<PedidoVenda>> {
+      return apiClient.getData<PaginatedResponse<PedidoVenda>>(`/sales/clientes/${id}/historico/`, params);
+    },
   },
 
   // -----------------------------------------------------------------------
@@ -132,8 +150,12 @@ export const salesAPI = {
       return apiClient.getData<Venda>(`/sales/vendas/${id}/`);
     },
 
-    async cancel(id: string, motivo: string): Promise<Venda> {
-      return apiClient.postData<Venda>(`/sales/vendas/${id}/cancelar/`, { motivo });
+    async cancel(id: string, motivo: string, pin: string): Promise<{ status: string; venda_id: string }> {
+      return apiClient.postData(`/sales/vendas/${id}/cancelar/`, { motivo, pin });
+    },
+
+    async devolver(id: string, payload: { motivo: string; itens?: Array<{ item_id: number; quantidade: string }> }): Promise<{ status: string; venda_id: string; movimentacoes_entrada: unknown[] }> {
+      return apiClient.postData(`/sales/vendas/${id}/devolver/`, payload);
     },
 
     async nfeStatus(id: string): Promise<{ situacao: string; protocolo: string | null }> {
@@ -174,8 +196,8 @@ export const salesAPI = {
       await apiClient.deleteData(`/sales/pedidos/${pedidoId}/remove-item/${itemId}/`);
     },
 
-    async aprovar(id: number): Promise<PedidoVenda> {
-      return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar/`, {});
+    async aprovar(id: number, data_entrega_prevista?: string): Promise<PedidoVenda> {
+      return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar/`, { data_entrega_prevista });
     },
 
     async iniciarCheckout(id: number): Promise<{ sessao_checkout: string; reservas_criadas: number; avisos: string[] }> {
@@ -191,6 +213,14 @@ export const salesAPI = {
     async cancelar(id: number, motivo: string): Promise<PedidoVenda> {
       return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/cancelar/`, { motivo });
     },
+
+    async aprovarDesconto(id: number, payload: AprovarDescontoPayload): Promise<PedidoVenda> {
+      return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar-desconto/`, payload);
+    },
+
+    async finalizarEntrega(id: number): Promise<{ pedido_id: string; venda_id: string; numero_venda: string }> {
+      return apiClient.postData(`/sales/pedidos/${id}/finalizar-entrega/`, {});
+    },
   },
 
   // -----------------------------------------------------------------------
@@ -200,5 +230,39 @@ export const salesAPI = {
     query: EstoqueDisponivelQuery,
   ): Promise<EstoqueDisponivelResult> {
     return apiClient.getData<EstoqueDisponivelResult>('/sales/estoque-disponivel/', query);
+  },
+
+  // -----------------------------------------------------------------------
+  // T038-T039: Recebíveis
+  // -----------------------------------------------------------------------
+  recebiveis: {
+    async list(filters?: RecebivelFilters): Promise<PaginatedResponse<Recebivel>> {
+      return apiClient.getData<PaginatedResponse<Recebivel>>('/sales/recebiveis/', filters);
+    },
+
+    async get(id: number): Promise<Recebivel> {
+      return apiClient.getData<Recebivel>(`/sales/recebiveis/${id}/`);
+    },
+
+    async baixar(id: number, valor_pago: string, forma_pagamento?: string, observacoes?: string): Promise<Recebivel> {
+      return apiClient.postData<Recebivel>(`/sales/recebiveis/${id}/baixar/`, {
+        valor_pago,
+        forma_pagamento,
+        observacoes,
+      });
+    },
+
+    async cancelar(id: number, motivo: string): Promise<Recebivel> {
+      return apiClient.postData<Recebivel>(`/sales/recebiveis/${id}/cancelar/`, { motivo });
+    },
+  },
+
+  // -----------------------------------------------------------------------
+  // T038-T039: PDV Checkout
+  // -----------------------------------------------------------------------
+  pdv: {
+    async checkout(payload: PDVCheckoutPayload): Promise<PDVCheckoutResponse> {
+      return apiClient.postData<PDVCheckoutResponse>('/sales/pdv/checkout/', payload);
+    },
   },
 };

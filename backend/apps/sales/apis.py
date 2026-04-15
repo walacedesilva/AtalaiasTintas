@@ -10,15 +10,32 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from apps.sales.models import Cliente, ItemPedidoVenda, PedidoVenda, Venda
+from apps.sales.models import Cliente, ItemPedidoVenda, PedidoVenda, Recebivel, Venda
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# T031 — Rate-limiting throttle classes
+# ---------------------------------------------------------------------------
+
+class PDVCheckoutThrottle(UserRateThrottle):
+    rate = '60/min'
+    scope = 'pdv_checkout'
+
+
+class AprovarDescontoThrottle(UserRateThrottle):
+    rate = '10/min'
+    scope = 'aprovar_desconto'
 
 
 def _recalcular_totais_pedido(pedido: PedidoVenda) -> None:
@@ -100,6 +117,27 @@ class ClienteViewSet(ModelViewSet):
         cliente.ativo = not cliente.ativo
         cliente.save(update_fields=['ativo'])
         return Response(self.get_serializer(cliente).data)
+
+    @action(detail=True, methods=['get'], url_path='historico')
+    def historico(self, request, pk=None):
+        """T026 — Paginated purchase history for a customer, no N+1."""
+        cliente = self.get_object()
+        qs = (
+            PedidoVenda.objects
+            .filter(cliente=cliente)
+            .select_related('loja', 'vendedor')
+            .prefetch_related('itens__produto_variacao', 'itens__unidade_venda')
+            .order_by('-data_pedido')
+        )
+        from rest_framework.pagination import PageNumberPagination
+        paginator = PageNumberPagination()
+        try:
+            page_size = int(request.query_params.get('page_size', 10))
+        except (TypeError, ValueError):
+            page_size = 10
+        paginator.page_size = min(max(page_size, 1), 100)
+        page = paginator.paginate_queryset(qs, request)
+        return paginator.get_paginated_response(PedidoVendaSerializer(page, many=True).data)
 
 
 class ItemPedidoVendaSerializer(serializers.ModelSerializer):
@@ -236,17 +274,172 @@ class PedidoVendaViewSet(ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='aprovar')
     def aprovar(self, request, pk=None):
-        """Transition a PedidoVenda from ORCAMENTO → APROVADO."""
+        """T021 — ORCAMENTO → APROVADO with optional stock reservation."""
         pedido = self.get_object()
         if pedido.situacao != 'ORCAMENTO':
             return Response(
                 {'erro': f'Apenas pedidos em ORCAMENTO podem ser aprovados (atual: {pedido.situacao})'},
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
-        from django.utils import timezone
+        from django.utils import timezone as tz
+
+        update_fields = ['situacao', 'data_aprovacao', 'updated_at']
         pedido.situacao = 'APROVADO'
-        pedido.data_aprovacao = timezone.now()
-        pedido.save(update_fields=['situacao', 'data_aprovacao'])
+        pedido.data_aprovacao = tz.now()
+        data_entrega = request.data.get('data_entrega_prevista')
+        if data_entrega:
+            pedido.data_entrega_prevista = data_entrega
+            update_fields.append('data_entrega_prevista')
+        pedido.save(update_fields=update_fields)
+
+        # Create stock reservations for all items
+        from apps.inventory.services import ConversaoService, EstoqueService
+
+        sessao = f'pedido_{pedido.pk}'
+        reservas_criadas = 0
+        avisos_estoque = []
+        for item in pedido.itens.select_related('produto_variacao', 'unidade_venda').all():
+            unidade_id = (
+                item.unidade_venda_id
+                if item.unidade_venda_id
+                else ConversaoService.obter_unidade_base(str(item.produto_variacao_id)).id
+            )
+            try:
+                EstoqueService.criar_reserva(
+                    produto_variacao_id=str(item.produto_variacao_id),
+                    loja_id=pedido.loja_id,
+                    quantidade=item.quantidade,
+                    unidade_id=unidade_id,
+                    sessao_checkout=sessao,
+                    usuario=request.user,
+                )
+                reservas_criadas += 1
+            except Exception as exc:
+                avisos_estoque.append({'item': str(item.pk), 'aviso': str(exc)})
+
+        resp = self.get_serializer(pedido).data
+        resp['reservas_criadas'] = reservas_criadas
+        if avisos_estoque:
+            resp['avisos_estoque'] = avisos_estoque
+        return Response(resp)
+
+    @action(detail=True, methods=['post'], url_path='aprovar-desconto',
+            throttle_classes=[AprovarDescontoThrottle])
+    def aprovar_desconto(self, request, pk=None):
+        """T022 — Apply a discount to a pedido or item via PIN approval."""
+        pedido = self.get_object()
+        data = request.data
+        percentual_str = data.get('percentual')
+        if not percentual_str:
+            return Response({'erro': 'percentual é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
+        motivo = data.get('motivo', '')
+        pin = data.get('pin', '')
+        aprovador_id = data.get('aprovador_id', request.user.pk)
+        tipo = data.get('tipo', 'TOTAL')
+        item_id = data.get('item_id')
+
+        User = get_user_model()
+        try:
+            aprovador = User.objects.get(pk=aprovador_id)
+        except User.DoesNotExist:
+            return Response({'erro': 'aprovador_id inválido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.sales.services import (
+            DescontoService,
+            DescontoCooldownError,
+            DescontoInsuficientePermissaoError,
+            DescontoPINError,
+        )
+
+        try:
+            percentual = Decimal(str(percentual_str))
+            if tipo == 'ITEM' and item_id:
+                item = ItemPedidoVenda.objects.get(pk=item_id, pedido=pedido)
+                DescontoService.aplicar_desconto_item(
+                    item, percentual, request.user, aprovador, pin=pin
+                )
+                pedido.refresh_from_db()
+            else:
+                DescontoService.aprovar_com_pin(
+                    pedido, percentual, motivo, pin, aprovador
+                )
+        except DescontoInsuficientePermissaoError as exc:
+            return Response({'erro': str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except DescontoPINError as exc:
+            return Response(
+                {'erro': 'PIN incorreto', 'tentativas': exc.tentativas,
+                 'max_tentativas': exc.max_tentativas},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except DescontoCooldownError as exc:
+            return Response({'erro': str(exc)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except (ItemPedidoVenda.DoesNotExist, ValueError) as exc:
+            return Response({'erro': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        pedido.refresh_from_db()
+        return Response(self.get_serializer(pedido).data)
+
+    @action(detail=True, methods=['post'], url_path='finalizar-entrega')
+    def finalizar_entrega(self, request, pk=None):
+        """T023 — PRONTO → ENTREGUE: commit stock and create Venda."""
+        pedido = self.get_object()
+        if pedido.situacao != 'PRONTO':
+            return Response(
+                {'erro': f'Apenas pedidos em PRONTO podem ser finalizados (atual: {pedido.situacao})'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        import uuid as _uuid
+        from apps.sales.services import VendaService
+
+        num_venda = request.data.get('numero_venda') or f'VND-{_uuid.uuid4().hex[:8].upper()}'
+        sessao = f'pedido_{pedido.pk}'
+
+        try:
+            venda = VendaService.finalizar_venda(
+                pedido_id=str(pedido.pk),
+                sessao_checkout=sessao,
+                usuario=request.user,
+                numero_venda=num_venda,
+            )
+        except Exception as exc:
+            logger.error("Erro em finalizar_entrega pedido=%s: %s", pedido.pk, exc)
+            return Response({'erro': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        pedido.refresh_from_db()
+        return Response({
+            'pedido': self.get_serializer(pedido).data,
+            'venda_id': str(venda.pk),
+            'numero_venda': venda.numero_venda if hasattr(venda, 'numero_venda') else num_venda,
+        })
+
+    @action(detail=True, methods=['post'], url_path='cancelar')
+    def cancelar(self, request, pk=None):
+        """T024 — Cancel a PedidoVenda and release stock reservations."""
+        pedido = self.get_object()
+        motivo = request.data.get('motivo', '').strip()
+        if len(motivo) < 10:
+            return Response(
+                {'erro': 'motivo deve ter no mínimo 10 caracteres'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if pedido.situacao == 'CANCELADO':
+            return Response({'erro': 'Pedido já está cancelado'}, status=status.HTTP_400_BAD_REQUEST)
+        if pedido.situacao == 'ENTREGUE':
+            return Response(
+                {'erro': 'Pedido entregue deve ser cancelado via cancelamento de Venda'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        from apps.inventory.services import EstoqueService
+
+        sessao = f'pedido_{pedido.pk}'
+        try:
+            EstoqueService.cancelar_reservas(sessao)
+        except Exception as exc:
+            logger.warning("Erro ao cancelar reservas do pedido %s: %s", pedido.pk, exc)
+
+        pedido.situacao = 'CANCELADO'
+        pedido.save(update_fields=['situacao', 'updated_at'])
         return Response(self.get_serializer(pedido).data)
 
     # T058 — initiate checkout with stock reservation
@@ -337,7 +530,7 @@ class PedidoVendaViewSet(ModelViewSet):
 class VendaViewSet(ModelViewSet):
     serializer_class = VendaSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'patch', 'delete', 'head', 'options']  # no POST/PUT: created via PedidoVenda
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
         qs = Venda.objects.select_related('loja', 'cliente', 'vendedor').order_by('-created_at')
@@ -350,10 +543,19 @@ class VendaViewSet(ModelViewSet):
             qs = qs.filter(cliente_id=cliente_id)
         return qs
 
-    # T060 — cancel a sale
+    # T060 / T025a — cancel a sale (D+0 only, PIN required)
     @action(detail=True, methods=['post'], url_path='cancelar')
     def cancelar(self, request, pk=None):
+        """T025a — Cancel a Venda (same day only) with PIN verification."""
         venda = self.get_object()
+
+        # Idempotency: already cancelled → 400
+        if venda.cancelada:
+            return Response(
+                {'erro': 'Venda já está cancelada'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         motivo = request.data.get('motivo', '').strip()
         if len(motivo) < 10:
             return Response(
@@ -361,18 +563,111 @@ class VendaViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from apps.sales.services import VendaService
+        # D+0 check: cancellation only allowed on the sale date
+        from django.utils import timezone as tz
+        if venda.data_venda.date() != tz.now().date():
+            return Response(
+                {'erro': 'Cancelamento permitido apenas no dia da venda (D+0). Use devolução para vendas anteriores.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # PIN verification
+        pin = request.data.get('pin', '')
+        if not pin:
+            return Response({'erro': 'PIN obrigatório para cancelamento'}, status=status.HTTP_400_BAD_REQUEST)
+        if not request.user.check_password(pin):
+            return Response({'erro': 'PIN incorreto'}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.sales.services import VendaService, RecebivelService
+
+        nfe_situacao_antes = venda.nfe_situacao
 
         try:
-            venda = VendaService.cancelar_venda(
-                venda_id=str(venda.pk),
-                motivo=motivo,
-                usuario=request.user,
-            )
+            with transaction.atomic():
+                venda = VendaService.cancelar_venda(
+                    venda_id=str(venda.pk),
+                    motivo=motivo,
+                    usuario=request.user,
+                )
+                # Cancel any open crediário receivables
+                for rec in Recebivel.objects.filter(
+                    venda_id=venda.pk, situacao__in=('ABERTO', 'PARCIAL', 'VENCIDO')
+                ):
+                    RecebivelService.cancelar(rec, motivo, request.user)
+
         except ValueError as exc:
             return Response({'erro': str(exc)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-        return Response(VendaSerializer(venda).data)
+        logger.info(
+            "Venda %s cancelada por %s — motivo: %s — nfe_antes: %s",
+            venda.pk, request.user, motivo, nfe_situacao_antes,
+        )
+        return Response({'status': 'cancelada', 'venda_id': str(venda.pk)})
+
+    @action(detail=True, methods=['post'], url_path='devolver')
+    def devolver(self, request, pk=None):
+        """T025 — Return items from a sale: restore stock, mark tem_devolucao."""
+        venda = self.get_object()
+        motivo = request.data.get('motivo', '').strip()
+        itens_data = request.data.get('itens', [])
+
+        from apps.inventory.services import ConversaoService, EstoqueService
+
+        movimentacoes = []
+        with transaction.atomic():
+            pedido = getattr(venda, 'pedido_origem', None)
+            if not itens_data and pedido:
+                # Return all items from the originating order
+                for item in pedido.itens.select_related('produto_variacao', 'unidade_venda').all():
+                    unidade_id = (
+                        item.unidade_venda_id
+                        if item.unidade_venda_id
+                        else ConversaoService.obter_unidade_base(str(item.produto_variacao_id)).id
+                    )
+                    mov, _ = EstoqueService.processar_entrada(
+                        produto_variacao_id=str(item.produto_variacao_id),
+                        loja_id=venda.loja_id,
+                        quantidade=item.quantidade,
+                        unidade_id=unidade_id,
+                        usuario=request.user,
+                        tipo_movimentacao='DEVOLUCAO_VENDA',
+                        documento_referencia=str(venda.pk),
+                    )
+                    movimentacoes.append({'item': str(item.pk), 'movimentacao': str(mov.pk)})
+            else:
+                for item_data in itens_data:
+                    try:
+                        item = ItemPedidoVenda.objects.get(pk=item_data['item_id'], pedido=pedido)
+                    except ItemPedidoVenda.DoesNotExist:
+                        return Response(
+                            {'erro': f"Item {item_data['item_id']} não encontrado"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    unidade_id = (
+                        item.unidade_venda_id
+                        if item.unidade_venda_id
+                        else ConversaoService.obter_unidade_base(str(item.produto_variacao_id)).id
+                    )
+                    qtd = Decimal(str(item_data.get('quantidade', item.quantidade)))
+                    mov, _ = EstoqueService.processar_entrada(
+                        produto_variacao_id=str(item.produto_variacao_id),
+                        loja_id=venda.loja_id,
+                        quantidade=qtd,
+                        unidade_id=unidade_id,
+                        usuario=request.user,
+                        tipo_movimentacao='DEVOLUCAO_VENDA',
+                        documento_referencia=str(venda.pk),
+                    )
+                    movimentacoes.append({'item': str(item.pk), 'movimentacao': str(mov.pk)})
+
+            venda.tem_devolucao = True
+            venda.save(update_fields=['tem_devolucao', 'updated_at'])
+
+        return Response({
+            'status': 'devolvida',
+            'venda_id': str(venda.pk),
+            'movimentacoes_entrada': movimentacoes,
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -588,3 +883,303 @@ class RastreabilidadeAPIView(APIView):
         ]
 
         return Response({'total': len(data), 'movimentacoes': data})
+
+
+# ---------------------------------------------------------------------------
+# T027-T029 — RecebivelViewSet: CRUD + baixar + cancelar
+# ---------------------------------------------------------------------------
+
+class RecebivelSerializer(serializers.ModelSerializer):
+    cliente_nome = serializers.CharField(source='cliente.nome_completo', read_only=True)
+
+    class Meta:
+        model = Recebivel
+        fields = [
+            'id', 'cliente', 'cliente_nome', 'venda', 'loja',
+            'valor_original', 'valor_pago', 'valor_saldo',
+            'data_vencimento', 'situacao', 'observacoes',
+            'criado_com_override', 'aprovador_override',
+            'cancelado_por', 'data_cancelamento', 'motivo_cancelamento',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'cliente_nome', 'valor_saldo', 'criado_com_override',
+            'aprovador_override', 'cancelado_por', 'data_cancelamento',
+            'motivo_cancelamento', 'created_at', 'updated_at',
+        ]
+
+
+class RecebivelViewSet(ModelViewSet):
+    """T027 — Recebivel CRUD + baixar + cancelar actions."""
+
+    serializer_class = RecebivelSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        from apps.companies.models import UsuarioLoja
+
+        loja_ids = UsuarioLoja.objects.filter(
+            usuario=self.request.user, ativo=True,
+        ).values_list('loja_id', flat=True)
+
+        qs = (
+            Recebivel.objects
+            .filter(loja__in=loja_ids)
+            .select_related('cliente', 'venda', 'loja')
+            .order_by('data_vencimento')
+        )
+
+        # Filters
+        if cliente_id := self.request.query_params.get('cliente'):
+            qs = qs.filter(cliente_id=cliente_id)
+        if situacao := self.request.query_params.get('situacao'):
+            qs = qs.filter(situacao=situacao)
+        if loja_id := self.request.query_params.get('loja'):
+            qs = qs.filter(loja_id=loja_id)
+        if venc_lte := self.request.query_params.get('data_vencimento__lte'):
+            qs = qs.filter(data_vencimento__lte=venc_lte)
+        if venc_gte := self.request.query_params.get('data_vencimento__gte'):
+            qs = qs.filter(data_vencimento__gte=venc_gte)
+        return qs
+
+    @action(detail=True, methods=['post'], url_path='baixar')
+    def baixar(self, request, pk=None):
+        """T028 — Register a payment on a Recebivel."""
+        recebivel = self.get_object()
+        valor_pago = request.data.get('valor_pago')
+        if not valor_pago:
+            return Response({'erro': 'valor_pago é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.sales.services import RecebivelService
+
+        try:
+            recebivel = RecebivelService.baixar(recebivel, Decimal(str(valor_pago)), request.user)
+        except ValueError as exc:
+            return Response({'erro': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(RecebivelSerializer(recebivel).data)
+
+    @action(detail=True, methods=['post'], url_path='cancelar')
+    def cancelar(self, request, pk=None):
+        """T029 — Cancel a Recebivel."""
+        recebivel = self.get_object()
+        motivo = request.data.get('motivo', '').strip()
+        if len(motivo) < 5:
+            return Response(
+                {'erro': 'motivo deve ter no mínimo 5 caracteres'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.sales.services import RecebivelService
+
+        try:
+            recebivel = RecebivelService.cancelar(recebivel, motivo, request.user)
+        except ValueError as exc:
+            return Response({'erro': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(RecebivelSerializer(recebivel).data)
+
+
+# ---------------------------------------------------------------------------
+# T030-T031 — PDVCheckoutAPIView: atomic PDV checkout with rate limiting
+# ---------------------------------------------------------------------------
+
+class PDVCheckoutAPIView(APIView):
+    """T030 — Atomic PDV checkout: validate stock → create order → deduct stock → create sale.
+
+    POST /sales/pdv/checkout/
+    Body: {
+        loja_id, cliente_id?, itens[], pagamentos[],
+        desconto_total?, observacoes?,
+        override_credito?: { pin, aprovador_id }
+    }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [PDVCheckoutThrottle]
+
+    def post(self, request):
+        from apps.companies.models import UsuarioLoja
+        from apps.inventory.services import ConversaoService, EstoqueService
+        from apps.sales.services import (
+            CreditoInsuficienteError,
+            CreditoService,
+            RecebivelService,
+        )
+        import uuid as _uuid
+        import datetime
+
+        data = request.data
+        loja_id = data.get('loja_id')
+        if not loja_id:
+            return Response({'erro': 'loja_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # SEC-3: validate loja belongs to user
+        if not UsuarioLoja.objects.filter(
+            usuario=request.user, loja_id=loja_id, ativo=True
+        ).exists():
+            return Response({'erro': 'Loja não autorizada'}, status=status.HTTP_403_FORBIDDEN)
+
+        itens_data = data.get('itens', [])
+        pagamentos_data = data.get('pagamentos', [])
+        cliente_id = data.get('cliente_id')
+        desconto_total = Decimal(str(data.get('desconto_total', '0')))
+        observacoes = data.get('observacoes', '')
+
+        if not itens_data:
+            return Response({'erro': 'itens não pode ser vazio'}, status=status.HTTP_400_BAD_REQUEST)
+        if not pagamentos_data:
+            return Response({'erro': 'pagamentos não pode ser vazio'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                from apps.sales.models import PagamentoVenda as PagVenda
+
+                # 1. Validate stock for all items (raise before any writes)
+                for item_d in itens_data:
+                    prod_id = str(item_d['produto_variacao_id'])
+                    unid_id = int(item_d.get('unidade_id', 0))
+                    qtd = Decimal(str(item_d['quantidade']))
+                    try:
+                        unid_id = unid_id or ConversaoService.obter_unidade_base(prod_id).id
+                        disponivel = EstoqueService.calcular_disponibilidade(prod_id, int(loja_id))
+                        qtd_base = ConversaoService.converter_quantidade(prod_id, qtd, unid_id)
+                        if qtd_base > disponivel:
+                            return Response(
+                                {'erro': f"Estoque insuficiente para produto {prod_id}. "
+                                         f"Disponível: {disponivel}, Solicitado: {qtd_base}"},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                    except Exception as exc:
+                        return Response({'erro': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+                # 2. Create PedidoVenda in ENTREGUE state
+                num_pedido = f'PDV-{_uuid.uuid4().hex[:8].upper()}'
+                pedido = PedidoVenda.objects.create(
+                    loja_id=loja_id,
+                    cliente_id=cliente_id,
+                    vendedor=request.user,
+                    numero_pedido=num_pedido,
+                    situacao='ENTREGUE',
+                    data_aprovacao=None,
+                    valor_subtotal=Decimal('0'),
+                    valor_desconto=desconto_total,
+                    valor_total=Decimal('0'),
+                    observacoes=observacoes,
+                )
+
+                # 3. Create ItemPedidoVenda for each item
+                subtotal = Decimal('0')
+                for seq, item_d in enumerate(itens_data, 1):
+                    prod_id = str(item_d['produto_variacao_id'])
+                    unid_id = int(item_d.get('unidade_id', 0)) or ConversaoService.obter_unidade_base(prod_id).id
+                    qtd = Decimal(str(item_d['quantidade']))
+                    preco_unit = Decimal(str(item_d['preco_unitario']))
+                    desc_item = Decimal(str(item_d.get('desconto_valor', '0')))
+                    preco_total = (qtd * preco_unit - desc_item).quantize(Decimal('0.01'))
+                    preco_total = max(Decimal('0'), preco_total)
+                    ItemPedidoVenda.objects.create(
+                        pedido=pedido,
+                        produto_variacao_id=prod_id,
+                        quantidade=qtd,
+                        unidade_venda_id=unid_id,
+                        preco_unitario=preco_unit,
+                        desconto_valor=desc_item,
+                        preco_total=preco_total,
+                        sequencia=seq,
+                    )
+                    subtotal += preco_total
+
+                # Update pedido totals
+                total = max(Decimal('0'), subtotal - desconto_total)
+                pedido.valor_subtotal = subtotal
+                pedido.valor_total = total
+                pedido.save(update_fields=['valor_subtotal', 'valor_total', 'updated_at'])
+
+                # 4. Create Venda
+                num_venda = f'VND-{_uuid.uuid4().hex[:8].upper()}'
+                venda = Venda.objects.create(
+                    pedido_origem=pedido,
+                    loja_id=loja_id,
+                    cliente_id=cliente_id,
+                    vendedor=request.user,
+                    numero_venda=num_venda,
+                    valor_total=total,
+                    valor_desconto=desconto_total,
+                    valor_liquido=total,
+                    nfe_situacao='NAO_APLICAVEL',
+                )
+
+                # 5. Create PagamentoVenda
+                troco = Decimal('0')
+                recebiveis = []
+                for pag_d in pagamentos_data:
+                    forma = pag_d['forma']
+                    valor_pag = Decimal(str(pag_d['valor']))
+                    valor_recebido = Decimal(str(pag_d.get('valor_recebido', valor_pag)))
+                    troco_pag = max(Decimal('0'), valor_recebido - valor_pag) if forma == 'DINHEIRO' else Decimal('0')
+                    troco += troco_pag
+                    PagVenda.objects.create(
+                        venda=venda,
+                        forma=forma,
+                        valor=valor_pag,
+                        valor_recebido=valor_recebido if forma == 'DINHEIRO' else None,
+                        troco=troco_pag,
+                        referencia_externa=pag_d.get('referencia_externa'),
+                        observacoes=pag_d.get('observacoes'),
+                    )
+
+                    # 7. Crediário handling
+                    if forma == 'CREDIARIO' and cliente_id:
+                        from django.contrib.auth import get_user_model as _get_user
+                        from apps.sales.models import Cliente as ClienteModel
+                        cliente_obj = ClienteModel.objects.get(pk=cliente_id)
+                        override_data = data.get('override_credito')
+                        try:
+                            rec = CreditoService.bloquear_para_venda(cliente_obj, valor_pag, venda)
+                            recebiveis.append(str(rec.pk))
+                        except CreditoInsuficienteError as exc:
+                            if not override_data:
+                                raise  # will be caught by outer try/except
+                            # Override with PIN
+                            _User = _get_user()
+                            aprovador = _User.objects.get(pk=override_data['aprovador_id'])
+                            rec = CreditoService.override_com_pin(
+                                cliente_obj, valor_pag, venda,
+                                pin=override_data['pin'],
+                                aprovador=aprovador,
+                            )
+                            recebiveis.append(str(rec.pk))
+
+                # 6. Deduct stock for each item
+                for item_d in itens_data:
+                    prod_id = str(item_d['produto_variacao_id'])
+                    unid_id = int(item_d.get('unidade_id', 0)) or ConversaoService.obter_unidade_base(prod_id).id
+                    qtd = Decimal(str(item_d['quantidade']))
+                    EstoqueService.processar_baixa_venda(
+                        produto_variacao_id=prod_id,
+                        loja_id=int(loja_id),
+                        quantidade=qtd,
+                        unidade_id=unid_id,
+                        venda_id=venda.pk,
+                        usuario=request.user,
+                    )
+
+        except CreditoInsuficienteError as exc:
+            return Response(
+                {'erro': 'Limite de crédito insuficiente',
+                 'disponivel': str(exc.disponivel),
+                 'solicitado': str(exc.solicitado)},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+        except Exception as exc:
+            logger.error("Erro no PDV checkout loja=%s usuario=%s: %s", loja_id, request.user, exc)
+            return Response({'erro': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'pedido_id': str(pedido.pk),
+            'venda_id': str(venda.pk),
+            'numero_venda': venda.numero_venda,
+            'troco': str(troco),
+            'recebiveis': recebiveis,
+        }, status=status.HTTP_201_CREATED)
+
