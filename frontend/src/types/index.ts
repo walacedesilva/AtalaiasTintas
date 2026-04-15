@@ -10,6 +10,15 @@ export interface BaseModel {
   updated_at: string;
 }
 
+// Loja
+export interface Loja {
+  id: number;
+  nome: string;
+  uf: string | null;
+  cidade: string | null;
+  ativa: boolean;
+}
+
 // Authentication types
 export interface User {
   id: number;
@@ -129,7 +138,7 @@ export interface MisturaTinta extends BaseModel {
   custo_total?: string | null;
   custo_base?: string | null;
   custo_pigmentos?: string | null;
-  situacao: 'PENDENTE' | 'PRODUCAO' | 'CONCLUIDA' | 'CANCELADA';
+  situacao: 'CALCULADA' | 'CONFIRMADA' | 'PRODUZIDA' | 'ENTREGUE' | 'CANCELADA';
   data_confirmacao?: string | null;
   data_producao?: string | null;
   data_entrega?: string | null;
@@ -148,11 +157,16 @@ export interface MisturaTinta extends BaseModel {
 
 export interface EstoquePigmento extends BaseModel {
   pigmento: Pigmento;
-  quantidade_atual: string; // Decimal field as string
-  quantidade_minima: string; // Decimal field as string
-  unidade: string;
-  localizacao?: string;
-  ultimo_movimento?: MovimentoEstoque;
+  loja: number; // FK id
+  saldo_ml: string; // Decimal field as string (ml)
+  saldo_minimo: string; // Decimal field as string (ml)
+  saldo_maximo: string; // Decimal field as string (ml)
+  custo_ml: string; // Decimal field as string
+  ativo: boolean;
+  /** @deprecated kept for backwards compat — use saldo_ml */
+  quantidade_atual?: string;
+  /** @deprecated kept for backwards compat — use saldo_minimo */
+  quantidade_minima?: string;
 }
 
 export interface MovimentoEstoque extends BaseModel {
@@ -320,6 +334,7 @@ export interface EstoqueLojaItem {
   unidade_sigla: string;
   estoque_minimo: string;
   preco_custo: string;
+  preco_venda: string;
   quantidade_atual: string;
   quantidade_reservada: string;
   quantidade_disponivel: string;

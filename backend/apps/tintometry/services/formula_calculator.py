@@ -84,7 +84,7 @@ class FormulaCalculatorService:
                     validate_stock
                 )
                 calculation_results.append(item_result)
-                total_pigment_cost += item_result['total_cost']
+                total_pigment_cost += Decimal(str(item_result['custos']['total']))
             
             # Calcular custo da base
             base_cost = self._calculate_base_cost(formula, target_volume)
@@ -170,6 +170,12 @@ class FormulaCalculatorService:
         
         # Obter informações de estoque
         stock_info = self._get_stock_info(item.pigmento, loja_id, validate_stock)
+        
+        # Verificar suficiência do estoque para a quantidade calculada
+        if validate_stock:
+            stock_info['sufficient'] = (
+                Decimal(str(stock_info['saldo_atual'])) >= density_corrected_quantity
+            )
         
         # Calcular custos
         unit_cost = stock_info['unit_cost']

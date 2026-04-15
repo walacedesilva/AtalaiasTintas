@@ -15,7 +15,10 @@ import EtiquetasPage from '@/pages/labels/EtiquetasPage';
 import ProfilePage from '@/pages/profile/ProfilePage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import VendasPage from '@/pages/sales/VendasPage';
+import PedidosPage from '@/pages/sales/PedidosPage';
 import ClientesPage from '@/pages/customers/ClientesPage';
+import TintometryPage from '@/pages/TintometryPage';
+import PigmentStockPage from '@/pages/PigmentStockPage';
 
 /**
  * Protected route component
@@ -128,8 +131,20 @@ const router = createBrowserRouter([
         element: <VendasPage />
       },
       {
+        path: 'sales/orders',
+        element: <PedidosPage />
+      },
+      {
         path: 'customers',
         element: <ClientesPage />
+      },
+      {
+        path: 'tintometry',
+        element: <TintometryPage />
+      },
+      {
+        path: 'tintometry/stock',
+        element: <PigmentStockPage />
       }
     ]
   },

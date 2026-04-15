@@ -10,6 +10,16 @@ import tempfile
 # Test mode
 DEBUG = False
 
+# Strip development-only apps that may have been appended to INSTALLED_APPS via
+# base.py list mutation when __init__.py imports development.py first.
+INSTALLED_APPS = [
+    app for app in INSTALLED_APPS
+    if app not in ('debug_toolbar', 'django_extensions')
+]
+
+# Strip debug_toolbar middleware for the same reason
+MIDDLEWARE = [m for m in MIDDLEWARE if 'debug_toolbar' not in m]
+
 # Secret key for testing
 SECRET_KEY = 'test-secret-key-not-for-production'
 
@@ -17,31 +27,32 @@ SECRET_KEY = 'test-secret-key-not-for-production'
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 
 # Database configuration for testing
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('TEST_DB_NAME', default='test_tintas_system'),
-        'USER': config('TEST_DB_USER', default='postgres'),
-        'PASSWORD': config('TEST_DB_PASSWORD', default='postgres'),
-        'HOST': config('TEST_DB_HOST', default='127.0.0.1'),
-        'PORT': config('TEST_DB_PORT', default='5432'),
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
-        'TEST': {
-            'NAME': 'test_tintas_system',
-        }
-    }
-}
-
-# Use in-memory SQLite for faster tests if configured
-if config('USE_SQLITE_TESTS', default=False, cast=bool):
+# Use in-memory SQLite by default for fast, portable tests.
+# Set USE_SQLITE_TESTS=false to use PostgreSQL instead.
+if config('USE_SQLITE_TESTS', default=True, cast=bool):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': ':memory:',
             'TEST': {
                 'NAME': ':memory:',
+            }
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('TEST_DB_NAME', default='test_tintas_system'),
+            'USER': config('TEST_DB_USER', default='postgres'),
+            'PASSWORD': config('TEST_DB_PASSWORD', default='postgres'),
+            'HOST': config('TEST_DB_HOST', default='127.0.0.1'),
+            'PORT': config('TEST_DB_PORT', default='5432'),
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+            'TEST': {
+                'NAME': 'test_tintas_system',
             }
         }
     }
@@ -106,6 +117,9 @@ class DisableMigrations:
         return True
 
     def __getitem__(self, item):
+        return None
+
+    def setdefault(self, key, value=None):
         return None
 
 if config('DISABLE_MIGRATIONS_IN_TESTS', default=True, cast=bool):

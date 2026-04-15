@@ -14,6 +14,13 @@ import type {
   SearchFilters,
   DashboardStats
 } from '@/types';
+import type {
+  CalculationResult,
+  CreateCalculationPayload,
+  QuickCalculatePayload,
+  CustomerHistoryResponse,
+  LowStockAlertsResponse
+} from '@/types/tintometry';
 
 /**
  * Tintometry API module
@@ -184,6 +191,18 @@ export const tintometryAPI = {
 
     async cancel(id: number, motivo: string): Promise<MisturaTinta> {
       return apiClient.postData<MisturaTinta>(`/tintometry/misturas/${id}/cancel/`, { motivo });
+    },
+
+    async createCalculation(payload: CreateCalculationPayload): Promise<CalculationResult> {
+      return apiClient.postData<CalculationResult>('/tintometry/misturas/create_calculation/', payload);
+    },
+
+    async confirm(id: number): Promise<CalculationResult> {
+      return apiClient.postData<CalculationResult>(`/tintometry/misturas/${id}/confirm/`, {});
+    },
+
+    async reproduceFromHistory(id: number): Promise<{ success: boolean; prefill: Record<string, unknown>; formula: FormulaTintometrica }> {
+      return apiClient.postData(`/tintometry/misturas/${id}/reproduce_from_history/`, {});
     }
   },
 
@@ -226,6 +245,12 @@ export const tintometryAPI = {
         nova_quantidade: novaQuantidade,
         motivo
       });
+    },
+
+    async getLowStockAlerts(lojaId?: number): Promise<LowStockAlertsResponse> {
+      const params: Record<string, unknown> = {};
+      if (lojaId) params.loja_id = lojaId;
+      return apiClient.getData<LowStockAlertsResponse>('/tintometry/estoque/low_stock_alerts/', params);
     }
   },
 
@@ -281,6 +306,20 @@ export const tintometryAPI = {
       const params = { cor_hex: corHex };
       const response = await apiClient.getData<ColorAnalysisResponse>('/tintometry/colors/analyze/', params);
       return response.sugestoes_formula;
+    }
+  },
+
+  // Quick calculate (no mixture created)
+  async quickCalculate(payload: QuickCalculatePayload): Promise<CalculationResult> {
+    return apiClient.postData<CalculationResult>('/tintometry/quick-calculate/', payload);
+  },
+
+  // Customer history
+  customerHistory: {
+    async getByPhone(phone: string): Promise<CustomerHistoryResponse> {
+      return apiClient.getData<CustomerHistoryResponse>('/tintometry/customer-history/', {
+        cliente_telefone: phone
+      });
     }
   }
 };

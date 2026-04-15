@@ -27,6 +27,7 @@ router.register(r'formulas', views.FormulaTintometricaViewSet, basename='formula
 router.register(r'misturas', views.MisturaTintaViewSet, basename='mistura')
 router.register(r'estoque', views.EstoquePigmentoViewSet, basename='estoque')
 router.register(r'colors', views.ColorAnalysisAPIView, basename='color-analysis')
+router.register(r'customer-history', views.CustomerHistoryViewSet, basename='customer-history')
 
 # Register label system ViewSets
 router.register(r'labels', LabelGenerationViewSet, basename='label-generation')
@@ -38,7 +39,14 @@ app_name = 'tintometry'
 urlpatterns = [
     # Include router URLs
     path('', include(router.urls)),
-    
-    # Custom endpoints could be added here in the future
-    # Example: path('reports/', views.ReportsView.as_view(), name='reports')
+
+    # T012 – Report endpoints
+    path('reports/daily-production/', views.DailyProductionReportView.as_view(), name='daily-production-report'),
+    path('reports/pigment-usage/', views.PigmentUsageReportView.as_view(), name='pigment-usage-report'),
+
+    # T014 – Quick calculate (PDV)
+    path('quick-calculate/', views.QuickFormulaCalculationView.as_view(), name='quick-calculate'),
+
+    # Dashboard stats (aggregate view)
+    path('dashboard/stats/', views.MisturaTintaViewSet.as_view({'get': 'dashboard_summary'}), name='dashboard-stats'),
 ]

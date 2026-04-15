@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI } from '@/api/sales';
+import { fiscalAPI } from '@/api/fiscal';
 import type { Venda, NfeSituacao } from '@/types';
 
 // ─── NFe Status badge ─────────────────────────────────────────────────────────
@@ -137,6 +138,15 @@ export default function VendasPage() {
         page_size: 20,
       }),
     staleTime: 30_000,
+  });
+
+  const emitirNfeMutation = useMutation({
+    mutationFn: (vendaId: string) => fiscalAPI.nfe.emitir(vendaId),
+    onSuccess: () => {
+      toast.success('NF-e enviada para emissão.');
+      qc.invalidateQueries({ queryKey: ['vendas'] });
+    },
+    onError: () => toast.error('Erro ao emitir NF-e.'),
   });
 
   const cancelMutation = useMutation({
@@ -341,15 +351,27 @@ export default function VendasPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {!venda.cancelada && (
-                          <button
-                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                            onClick={() => setSelectedVenda(venda)}
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
-                            Cancelar
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {!venda.cancelada && (venda.nfe_situacao === 'PENDENTE' || venda.nfe_situacao === 'REJEITADA') && (
+                            <button
+                              className="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 transition hover:bg-brand-50 disabled:opacity-50"
+                              disabled={emitirNfeMutation.isPending}
+                              onClick={() => emitirNfeMutation.mutate(venda.id)}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Emitir NF-e
+                            </button>
+                          )}
+                          {!venda.cancelada && (
+                            <button
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                              onClick={() => setSelectedVenda(venda)}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

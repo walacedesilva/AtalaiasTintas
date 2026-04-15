@@ -131,9 +131,9 @@ export default function Dashboard(): React.ReactElement {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-rose-600 leading-none">
-                      {item.quantidade_atual} {item.unidade}
+                      {item.saldo_ml ?? item.quantidade_atual} ml
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">Mín: {item.quantidade_minima}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Mín: {item.saldo_minimo ?? item.quantidade_minima}</p>
                   </div>
                 </div>
               ))}

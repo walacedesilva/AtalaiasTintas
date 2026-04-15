@@ -1,0 +1,92 @@
+[
+  {
+    "model": "tintometry.pigmento",
+    "pk": 101,
+    "fields": {
+      "codigo": "PIG-RED-01",
+      "nome": "Vermelho Óxido",
+      "cor_base": "Vermelho",
+      "densidade": "1.2000",
+      "poder_tintorial": "95.00",
+      "fornecedor": "Fornecedor Teste SA",
+      "codigo_fornecedor": "FT-RO-01",
+      "concentracao_maxima": "15.00",
+      "r": 180,
+      "g": 30,
+      "b": 30,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.pigmento",
+    "pk": 102,
+    "fields": {
+      "codigo": "PIG-YEL-01",
+      "nome": "Amarelo Cromo",
+      "cor_base": "Amarelo",
+      "densidade": "1.1500",
+      "poder_tintorial": "88.00",
+      "fornecedor": "Fornecedor Teste SA",
+      "codigo_fornecedor": "FT-AC-01",
+      "concentracao_maxima": "12.00",
+      "r": 230,
+      "g": 200,
+      "b": 20,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.pigmento",
+    "pk": 103,
+    "fields": {
+      "codigo": "PIG-BLU-01",
+      "nome": "Azul Cobalto",
+      "cor_base": "Azul",
+      "densidade": "1.3500",
+      "poder_tintorial": "92.00",
+      "fornecedor": "Fornecedor Teste SA",
+      "codigo_fornecedor": "FT-AC-02",
+      "concentracao_maxima": "10.00",
+      "r": 30,
+      "g": 70,
+      "b": 180,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.pigmento",
+    "pk": 104,
+    "fields": {
+      "codigo": "PIG-BLK-01",
+      "nome": "Preto Carvão",
+      "cor_base": "Preto",
+      "densidade": "1.4000",
+      "poder_tintorial": "99.00",
+      "fornecedor": "Fornecedor Teste SA",
+      "codigo_fornecedor": "FT-PC-01",
+      "concentracao_maxima": "8.00",
+      "r": 20,
+      "g": 20,
+      "b": 20,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.pigmento",
+    "pk": 105,
+    "fields": {
+      "codigo": "PIG-WHT-01",
+      "nome": "Branco Titânio",
+      "cor_base": "Branco",
+      "densidade": "1.0000",
+      "poder_tintorial": "100.00",
+      "fornecedor": "Fornecedor Teste SA",
+      "codigo_fornecedor": "FT-BT-01",
+      "concentracao_maxima": "25.00",
+      "r": 250,
+      "g": 250,
+      "b": 250,
+      "ativo": true
+    }
+  }
+]

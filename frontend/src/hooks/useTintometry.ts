@@ -9,6 +9,7 @@ import type {
   ColorAnalysisRequest,
   SearchFilters,
 } from '@/types';
+import type { CreateCalculationPayload, QuickCalculatePayload } from '@/types/tintometry';
 
 /**
  * Tintometry hooks using React Query
@@ -247,7 +248,7 @@ export function useMistura(id: number) {
     queryFn: () => tintometryAPI.misturas.get(id),
     enabled: id > 0,
     refetchInterval: (query) => {
-      return query.state.data?.situacao === 'PRODUCAO' ? 10000 : false;
+      return query.state.data?.situacao === 'CONFIRMADA' ? 10000 : false;
     }
   });
 }
@@ -400,5 +401,59 @@ export function useFindSimilarColors() {
   return useMutation({
     mutationFn: ({ corHex, tolerancia }: { corHex: string; tolerancia?: number }) =>
       tintometryAPI.colors.findSimilar(corHex, tolerancia)
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6 hooks — calculation, confirmation, customer history, stock alerts
+// ---------------------------------------------------------------------------
+
+export function useCreateCalculation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateCalculationPayload) =>
+      tintometryAPI.misturas.createCalculation(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.misturas() });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.estoque() });
+    }
+  });
+}
+
+export function useQuickCalculate() {
+  return useMutation({
+    mutationFn: (payload: QuickCalculatePayload) =>
+      tintometryAPI.quickCalculate(payload)
+  });
+}
+
+export function useConfirmMixture() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => tintometryAPI.misturas.confirm(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.mistura(id) });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.misturas() });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.estoque() });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.dashboard() });
+    }
+  });
+}
+
+export function useCustomerHistory(phone: string | null) {
+  return useQuery({
+    queryKey: ['tintometry', 'customerHistory', phone],
+    queryFn: () => tintometryAPI.customerHistory.getByPhone(phone!),
+    enabled: !!phone && phone.replace(/\D/g, '').length >= 8,
+    staleTime: 2 * 60 * 1000
+  });
+}
+
+export function useLowStockAlerts(lojaId?: number) {
+  return useQuery({
+    queryKey: ['tintometry', 'estoque', 'low_stock_alerts', lojaId],
+    queryFn: () => tintometryAPI.estoque.getLowStockAlerts(lojaId),
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000
   });
 }

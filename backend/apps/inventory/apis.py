@@ -480,6 +480,9 @@ class EstoqueLojaSerializer(serializers.ModelSerializer):
     preco_custo = serializers.DecimalField(
         source='produto_variacao.preco_custo', max_digits=10, decimal_places=2, read_only=True
     )
+    preco_venda = serializers.DecimalField(
+        source='produto_variacao.preco_venda', max_digits=10, decimal_places=2, read_only=True
+    )
     quantidade_disponivel = serializers.ReadOnlyField()
     status_estoque = serializers.SerializerMethodField()
 
@@ -497,7 +500,7 @@ class EstoqueLojaSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'loja',
             'produto_id', 'produto_codigo', 'produto_nome', 'produto_base_nome', 'marca_nome',
-            'unidade_sigla', 'estoque_minimo', 'preco_custo',
+            'unidade_sigla', 'estoque_minimo', 'preco_custo', 'preco_venda',
             'quantidade_atual', 'quantidade_reservada', 'quantidade_disponivel',
             'status_estoque', 'localizacao', 'data_ultima_movimentacao', 'bloqueado_venda',
         ]

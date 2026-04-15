@@ -2,6 +2,7 @@ import { apiClient } from './client';
 import type {
   Cliente,
   PedidoVenda,
+  ItemPedidoVenda,
   Venda,
   PaginatedResponse,
 } from '@/types';
@@ -57,6 +58,23 @@ export interface EstoqueDisponivelResult {
   produto_variacao_id: number;
   quantidade_disponivel: string;
   unidade: string;
+}
+
+export interface PedidoCreatePayload {
+  loja: number;
+  cliente: number;
+  forma_pagamento: string;
+  parcelas?: number;
+  tipo_entrega?: string;
+  observacoes?: string | null;
+}
+
+export interface ItemAddPayload {
+  produto_variacao: string;   // UUID
+  quantidade: string;
+  preco_unitario: string;
+  desconto_valor?: string;
+  observacoes?: string | null;
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
@@ -144,12 +162,30 @@ export const salesAPI = {
       return apiClient.getData<PedidoVenda>(`/sales/pedidos/${id}/`);
     },
 
+    async create(data: PedidoCreatePayload): Promise<PedidoVenda> {
+      return apiClient.postData<PedidoVenda>('/sales/pedidos/', data);
+    },
+
+    async addItem(pedidoId: number, item: ItemAddPayload): Promise<ItemPedidoVenda> {
+      return apiClient.postData<ItemPedidoVenda>(`/sales/pedidos/${pedidoId}/add-item/`, item);
+    },
+
+    async removeItem(pedidoId: number, itemId: number): Promise<void> {
+      await apiClient.deleteData(`/sales/pedidos/${pedidoId}/remove-item/${itemId}/`);
+    },
+
     async aprovar(id: number): Promise<PedidoVenda> {
       return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar/`, {});
     },
 
-    async finalizar(id: number): Promise<PedidoVenda> {
-      return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/finalizar/`, {});
+    async iniciarCheckout(id: number): Promise<{ sessao_checkout: string; reservas_criadas: number; avisos: string[] }> {
+      return apiClient.postData(`/sales/pedidos/${id}/iniciar-checkout/`, {});
+    },
+
+    async finalizar(pedidoId: number, sessaoCheckout: string): Promise<Venda> {
+      return apiClient.postData<Venda>(`/sales/pedidos/${pedidoId}/finalizar/`, {
+        sessao_checkout: sessaoCheckout,
+      });
     },
 
     async cancelar(id: number, motivo: string): Promise<PedidoVenda> {

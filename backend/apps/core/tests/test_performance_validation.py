@@ -9,7 +9,8 @@ import time
 from pathlib import Path
 from django.test import TestCase, override_settings
 from django.test.client import Client
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from django.core.management import call_command
 from django.conf import settings
 from django.template.loader import render_to_string

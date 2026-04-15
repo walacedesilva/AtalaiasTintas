@@ -150,7 +150,7 @@ CORS_ALLOW_CREDENTIALS = True
 # Security settings (base configurations)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Session configuration
 SESSION_COOKIE_AGE = 28800  # 8 hours in seconds

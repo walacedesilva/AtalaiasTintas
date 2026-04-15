@@ -12,7 +12,9 @@ import {
   Plus,
   Printer,
   ShoppingCart,
+  ClipboardList,
   Users,
+  Pipette,
 } from 'lucide-react';
 
 interface NavItem {
@@ -28,6 +30,7 @@ export default function Navigation(): React.ReactElement {
 
   const navItems: NavItem[] = [
     { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
     { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
     { path: '/customers',  label: 'Clientes',         icon: Users },
     { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
@@ -42,6 +45,8 @@ export default function Navigation(): React.ReactElement {
       badgeDanger: (stats?.estoque_baixo ?? 0) > 0,
     },
     { path: '/labels',     label: 'Etiquetas',        icon: Tag,          badge: stats?.etiquetas_geradas },
+    { path: '/tintometry', label: 'Tintometria',      icon: Pipette,      badge: undefined },
+    { path: '/tintometry/stock', label: 'Estoque Pigmentos', icon: Beaker, badge: undefined },
   ];
 
   return (
@@ -98,6 +103,13 @@ export default function Navigation(): React.ReactElement {
           >
             <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
             Nova Mistura
+          </NavLink>
+          <NavLink
+            to="/tintometry"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-violet-400 hover:bg-violet-600/10 transition-colors"
+          >
+            <Pipette className="h-4 w-4 shrink-0" aria-hidden="true" />
+            Nova Tintometria
           </NavLink>
           <NavLink
             to="/labels?action=generate"

@@ -280,6 +280,8 @@ class MisturaCalculationRequestSerializer(serializers.Serializer):
         """Valida volume solicitado"""
         if value <= 0:
             raise serializers.ValidationError("Volume deve ser positivo")
+        if value < Decimal('0.1'):
+            raise serializers.ValidationError("Volume mínimo é 100ml (0.1L)")
         if value > 1000:
             raise serializers.ValidationError("Volume muito alto (máximo 1000L)")
         return value
@@ -454,3 +456,28 @@ class ColorMatchSerializer(serializers.Serializer):
                 "Deve fornecer target_rgb ou target_lab"
             )
         return data
+
+
+class CustomerHistorySerializer(serializers.ModelSerializer):
+    """Serializer para histórico de cores por cliente (T007)"""
+
+    cor = serializers.SerializerMethodField()
+    formula_id = serializers.UUIDField(source='formula.id', read_only=True)
+
+    class Meta:
+        model = MisturaTinta
+        fields = [
+            'codigo_mistura',
+            'cor',
+            'data_confirmacao',
+            'volume_produzido',
+            'observacoes_cliente',
+            'formula_id',
+        ]
+
+    def get_cor(self, obj):
+        """Retorna nome da cor da fórmula associada"""
+        try:
+            return obj.formula.cor_definida.nome_cor
+        except AttributeError:
+            return None

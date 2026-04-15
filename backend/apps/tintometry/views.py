@@ -12,11 +12,13 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.utils import timezone
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count, Avg, F
 from decimal import Decimal
+from datetime import date, timedelta
 
 import logging
 
@@ -41,7 +43,8 @@ from .serializers import (
     StockMovementSerializer,
     ColorAnalysisSerializer,
     StockAlertSerializer,
-    ColorMatchSerializer
+    ColorMatchSerializer,
+    CustomerHistorySerializer,
 )
 from .services import (
     FormulaCalculatorService,
@@ -547,9 +550,8 @@ class MisturaTintaViewSet(viewsets.ModelViewSet):
         }
         
         # Contar por situação
-        situacoes = queryset.values_list('situacao', flat=True)
         for situacao in ['CALCULADA', 'CONFIRMADA', 'PRODUZIDA', 'ENTREGUE', 'CANCELADA']:
-            summary['por_situacao'][situacao] = situacoes.filter(situacao=situacao).count()
+            summary['por_situacao'][situacao] = queryset.filter(situacao=situacao).count()
         
         # Receita total (apenas entregues)
         receita = queryset.filter(situacao='ENTREGUE').aggregate(
@@ -567,6 +569,108 @@ class MisturaTintaViewSet(viewsets.ModelViewSet):
         ).count()
         
         return Response(summary)
+
+
+    @action(detail=True, methods=['post'])
+    def reproduce_from_history(self, request, pk=None):
+        """Retorna cálculo pré-preenchido com a fórmula da mistura original (T009).
+
+        Permite ao funcionário reproduzir exatamente a mesma cor de uma mistura
+        anterior sem inserir dados manualmente.
+        """
+        mistura = self.get_object()
+
+        if not mistura.formula:
+            return Response(
+                {'success': False, 'error': 'Mistura sem fórmula associada.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({
+            'success': True,
+            'source_mistura': {
+                'codigo_mistura': mistura.codigo_mistura,
+                'cliente_nome': mistura.cliente_nome,
+                'cliente_telefone': mistura.cliente_telefone,
+                'data_original': mistura.data_confirmacao,
+                'volume_produzido': float(mistura.volume_produzido) if mistura.volume_produzido else None,
+                'observacoes_cliente': mistura.observacoes_cliente,
+            },
+            'prefill': {
+                'formula_id': str(mistura.formula.id),
+                'volume_requested': float(mistura.volume_solicitado),
+                'customer_data': {
+                    'nome': mistura.cliente_nome,
+                    'telefone': mistura.cliente_telefone,
+                    'documento': mistura.cliente_documento,
+                    'email': mistura.cliente_email,
+                },
+                'observations': mistura.observacoes_cliente or '',
+            },
+            'formula': FormulaTintometricaSerializer(mistura.formula).data,
+        })
+
+
+class CustomerHistoryViewSet(viewsets.GenericViewSet):
+    """Histórico de cores por cliente (T006).
+
+    Endpoints:
+      GET  /customer-history/?cliente_telefone=<phone>  — 10 últimas misturas
+      GET  /customer-history/search_by_phone/?phone=<phone>  — alias explícito
+    """
+
+    serializer_class = CustomerHistorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        phone = self.request.query_params.get('cliente_telefone') or \
+                self.request.query_params.get('phone', '')
+        phone = phone.strip()
+
+        qs = MisturaTinta.objects.select_related(
+            'formula', 'formula__cor_definida'
+        ).filter(
+            situacao__in=['CONFIRMADA', 'PRODUZIDA', 'ENTREGUE', 'ETIQUETADA']
+        ).order_by('-data_confirmacao', '-created_at')
+
+        if phone:
+            qs = qs.filter(cliente_telefone__icontains=phone)
+
+        return qs[:10]
+
+    def list(self, request):
+        """Lista as 10 últimas misturas do cliente filtrado por telefone."""
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': len(serializer.data),
+            'results': serializer.data,
+        })
+
+    @action(detail=False, methods=['get'])
+    def search_by_phone(self, request):
+        """Busca histórico por telefone do cliente (query param: phone)."""
+        phone = request.query_params.get('phone', '').strip()
+
+        if not phone:
+            return Response(
+                {'error': 'Parâmetro "phone" é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queryset = MisturaTinta.objects.select_related(
+            'formula', 'formula__cor_definida'
+        ).filter(
+            cliente_telefone__icontains=phone,
+            situacao__in=['CONFIRMADA', 'PRODUZIDA', 'ENTREGUE', 'ETIQUETADA'],
+        ).order_by('-data_confirmacao', '-created_at')[:10]
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'phone': phone,
+            'count': len(serializer.data),
+            'results': serializer.data,
+        })
 
 
 class EstoquePigmentoViewSet(viewsets.ModelViewSet):
@@ -614,6 +718,19 @@ class EstoquePigmentoViewSet(viewsets.ModelViewSet):
         
         return Response(summary)
     
+    @action(detail=False, methods=['get'], url_path='low-stock')
+    def low_stock(self, request):
+        """Lista pigmentos com estoque abaixo do mínimo"""
+        queryset = self.get_queryset().filter(
+            saldo_ml__lte=F('saldo_minimo')
+        )
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def add_stock(self, request, pk=None):
         """Adiciona estoque para o pigmento"""
@@ -706,3 +823,248 @@ class ColorAnalysisAPIView(viewsets.GenericViewSet):
             'lab': {'L': float(L), 'a': float(a), 'b': float(b)},
             'rgb': {'r': r, 'g': g, 'b': b_rgb}
         })
+
+
+# ---------------------------------------------------------------------------
+# T010 – Relatório de Produção Diária
+# ---------------------------------------------------------------------------
+
+class DailyProductionReportView(APIView):
+    """Relatório de produção do dia com ranking de pigmentos mais utilizados"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # --- parâmetros ---
+        date_param = request.query_params.get('date')
+        loja_id = request.query_params.get('loja_id')
+
+        try:
+            report_date = (
+                date.fromisoformat(date_param) if date_param
+                else timezone.localdate()
+            )
+        except ValueError:
+            return Response(
+                {'error': 'Parâmetro date inválido. Use ISO 8601 (YYYY-MM-DD).'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # --- filtro base ---
+        qs = MisturaTinta.objects.filter(
+            situacao__in=['CONFIRMADA', 'PRODUZIDA', 'ENTREGUE', 'ETIQUETADA'],
+            data_confirmacao__date=report_date,
+        )
+        if loja_id:
+            qs = qs.filter(loja_id=loja_id)
+
+        # --- totais ---
+        totals = qs.aggregate(
+            total_misturas=Count('id'),
+            volume_total=Sum('volume_produzido'),
+            custo_total=Sum('custo_total'),
+        )
+
+        # --- top 10 pigmentos do dia ---
+        from .models import ItemMistura
+        itens_qs = ItemMistura.objects.filter(
+            mistura__in=qs
+        ).values(
+            'pigmento__id',
+            'pigmento__nome',
+            'pigmento__codigo',
+        ).annotate(
+            volume_usado=Sum('quantidade_executada'),
+            custo_total_pigmento=Sum('custo_total'),
+            vezes_usado=Count('id'),
+        ).order_by('-volume_usado')[:10]
+
+        return Response({
+            'date': report_date.isoformat(),
+            'loja_id': loja_id,
+            'total_misturas': totals['total_misturas'] or 0,
+            'volume_total_litros': float(totals['volume_total'] or 0),
+            'custo_total': float(totals['custo_total'] or 0),
+            'top_pigmentos': [
+                {
+                    'pigmento_id': str(item['pigmento__id']),
+                    'nome': item['pigmento__nome'],
+                    'codigo': item['pigmento__codigo'],
+                    'volume_usado_ml': float(item['volume_usado'] or 0),
+                    'custo_total': float(item['custo_total_pigmento'] or 0),
+                    'vezes_usado': item['vezes_usado'],
+                }
+                for item in itens_qs
+            ],
+        })
+
+
+# ---------------------------------------------------------------------------
+# T011 – Relatório de Uso de Pigmentos por Período
+# ---------------------------------------------------------------------------
+
+class PigmentUsageReportView(APIView):
+    """Consumo por pigmento em um período com comparação ao período anterior"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start_param = request.query_params.get('start_date')
+        end_param = request.query_params.get('end_date')
+        loja_id = request.query_params.get('loja_id')
+
+        try:
+            end_date = (
+                date.fromisoformat(end_param) if end_param
+                else timezone.localdate()
+            )
+            start_date = (
+                date.fromisoformat(start_param) if start_param
+                else end_date - timedelta(days=29)
+            )
+        except ValueError:
+            return Response(
+                {'error': 'Datas inválidas. Use ISO 8601 (YYYY-MM-DD).'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if start_date > end_date:
+            return Response(
+                {'error': 'start_date deve ser anterior a end_date.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        period_days = (end_date - start_date).days + 1
+
+        def _pigment_usage(s, e, loja):
+            """Retorna queryset de consumo por pigmento no intervalo [s, e]."""
+            from .models import ItemMistura
+            mistura_qs = MisturaTinta.objects.filter(
+                situacao__in=['CONFIRMADA', 'PRODUZIDA', 'ENTREGUE', 'ETIQUETADA'],
+                data_confirmacao__date__range=(s, e),
+            )
+            if loja:
+                mistura_qs = mistura_qs.filter(loja_id=loja)
+            return (
+                ItemMistura.objects
+                .filter(mistura__in=mistura_qs)
+                .values('pigmento__id', 'pigmento__nome', 'pigmento__codigo')
+                .annotate(
+                    volume_total_ml=Sum('quantidade_executada'),
+                    custo_total=Sum('custo_total'),
+                    num_misturas=Count('mistura', distinct=True),
+                )
+                .order_by('-volume_total_ml')
+            )
+
+        # Período anterior com mesma duração
+        prev_end = start_date - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=period_days - 1)
+
+        current = {
+            str(r['pigmento__id']): r
+            for r in _pigment_usage(start_date, end_date, loja_id)
+        }
+        previous = {
+            str(r['pigmento__id']): r
+            for r in _pigment_usage(prev_start, prev_end, loja_id)
+        }
+
+        pigmentos = []
+        all_ids = set(current) | set(previous)
+        for pid in all_ids:
+            cur = current.get(pid, {})
+            prev = previous.get(pid, {})
+            cur_vol = float(cur.get('volume_total_ml') or 0)
+            prev_vol = float(prev.get('volume_total_ml') or 0)
+            variacao = (
+                round((cur_vol - prev_vol) / prev_vol * 100, 2)
+                if prev_vol > 0 else None
+            )
+            pigmentos.append({
+                'pigmento_id': pid,
+                'nome': cur.get('pigmento__nome') or prev.get('pigmento__nome'),
+                'codigo': cur.get('pigmento__codigo') or prev.get('pigmento__codigo'),
+                'volume_total_ml': cur_vol,
+                'custo_total': float(cur.get('custo_total') or 0),
+                'num_misturas': cur.get('num_misturas') or 0,
+                'volume_periodo_anterior_ml': prev_vol,
+                'variacao_percentual': variacao,
+            })
+
+        pigmentos.sort(key=lambda x: x['volume_total_ml'], reverse=True)
+
+        return Response({
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+            'period_days': period_days,
+            'loja_id': loja_id,
+            'previous_period': {
+                'start_date': prev_start.isoformat(),
+                'end_date': prev_end.isoformat(),
+            },
+            'pigmentos': pigmentos,
+        })
+
+
+# ---------------------------------------------------------------------------
+# T013 – Quick Calculate (PDV)
+# ---------------------------------------------------------------------------
+
+class QuickFormulaCalculationView(APIView):
+    """Cálculo rápido de fórmula sem criar mistura — para uso no PDV."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        formula_id = request.data.get('formula_id')
+        volume = request.data.get('volume')
+        loja_id = request.data.get('loja_id')
+
+        # Validação de entrada
+        if not formula_id or not volume or not loja_id:
+            return Response(
+                {'error': 'Os campos formula_id, volume e loja_id são obrigatórios.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            volume_decimal = Decimal(str(volume))
+        except Exception:
+            return Response(
+                {'error': 'volume deve ser um número válido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if volume_decimal < Decimal('0.1'):
+            return Response(
+                {'error': 'Volume mínimo é 100ml (0.1L).'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            formula = FormulaTintometrica.objects.select_related('cor_definida').get(
+                id=formula_id,
+                ativa=True
+            )
+        except FormulaTintometrica.DoesNotExist:
+            return Response(
+                {'error': 'Fórmula não encontrada ou inativa.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        calculator = FormulaCalculatorService()
+        try:
+            result = calculator.calculate_mixture_quantities(
+                formula=formula,
+                target_volume=volume_decimal,
+                loja_id=int(loja_id),
+                validate_stock=True,
+            )
+        except ValueError as exc:
+            return Response(
+                {'error': str(exc)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(result, status=status.HTTP_200_OK)

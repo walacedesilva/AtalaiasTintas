@@ -1,0 +1,56 @@
+[
+  {
+    "model": "tintometry.lequecordefinida",
+    "pk": 201,
+    "fields": {
+      "codigo_cor": "RAL3000",
+      "nome_cor": "Vermelho Fogo",
+      "descricao": "Vermelho saturado estilo RAL 3000",
+      "familia_cor": "Vermelhos",
+      "linha_produto": "Standard",
+      "l_value": "38.000",
+      "a_value": "40.000",
+      "b_value": "26.000",
+      "r": 170,
+      "g": 35,
+      "b": 40,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.lequecordefinida",
+    "pk": 202,
+    "fields": {
+      "codigo_cor": "RAL5010",
+      "nome_cor": "Azul Genciana",
+      "descricao": "Azul intenso RAL 5010",
+      "familia_cor": "Azuis",
+      "linha_produto": "Standard",
+      "l_value": "25.000",
+      "a_value": "-5.000",
+      "b_value": "-35.000",
+      "r": 30,
+      "g": 60,
+      "b": 140,
+      "ativo": true
+    }
+  },
+  {
+    "model": "tintometry.lequecordefinida",
+    "pk": 203,
+    "fields": {
+      "codigo_cor": "RAL1021",
+      "nome_cor": "Amarelo Canário",
+      "descricao": "Amarelo brilhante RAL 1021",
+      "familia_cor": "Amarelos",
+      "linha_produto": "Premium",
+      "l_value": "78.000",
+      "a_value": "5.000",
+      "b_value": "75.000",
+      "r": 240,
+      "g": 200,
+      "b": 20,
+      "ativo": true
+    }
+  }
+]

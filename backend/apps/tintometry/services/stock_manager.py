@@ -410,7 +410,7 @@ class StockManagerService:
             Dict: Alertas de estoque baixo organizados
         """
         query = EstoquePigmento.objects.select_related('pigmento', 'loja').filter(
-            estoque_critico=True,
+            saldo_ml__lte=F('saldo_minimo'),
             ativo=True
         )
         

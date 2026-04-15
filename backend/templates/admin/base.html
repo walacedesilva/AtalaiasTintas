@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{# Atalaia Tintas - Admin base override
+   Preserva a posição de scroll do menu lateral (sidebar-wrapper)
+   entre navegações de página, usando sessionStorage.
+#}
+
+{% block extrajs %}
+{{ block.super }}
+<script>
+(function () {
+  var STORAGE_KEY = 'atalaia_admin_sidebar_scroll';
+
+  function getSidebarWrapper() {
+    return document.querySelector('.sidebar-wrapper');
+  }
+
+  // Restaura o scroll assim que o DOM estiver pronto
+  document.addEventListener('DOMContentLoaded', function () {
+    var wrapper = getSidebarWrapper();
+    if (!wrapper) return;
+
+    var saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved !== null) {
+      wrapper.scrollTop = parseInt(saved, 10);
+    }
+  });
+
+  // Salva o scroll imediatamente antes de sair da página
+  window.addEventListener('beforeunload', function () {
+    var wrapper = getSidebarWrapper();
+    if (!wrapper) return;
+    sessionStorage.setItem(STORAGE_KEY, wrapper.scrollTop);
+  });
+})();
+</script>
+{% endblock %}

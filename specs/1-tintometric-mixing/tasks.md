@@ -76,10 +76,10 @@
 
 ### CustomerHistory Endpoint
 
-- [ ] T006 [P] [US3] Criar `CustomerHistoryViewSet` em `apps/tintometry/views.py` com `get_queryset` filtrando por `cliente_id` e ação extra `search_by_phone` (query param `phone`) que retorna histórico das últimas 10 misturas por telefone
-- [ ] T007 [P] [US3] Criar `CustomerHistorySerializer` em `apps/tintometry/serializers.py` com campos: `codigo_mistura`, `cor`, `data_confirmacao`, `volume_produzido`, `observacoes_cliente`, `formula_id`
-- [ ] T008 [US3] Registrar `CustomerHistoryViewSet` no router em `apps/tintometry/urls.py` como `r'customer-history'` (depende de T006, T007)
-- [ ] T009 [P] [US3] Adicionar ação `reproduce_from_history` em `MisturaTintaViewSet` que recebe `mistura_id` e retorna o cálculo pré-preenchido com a fórmula original para nova mistura idêntica
+- [x] T006 [P] [US3] Criar `CustomerHistoryViewSet` em `apps/tintometry/views.py` com `get_queryset` filtrando por `cliente_id` e ação extra `search_by_phone` (query param `phone`) que retorna histórico das últimas 10 misturas por telefone
+- [x] T007 [P] [US3] Criar `CustomerHistorySerializer` em `apps/tintometry/serializers.py` com campos: `codigo_mistura`, `cor`, `data_confirmacao`, `volume_produzido`, `observacoes_cliente`, `formula_id`
+- [x] T008 [US3] Registrar `CustomerHistoryViewSet` no router em `apps/tintometry/urls.py` como `r'customer-history'` (depende de T006, T007)
+- [x] T009 [P] [US3] Adicionar ação `reproduce_from_history` em `MisturaTintaViewSet` que recebe `mistura_id` e retorna o cálculo pré-preenchido com a fórmula original para nova mistura idêntica
 
 **Checkpoint**: Funcionário consegue buscar cliente por telefone e reproduzir cor anterior
 
@@ -91,9 +91,9 @@
 
 ### Report Endpoints
 
-- [ ] T010 [P] [US2] Criar view `daily_production_report` (APIView) em `apps/tintometry/views.py` com query params `date`, `loja_id` retornando total de misturas, volume produzido, custo total e ranking dos 10 pigmentos mais utilizados no dia
-- [ ] T011 [P] [US2] Criar view `pigment_usage_report` (APIView) em `apps/tintometry/views.py` com query params `start_date`, `end_date`, `loja_id` retornando consumo por pigmento com totais e comparação com período anterior
-- [ ] T012 [US2] Adicionar URLs dos relatórios em `apps/tintometry/urls.py`: `path('reports/daily-production/', ...)` e `path('reports/pigment-usage/', ...)` (depende de T010, T011)
+- [x] T010 [P] [US2] Criar view `daily_production_report` (APIView) em `apps/tintometry/views.py` com query params `date`, `loja_id` retornando total de misturas, volume produzido, custo total e ranking dos 10 pigmentos mais utilizados no dia
+- [x] T011 [P] [US2] Criar view `pigment_usage_report` (APIView) em `apps/tintometry/views.py` com query params `start_date`, `end_date`, `loja_id` retornando consumo por pigmento com totais e comparação com período anterior
+- [x] T012 [US2] Adicionar URLs dos relatórios em `apps/tintometry/urls.py`: `path('reports/daily-production/', ...)` e `path('reports/pigment-usage/', ...)` (depende de T010, T011)
 
 ### Cancelamento de Mistura com Restauração de Estoque (GAP-1)
 
@@ -102,12 +102,12 @@
 
 ### Testes Formula CRUD (GAP-2)
 
-- [ ] T012c [P] [US1] Criar testes de `FormulaTintometricaViewSet` em `apps/tintometry/tests/test_views.py`: `test_create_formula_with_items`, `test_update_formula_proportions`, `test_calculate_mixture_action_on_formula`, `test_formula_inactive_excluded_from_list`
+- [x] T012c [P] [US1] Criar testes de `FormulaTintometricaViewSet` em `apps/tintometry/tests/test_views.py`: `test_create_formula_with_items`, `test_update_formula_proportions`, `test_calculate_mixture_action_on_formula`, `test_formula_inactive_excluded_from_list`
 
 ### Quick Calculate (PDV)
 
-- [ ] T013 [P] [US1] Criar view `quick_formula_calculation` (APIView) em `apps/tintometry/views.py` com POST body `{formula_id, volume, loja_id}` que retorna cálculo sem criar MisturaTinta — endpoint otimizado para uso no PDV com resposta < 1s
-- [ ] T014 [US1] Adicionar URL `path('quick-calculate/', ...)` em `apps/tintometry/urls.py` (depende de T013)
+- [x] T013 [P] [US1] Criar view `quick_formula_calculation` (APIView) em `apps/tintometry/views.py` com POST body `{formula_id, volume, loja_id}` que retorna cálculo sem criar MisturaTinta — endpoint otimizado para uso no PDV com resposta < 1s
+- [x] T014 [US1] Adicionar URL `path('quick-calculate/', ...)` em `apps/tintometry/urls.py` (depende de T013)
 
 **Checkpoint**: Relatórios acessíveis e endpoint quick-calculate funcional para PDV
 
@@ -119,23 +119,23 @@
 
 ### Estrutura de Testes
 
-- [ ] T015 [P] Criar estrutura de testes em `apps/tintometry/tests/` com `__init__.py`, `test_models.py`, `test_services.py`, `test_views.py`, `test_integrations.py` e diretório `fixtures/`
-- [ ] T016 [P] Criar fixtures em `apps/tintometry/tests/fixtures/`: `pigments.json` (5 pigmentos padrão com custo_ml e cor_hex), `formulas.json` (2 fórmulas com itens), `colors.json` (3 cores RAL com valores Lab)
+- [x] T015 [P] Criar estrutura de testes em `apps/tintometry/tests/` com `__init__.py`, `test_models.py`, `test_services.py`, `test_views.py`, `test_integrations.py` e diretório `fixtures/`
+- [x] T016 [P] Criar fixtures em `apps/tintometry/tests/fixtures/`: `pigments.json` (5 pigmentos padrão com custo_ml e cor_hex), `formulas.json` (2 fórmulas com itens), `colors.json` (3 cores RAL com valores Lab)
 
 ### Testes de Serviços
 
-- [ ] T017 [P] [US1] Criar testes de `FormulaCalculatorService` em `apps/tintometry/tests/test_services.py`:
+- [x] T017 [P] [US1] Criar testes de `FormulaCalculatorService` em `apps/tintometry/tests/test_services.py`:
   - `test_calculate_pigment_quantities_precision` — precisão de 0.1ml
   - `test_proportional_scaling_correctness` — escalonamento proporcional
   - `test_stock_availability_check_blocks_when_insufficient` — bloqueic por estoque
   - `test_calculate_returns_stock_alerts_when_short` — alertas retornados
   - `test_cost_breakdown_accuracy` — custo total correto
-- [ ] T018 [P] [US2] Criar testes de `StockManagerService` em `apps/tintometry/tests/test_services.py`:
+- [x] T018 [P] [US2] Criar testes de `StockManagerService` em `apps/tintometry/tests/test_services.py`:
   - `test_execute_stock_reduction_updates_saldo_ml` — baixa correta
   - `test_restock_alert_triggered_at_minimum` — alerta no mínimo
   - `test_no_negative_stock_without_override` — bloqueio de negativo
   - `test_concurrent_stock_reduction_consistency` — transação atômica
-- [ ] T019 [P] [US1,US2] Criar testes de `MixtureService` em `apps/tintometry/tests/test_services.py`:
+- [x] T019 [P] [US1,US2] Criar testes de `MixtureService` em `apps/tintometry/tests/test_services.py`:
   - `test_create_mixture_generates_unique_code` — código único
   - `test_confirm_mixture_changes_status` — status CONFIRMADA
   - `test_cancel_mixture_restores_stock` — estoque restaurado
@@ -143,7 +143,7 @@
 
 ### Testes de Models
 
-- [ ] T020 [P] [US1,US2] Criar testes em `apps/tintometry/tests/test_models.py`:
+- [x] T020 [P] [US1,US2] Criar testes em `apps/tintometry/tests/test_models.py`:
   - `test_mistura_codigo_uniqueness` — unicidade do código
   - `test_estoque_pigmento_unique_together` — unique_together pigmento+loja
   - `test_item_mistura_stock_before_after` — campos before/after
@@ -151,7 +151,7 @@
 
 ### Testes de Views/API
 
-- [ ] T021 [P] [US1] Criar testes de API em `apps/tintometry/tests/test_views.py`:
+- [x] T021 [P] [US1] Criar testes de API em `apps/tintometry/tests/test_views.py`:
   - `test_calculate_mixture_endpoint_returns_quantities` — endpoint calculate
   - `test_calculate_mixture_returns_409_when_stock_short` — conflito de estoque
   - `test_confirm_mixture_reduces_stock` — confirmação atualiza estoque
@@ -166,16 +166,16 @@
 
 **Objetivo**: Validar os 5 integration tests do spec end-to-end (IT-001 a IT-005)
 
-- [ ] T021a [P] [US2] IT-002b: Criar teste de cancelamento — mistura CONFIRMADA → cancel com motivo → estoque restaurado ao valor anterior para todos os pigmentos (depende de T012b, T020)
-- [ ] T022 [US1,US2] IT-001: Criar `tests/tintometry/test_integration_flow.py` — fluxo completo: seleção de cor → cálculo de fórmula → verificação de estoque → confirmação → baixa automática → registro no histórico (depende de T015-T021)
-- [ ] T023 [US3] IT-002: Criar teste — busca de cliente com histórico → seleção de cor anterior → reproduce_from_history → nova mistura idêntica (depende de T009, T022)
-- [ ] T024 [US1,US2] IT-003: Criar teste — múltiplas misturas simultâneas com `threading` → baixas paralelas → validação de consistência final de saldos (depende de T022)
-- [ ] T025 [US1] IT-004: Criar teste — esgotamento de pigmento → tentativa de nova mistura → bloqueio correto com alertas no response (depende de T022)
-- [ ] T026 [US2] IT-005: Criar teste — cadastro de nova fórmula via admin/API → primeira utilização → cálculo preciso → baixa correta de todos componentes (depende de T022)
-- [ ] T026a [P] [US4] IT-006: Criar teste para US4 end-to-end — `complete_mixture` → verificar que EtiquetaMistura é criada com `codigo_etiqueta` único → `generate_label` retorna dados completos (codigo, data, cliente, composição, QR code) (depende de T022)
-- [ ] T026b [P] [US1] Edge case: Criar teste `test_formula_not_found_for_color_returns_404` — cor sem fórmula cadastrada retorna erro apropriado ao tentar calcular
-- [ ] T026c [P] [US1] Edge case: Criar teste `test_minimum_volume_validation_rejects_below_100ml` — volume < MINIMUM_MIXTURE_VOLUME deve retornar 400 com mensagem clara
-- [ ] T026d [P] [US1,US2] Edge case: Criar teste `test_multistore_stock_isolation` — EstoquePigmento de loja A não é afetado por mistura da loja B usando o mesmo pigmento
+- [x] T021a [P] [US2] IT-002b: Criar teste de cancelamento — mistura CONFIRMADA → cancel com motivo → estoque restaurado ao valor anterior para todos os pigmentos (depende de T012b, T020)
+- [x] T022 [US1,US2] IT-001: Criar `tests/tintometry/test_integration_flow.py` — fluxo completo: seleção de cor → cálculo de fórmula → verificação de estoque → confirmação → baixa automática → registro no histórico (depende de T015-T021)
+- [x] T023 [US3] IT-002: Criar teste — busca de cliente com histórico → seleção de cor anterior → reproduce_from_history → nova mistura idêntica (depende de T009, T022)
+- [x] T024 [US1,US2] IT-003: Criar teste — múltiplas misturas simultâneas com `threading` → baixas paralelas → validação de consistência final de saldos (depende de T022)
+- [x] T025 [US1] IT-004: Criar teste — esgotamento de pigmento → tentativa de nova mistura → bloqueio correto com alertas no response (depende de T022)
+- [x] T026 [US2] IT-005: Criar teste — cadastro de nova fórmula via admin/API → primeira utilização → cálculo preciso → baixa correta de todos componentes (depende de T022)
+- [x] T026a [P] [US4] IT-006: Criar teste para US4 end-to-end — `complete_mixture` → verificar que EtiquetaMistura é criada com `codigo_etiqueta` único → `generate_label` retorna dados completos (codigo, data, cliente, composição, QR code) (depende de T022)
+- [x] T026b [P] [US1] Edge case: Criar teste `test_formula_not_found_for_color_returns_404` — cor sem fórmula cadastrada retorna erro apropriado ao tentar calcular
+- [x] T026c [P] [US1] Edge case: Criar teste `test_minimum_volume_validation_rejects_below_100ml` — volume < MINIMUM_MIXTURE_VOLUME deve retornar 400 com mensagem clara
+- [x] T026d [P] [US1,US2] Edge case: Criar teste `test_multistore_stock_isolation` — EstoquePigmento de loja A não é afetado por mistura da loja B usando o mesmo pigmento
 
 **Checkpoint**: Todos os integration tests do spec passando, incluindo US4 e edge cases
 
@@ -187,22 +187,22 @@
 
 ### Tipos e API Client
 
-- [ ] T027 [P] [US1] Criar types em `frontend/src/types/tintometry.ts`: `Pigmento`, `FormulaTintometrica`, `MisturaTinta`, `EstoquePigmento`, `CalculationResult`, `StockAlert`, `CustomerHistoryItem`
-- [ ] T028 [P] [US1] Criar API client em `frontend/src/api/tintometry.ts` com funções: `calculateFormula(formulaId, volume, lojaId)`, `quickCalculate(data)`, `confirmMixture(id)`, `getCustomerHistory(phone)`, `getLowStockAlerts(lojaId)`
+- [x] T027 [P] [US1] Criar types em `frontend/src/types/tintometry.ts`: `Pigmento`, `FormulaTintometrica`, `MisturaTinta`, `EstoquePigmento`, `CalculationResult`, `StockAlert`, `CustomerHistoryItem`
+- [x] T028 [P] [US1] Criar API client em `frontend/src/api/tintometry.ts` com funções: `calculateFormula(formulaId, volume, lojaId)`, `quickCalculate(data)`, `confirmMixture(id)`, `getCustomerHistory(phone)`, `getLowStockAlerts(lojaId)`
 
 ### Componentes
 
-- [ ] T029 [P] [US1] Criar `FormulaCalculator` component em `frontend/src/components/tintometry/FormulaCalculator.tsx` — seletor de cor, input de volume, botão calcular, exibição de lista de pigmentos com quantidades
-- [ ] T030 [P] [US1] Criar `StockAvailabilityBadge` component em `frontend/src/components/tintometry/StockAvailabilityBadge.tsx` — badge colorido (verde/amarelo/vermelho) para disponibilidade de cada pigmento
-- [ ] T031 [P] [US3] Criar `CustomerColorHistory` component em `frontend/src/components/tintometry/CustomerColorHistory.tsx` — busca por telefone, lista de cores anteriores, botão "reproduzir esta cor"
-- [ ] T032 [P] [US1] Criar `MixtureConfirmation` component em `frontend/src/components/tintometry/MixtureConfirmation.tsx` — resumo da mistura, custo total, botão confirmar produção
-- [ ] T033 [P] [US2] Criar `LowStockAlerts` component em `frontend/src/components/tintometry/LowStockAlerts.tsx` — lista de pigmentos abaixo do mínimo com percentual de estoque
+- [x] T029 [P] [US1] Criar `FormulaCalculator` component em `frontend/src/components/tintometry/FormulaCalculator.tsx` — seletor de cor, input de volume, botão calcular, exibição de lista de pigmentos com quantidades
+- [x] T030 [P] [US1] Criar `StockAvailabilityBadge` component em `frontend/src/components/tintometry/StockAvailabilityBadge.tsx` — badge colorido (verde/amarelo/vermelho) para disponibilidade de cada pigmento
+- [x] T031 [P] [US3] Criar `CustomerColorHistory` component em `frontend/src/components/tintometry/CustomerColorHistory.tsx` — busca por telefone, lista de cores anteriores, botão "reproduzir esta cor"
+- [x] T032 [P] [US1] Criar `MixtureConfirmation` component em `frontend/src/components/tintometry/MixtureConfirmation.tsx` — resumo da mistura, custo total, botão confirmar produção
+- [x] T033 [P] [US2] Criar `LowStockAlerts` component em `frontend/src/components/tintometry/LowStockAlerts.tsx` — lista de pigmentos abaixo do mínimo com percentual de estoque
 
 ### Páginas
 
-- [ ] T034 [US1,US3] Criar página `TintometryPage` em `frontend/src/pages/TintometryPage.tsx` integrando os 5 componentes acima no fluxo: busca cliente → seleção fórmula → cálculo → confirmação (depende de T027-T033)
-- [ ] T035 [US2] Criar página `PigmentStockPage` em `frontend/src/pages/PigmentStockPage.tsx` com gerenciamento de estoque de pigmentos, alertas e histórico de movimentações (depende de T027, T028)
-- [ ] T036 [US1,US2,US3,US4] Adicionar rotas em `frontend/src/App.tsx`: `/tintometry`, `/tintometry/stock` (depende de T034, T035)
+- [x] T034 [US1,US3] Criar página `TintometryPage` em `frontend/src/pages/TintometryPage.tsx` integrando os 5 componentes acima no fluxo: busca cliente → seleção fórmula → cálculo → confirmação (depende de T027-T033)
+- [x] T035 [US2] Criar página `PigmentStockPage` em `frontend/src/pages/PigmentStockPage.tsx` com gerenciamento de estoque de pigmentos, alertas e histórico de movimentações (depende de T027, T028)
+- [x] T036 [US1,US2,US3,US4] Adicionar rotas em `frontend/src/providers/RouterProvider.tsx`: `/tintometry`, `/tintometry/stock` (depende de T034, T035)
 
 **Checkpoint**: Interface React funcional para fluxo completo de mistura de tintas
 

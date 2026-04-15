@@ -180,6 +180,10 @@ class UserProfileView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def patch(self, request):
+        """Partial update user profile (alias for PUT with partial=True)"""
+        return self.put(request)
+
 
 class ChangePasswordView(APIView):
     """

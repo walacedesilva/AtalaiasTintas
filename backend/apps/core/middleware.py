@@ -17,6 +17,22 @@ from .models import UserSession, AuditLog
 logger = logging.getLogger(__name__)
 
 
+class PermissionsPolicyMiddleware:
+    """
+    Adds Permissions-Policy header to allow the 'unload' event.
+    Chrome 117+ blocks unload handlers by default (bfcache policy),
+    which breaks Django Admin popup windows (RelatedObjectLookups.js).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response['Permissions-Policy'] = 'unload=*'
+        return response
+
+
 class AuthenticationMiddleware(MiddlewareMixin):
     """
     Enhanced authentication middleware with session tracking

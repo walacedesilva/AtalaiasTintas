@@ -21,6 +21,19 @@ from apps.sales.models import Cliente, ItemPedidoVenda, PedidoVenda, Venda
 logger = logging.getLogger(__name__)
 
 
+def _recalcular_totais_pedido(pedido: PedidoVenda) -> None:
+    """Recompute subtotal, desconto and total from current items."""
+    from django.db.models import Sum
+    agg = pedido.itens.aggregate(
+        subtotal=Sum('preco_total'),
+        desconto=Sum('desconto_valor'),
+    )
+    pedido.valor_subtotal = agg['subtotal'] or Decimal('0.00')
+    pedido.valor_desconto = agg['desconto'] or Decimal('0.00')
+    pedido.valor_total = pedido.valor_subtotal - pedido.valor_desconto
+    pedido.save(update_fields=['valor_subtotal', 'valor_desconto', 'valor_total'])
+
+
 # ---------------------------------------------------------------------------
 # Serializers
 # ---------------------------------------------------------------------------
@@ -97,7 +110,16 @@ class ItemPedidoVendaSerializer(serializers.ModelSerializer):
             'unidade_venda', 'quantidade_base', 'fator_conversao_aplicado',
             'desconto_valor', 'desconto_percentual', 'observacoes', 'sequencia',
         ]
-        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado', 'preco_total']
+        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado']
+
+    def validate(self, attrs):
+        # Auto-compute preco_total if not provided
+        if 'preco_total' not in attrs:
+            qty = attrs.get('quantidade', Decimal('0'))
+            unit_price = attrs.get('preco_unitario', Decimal('0'))
+            desconto = attrs.get('desconto_valor', Decimal('0'))
+            attrs['preco_total'] = qty * unit_price - desconto
+        return attrs
 
 
 class PedidoVendaSerializer(serializers.ModelSerializer):
@@ -146,12 +168,86 @@ class PedidoVendaViewSet(ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
+        qs = (
             PedidoVenda.objects
             .select_related('loja', 'cliente', 'vendedor')
             .prefetch_related('itens')
             .order_by('-created_at')
         )
+        if situacao := self.request.query_params.get('situacao'):
+            qs = qs.filter(situacao=situacao)
+        if search := self.request.query_params.get('search'):
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(numero_pedido__icontains=search) |
+                Q(cliente__nome__icontains=search) |
+                Q(cliente__razao_social__icontains=search)
+            )
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        """Create a PedidoVenda; auto-sets vendedor and generates numero_pedido."""
+        import uuid as _uuid
+        data = request.data.copy()
+        data.setdefault('vendedor', request.user.pk)
+        data.setdefault('numero_pedido', f'PED-{_uuid.uuid4().hex[:8].upper()}')
+        data.setdefault('situacao', 'ORCAMENTO')
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=True, methods=['post'], url_path='add-item')
+    def add_item(self, request, pk=None):
+        """Add an item to a PedidoVenda (must be in ORCAMENTO or APROVADO)."""
+        pedido = self.get_object()
+        if pedido.situacao not in ('ORCAMENTO', 'APROVADO'):
+            return Response(
+                {'erro': f'Pedido na situação {pedido.situacao} não aceita novos itens'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        ser = ItemPedidoVendaSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        next_seq = pedido.itens.count() + 1
+        item = ser.save(pedido=pedido, sequencia=next_seq)
+
+        # Recalculate totals
+        _recalcular_totais_pedido(pedido)
+        pedido.refresh_from_db()
+        return Response(ItemPedidoVendaSerializer(item).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'], url_path=r'remove-item/(?P<item_pk>[0-9]+)')
+    def remove_item(self, request, pk=None, item_pk=None):
+        """Remove an item from a PedidoVenda."""
+        pedido = self.get_object()
+        if pedido.situacao not in ('ORCAMENTO', 'APROVADO'):
+            return Response(
+                {'erro': 'Pedido não pode ser alterado na situação atual'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        try:
+            item = pedido.itens.get(pk=item_pk)
+        except ItemPedidoVenda.DoesNotExist:
+            return Response({'erro': 'Item não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
+        _recalcular_totais_pedido(pedido)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='aprovar')
+    def aprovar(self, request, pk=None):
+        """Transition a PedidoVenda from ORCAMENTO → APROVADO."""
+        pedido = self.get_object()
+        if pedido.situacao != 'ORCAMENTO':
+            return Response(
+                {'erro': f'Apenas pedidos em ORCAMENTO podem ser aprovados (atual: {pedido.situacao})'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        from django.utils import timezone
+        pedido.situacao = 'APROVADO'
+        pedido.data_aprovacao = timezone.now()
+        pedido.save(update_fields=['situacao', 'data_aprovacao'])
+        return Response(self.get_serializer(pedido).data)
 
     # T058 — initiate checkout with stock reservation
     @action(detail=True, methods=['post'], url_path='iniciar-checkout')
