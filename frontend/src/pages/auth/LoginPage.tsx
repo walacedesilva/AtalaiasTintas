@@ -57,10 +57,10 @@ export default function LoginPage(): React.ReactElement {
         className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center bg-slate-900 px-12 py-16 relative overflow-hidden"
         aria-hidden="true"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(13,148,136,0.25)_0%,transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(13,148,136,0.15)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,115,234,0.25)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,115,234,0.15)_0%,transparent_60%)]" />
         <div className="relative z-10 text-center max-w-sm">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-600 shadow-xl mx-auto mb-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 shadow-xl mx-auto mb-8">
             <Paintbrush className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight mb-3">Atalaia Tintas</h1>
@@ -88,7 +88,7 @@ export default function LoginPage(): React.ReactElement {
       <div className="flex flex-1 flex-col items-center justify-center bg-slate-50 px-6 py-12 sm:px-12">
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600">
               <Paintbrush className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900">Atalaia Tintas</span>
@@ -97,7 +97,7 @@ export default function LoginPage(): React.ReactElement {
           <h2 className="text-2xl font-bold text-slate-900 mb-1">Bem-vindo de volta!</h2>
           <p className="text-sm text-slate-500 mb-8">Entre com suas credenciais para acessar o sistema.</p>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5" aria-label="Login">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Nome de usuário
@@ -146,7 +146,7 @@ export default function LoginPage(): React.ReactElement {
               <div className="flex justify-end mt-1.5">
                 <button
                   type="button"
-                  className="text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                  className="text-xs text-brand-600 hover:text-brand-700 font-medium transition-colors"
                   onClick={() => toast('Entre em contato com o administrador.', { icon: 'ℹ️' })}
                 >
                   Esqueceu sua senha?
@@ -168,7 +168,7 @@ export default function LoginPage(): React.ReactElement {
             Não tem uma conta?{' '}
             <button
               type="button"
-              className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
+              className="font-medium text-brand-600 hover:text-brand-700 transition-colors"
               onClick={() => toast('Solicite acesso ao administrador do sistema.', { icon: 'ℹ️' })}
             >
               Cadastre-se

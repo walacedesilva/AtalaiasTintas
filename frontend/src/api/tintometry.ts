@@ -29,12 +29,14 @@ export const tintometryAPI = {
   // Pigmentos (Pigments)
   pigmentos: {
     async list(filters?: SearchFilters): Promise<PaginatedResponse<Pigmento>> {
-      const params = {
-        search: filters?.query,
+      const params: Record<string, any> = {
         ordering: filters?.ordering || 'nome',
         page: filters?.page || 1,
-        page_size: filters?.page_size || 20
+        page_size: filters?.page_size || 50
       };
+      if (filters?.query) params.search = filters.query;
+      if (filters?.cor_base) params.cor_base = filters.cor_base;
+      if (filters?.include_inactive) params.include_inactive = '1';
       return apiClient.getData<PaginatedResponse<Pigmento>>('/tintometry/pigmentos/', params);
     },
 
@@ -62,13 +64,14 @@ export const tintometryAPI = {
   // Cores (Color Fan/Definitions)
   cores: {
     async list(filters?: SearchFilters): Promise<PaginatedResponse<LequeCorDefinida>> {
-      const params = {
-        search: filters?.query,
-        categoria: filters?.categoria,
-        ordering: filters?.ordering || 'nome',
+      const params: Record<string, unknown> = {
+        ordering: filters?.ordering || 'nome_cor',
         page: filters?.page || 1,
-        page_size: filters?.page_size || 20
+        page_size: filters?.page_size || 50
       };
+      if (filters?.query) params.search = filters.query;
+      if (filters?.categoria) params.familia_cor = filters.categoria;
+      if (filters?.include_inactive) params.include_inactive = '1';
       return apiClient.getData<PaginatedResponse<LequeCorDefinida>>('/tintometry/cores/', params);
     },
 
@@ -95,7 +98,7 @@ export const tintometryAPI = {
     },
 
     async getPopular(limit: number = 10): Promise<LequeCorDefinida[]> {
-      const params = { ordering: '-popularidade', page_size: limit };
+      const params = { ordering: 'nome_cor', page_size: limit };
       const response = await apiClient.getData<PaginatedResponse<LequeCorDefinida>>('/tintometry/cores/', params);
       return response.results;
     }
@@ -104,12 +107,13 @@ export const tintometryAPI = {
   // Formulas
   formulas: {
     async list(filters?: SearchFilters): Promise<PaginatedResponse<FormulaTintometrica>> {
-      const params = {
-        search: filters?.query,
-        ordering: filters?.ordering || 'nome',
+      const params: Record<string, unknown> = {
+        ordering: filters?.ordering || 'nome_formula',
         page: filters?.page || 1,
-        page_size: filters?.page_size || 20
+        page_size: filters?.page_size || 50
       };
+      if (filters?.query) params.search = filters.query;
+      if (filters?.include_inactive) params.include_inactive = '1';
       return apiClient.getData<PaginatedResponse<FormulaTintometrica>>('/tintometry/formulas/', params);
     },
 

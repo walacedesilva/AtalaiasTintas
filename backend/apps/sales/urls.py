@@ -1,9 +1,28 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from apps.sales.apis import (
+    ClienteViewSet,
+    NFeElegibilidadeAPIView,
+    NFeStatusAPIView,
+    MultiUnitPriceAPIView,
+    PedidoVendaViewSet,
+    RastreabilidadeAPIView,
+    StockAvailabilityAPIView,
+    VendaViewSet,
+)
+
 router = DefaultRouter()
+router.register(r'clientes', ClienteViewSet, basename='cliente')
+router.register(r'pedidos', PedidoVendaViewSet, basename='pedido')
+router.register(r'vendas', VendaViewSet, basename='venda')
+
 app_name = 'sales'
 
 urlpatterns = [
-    # Sales endpoints will be implemented in future user stories
+    path('estoque-disponivel/', StockAvailabilityAPIView.as_view(), name='estoque-disponivel'),
+    path('preco-multiunit/', MultiUnitPriceAPIView.as_view(), name='preco-multiunit'),
+    path('rastreabilidade/', RastreabilidadeAPIView.as_view(), name='rastreabilidade'),
+    path('vendas/<str:venda_id>/nfe-status/', NFeStatusAPIView.as_view(), name='nfe-status'),
+    path('vendas/<str:venda_id>/nfe-elegibilidade/', NFeElegibilidadeAPIView.as_view(), name='nfe-elegibilidade'),
 ] + router.urls

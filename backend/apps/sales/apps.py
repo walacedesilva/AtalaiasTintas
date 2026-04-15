@@ -5,3 +5,7 @@ class SalesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.sales'
     verbose_name = 'Gestão de Vendas'
+
+    def ready(self):
+        import apps.sales.signals  # noqa: F401
+

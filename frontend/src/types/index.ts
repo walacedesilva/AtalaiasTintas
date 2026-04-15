@@ -38,53 +38,112 @@ export interface LoginRequest {
 export interface Pigmento extends BaseModel {
   codigo: string;
   nome: string;
+  cor_base: string;
   densidade: string; // Decimal field as string
-  preco_litro: string; // Decimal field as string
-  cor_hex: string;
+  poder_tintorial: string; // Decimal field as string, 0-100 %
+  fornecedor: string;
+  codigo_fornecedor: string | null;
+  concentracao_maxima: string; // Decimal field as string, 0-100 %
+  r: number; // 0-255
+  g: number; // 0-255
+  b: number; // 0-255
+  cor_hex: string; // readonly: #rrggbb derived from r,g,b
   ativo: boolean;
-  observacoes?: string;
 }
 
 export interface LequeCorDefinida extends BaseModel {
-  codigo: string;
-  nome: string;
+  codigo_cor: string;
+  nome_cor: string;
   descricao?: string;
-  cor_rgb: string;
-  cor_hex: string;
-  formula_base?: FormulaTintometrica;
-  categoria: string;
-  popularidade: number;
+  familia_cor: string;
+  linha_produto: string;
+  l_value: string; // CIE Lab L* 0-100
+  a_value: string; // CIE Lab a* -128 to 127
+  b_value: string; // CIE Lab b* -128 to 127
+  r: number; // 0-255
+  g: number; // 0-255
+  b: number; // 0-255
+  cor_hex: string; // readonly: #rrggbb
+  amostra_cor?: string | null;
   ativo: boolean;
+  data_criacao: string;
+}
+
+export interface ItemFormula {
+  id: number;
+  pigmento: number; // FK id
+  pigmento_details?: Pigmento;
+  quantidade: string; // ml, Decimal as string
+  sequencia: number;
+  observacoes?: string | null;
 }
 
 export interface FormulaTintometrica extends BaseModel {
-  codigo: string;
-  nome: string;
-  base_tinta: string;
-  volume_litros: string; // Decimal field as string
-  densidade_final: string; // Decimal field as string
-  cor_resultante_hex: string;
-  observacoes?: string;
-  ativo: boolean;
-  componentes: ComponenteFormula[];
+  cor_definida: number; // FK id
+  cor_definida_details?: LequeCorDefinida;
+  base_produto: number; // FK id
+  codigo_formula: string;
+  nome_formula: string;
+  versao: string;
+  volume_base: string; // Decimal as string (litros)
+  instrucoes?: string | null;
+  tempo_mistura_minutos: number;
+  aprovada: boolean;
+  testada: boolean;
+  data_aprovacao?: string | null;
+  usuario_aprovacao?: number | null;
+  ativa: boolean;
+  itens: ItemFormula[];
+  total_pigmentos: number;
+  quantidade_total_pigmentos: number;
 }
 
-export interface ComponenteFormula {
-  pigmento: Pigmento;
-  quantidade_gramas: string; // Decimal field as string
-  percentual: string; // Decimal field as string
+export interface ItemMistura {
+  id: number;
+  pigmento: number; // FK id
+  pigmento_details?: Pigmento;
+  quantidade_calculada: string; // ml
+  quantidade_executada?: string | null;
+  custo_unitario?: string | null;
+  custo_total?: string | null;
+  lote_utilizado?: string | null;
+  estoque_antes?: string | null;
+  estoque_depois?: string | null;
+  sequencia: number;
+  variacao_percentual?: number;
+  quantidade_final?: string;
 }
 
 export interface MisturaTinta extends BaseModel {
-  formula: FormulaTintometrica;
-  quantidade_produzida: string; // Decimal field as string
-  data_mistura: string;
-  operador: User;
-  status: 'planejada' | 'em_preparacao' | 'concluida' | 'falhada';
-  observacoes?: string;
-  custo_total: string; // Decimal field as string
-  etiqueta_gerada?: EtiquetaMistura;
-  movimentos_estoque: MovimentoEstoque[];
+  codigo_mistura: string;
+  formula: number; // FK id
+  formula_details?: FormulaTintometrica;
+  loja: number; // FK id
+  usuario_operacao?: number | null;
+  cliente_nome: string;
+  cliente_documento?: string | null;
+  cliente_telefone?: string | null;
+  cliente_email?: string | null;
+  volume_solicitado: string; // Decimal as string (litros)
+  volume_produzido?: string | null;
+  custo_total?: string | null;
+  custo_base?: string | null;
+  custo_pigmentos?: string | null;
+  situacao: 'PENDENTE' | 'PRODUCAO' | 'CONCLUIDA' | 'CANCELADA';
+  data_confirmacao?: string | null;
+  data_producao?: string | null;
+  data_entrega?: string | null;
+  data_cancelamento?: string | null;
+  motivo_cancelamento?: string | null;
+  observacoes_cliente?: string | null;
+  observacoes_internas?: string | null;
+  cor_aprovada_cliente?: boolean;
+  data_aprovacao_cor?: string | null;
+  pedido_venda_id?: string | null;
+  itens: ItemMistura[];
+  etiqueta?: EtiquetaMistura | null;
+  fator_proporcao?: number;
+  economia?: number;
 }
 
 export interface EstoquePigmento extends BaseModel {
@@ -108,18 +167,17 @@ export interface MovimentoEstoque extends BaseModel {
 }
 
 export interface EtiquetaMistura extends BaseModel {
-  mistura: MisturaTinta;
-  codigo_barras: string;
-  qr_code: string;
-  cor_hex: string;
-  nome_cor: string;
-  volume_litros: string; // Decimal field as string
-  data_producao: string;
-  validade: string;
-  observacoes?: string;
-  template_usado?: string;
+  codigo_etiqueta: string;
+  qr_code_data?: string;
+  codigo_barras?: string;
   impressa: boolean;
-  data_impressao?: string;
+  data_impressao?: string | null;
+  usuario_impressao?: number | null;
+  reimpressoes: number;
+  historico_reimpressoes?: unknown;
+  titulo_personalizado?: string | null;
+  observacoes_etiqueta?: string | null;
+  dados_qr_formatados?: string;
 }
 
 // API request/response types
@@ -234,6 +292,8 @@ export interface UserPreferences {
 export interface SearchFilters {
   query?: string;
   categoria?: string;
+  cor_base?: string;
+  include_inactive?: boolean;
   status?: string;
   date_from?: string;
   date_to?: string;
@@ -337,4 +397,96 @@ export interface EntradaMercadoria {
   status: StatusEntrada;
   observacoes: string | null;
   itens: EntradaMercadoriaItem[];
+}
+
+// ─── Sales domain ─────────────────────────────────────────────────────────────
+export type TipoCliente = 'PF' | 'PJ';
+
+export interface Cliente {
+  id: number;
+  codigo_cliente: string;
+  tipo_cliente: TipoCliente;
+  nome: string;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  cnpj: string | null;
+  cpf: string | null;
+  nome_completo: string;
+  email: string | null;
+  telefone_principal: string | null;
+  celular: string | null;
+  ativo: boolean;
+  created_at: string;
+}
+
+export type SituacaoPedido =
+  | 'ORCAMENTO'
+  | 'APROVADO'
+  | 'PRODUCAO'
+  | 'PRONTO'
+  | 'ENTREGUE'
+  | 'CANCELADO';
+
+export type NfeSituacao =
+  | 'PENDENTE'
+  | 'EMITIDA'
+  | 'CANCELADA'
+  | 'REJEITADA'
+  | 'NAO_APLICAVEL';
+
+export interface ItemPedidoVenda {
+  id: number;
+  produto_variacao: number;
+  quantidade: string;
+  preco_unitario: string;
+  preco_total: string;
+  unidade_venda: number;
+  quantidade_base: string;
+  fator_conversao_aplicado: string | null;
+  desconto_valor: string;
+  desconto_percentual: string;
+  observacoes: string | null;
+  sequencia: number;
+}
+
+export interface PedidoVenda {
+  id: number;
+  numero_pedido: string;
+  loja: number;
+  cliente: number;
+  cliente_nome: string;
+  vendedor: number | null;
+  situacao: SituacaoPedido;
+  situacao_display: string;
+  data_pedido: string;
+  data_aprovacao: string | null;
+  data_entrega_prevista: string | null;
+  valor_subtotal: string;
+  valor_desconto: string;
+  valor_total: string;
+  forma_pagamento: string;
+  parcelas: number;
+  tipo_entrega: string;
+  itens: ItemPedidoVenda[];
+  observacoes: string | null;
+}
+
+export interface Venda {
+  id: string;
+  numero_venda: string;
+  loja: number;
+  cliente: number | null;
+  cliente_nome: string;
+  data_venda: string;
+  valor_total: string;
+  valor_desconto: string;
+  valor_liquido: string;
+  nfe_situacao: NfeSituacao;
+  nfe_situacao_display: string;
+  nfe_tipo_emissao: string;
+  nfe_protocolo: string | null;
+  nfe_chave_acesso: string | null;
+  cancelada: boolean;
+  motivo_cancelamento: string | null;
+  data_cancelamento: string | null;
 }

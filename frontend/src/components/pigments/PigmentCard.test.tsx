@@ -162,7 +162,7 @@ describe('PigmentCard', () => {
       </TestWrapper>
     );
 
-    const deleteButton = screen.getByRole('button', { name: /deletar/i });
+    const deleteButton = screen.getByRole('button', { name: /excluir/i });
     await user.click(deleteButton);
 
     expect(onDelete).toHaveBeenCalledWith(mockPigmento);
@@ -176,7 +176,7 @@ describe('PigmentCard', () => {
     );
 
     expect(screen.queryByRole('button', { name: /editar/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /deletar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /excluir/i })).not.toBeInTheDocument();
   });
 
   it('should be keyboard navigable', async () => {

@@ -26,6 +26,7 @@ python-decouple>=3.8
 # Scientific Computing (Tintometric calculations)
 numpy>=1.26.4
 scipy>=1.13.1
+colour-science>=0.4.2
 
 # File Processing
 xmltodict>=0.13.0

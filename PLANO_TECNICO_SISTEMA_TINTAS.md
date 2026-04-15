@@ -1,4 +1,79 @@
-# Plano Técnico: Sistema de Gestão de Loja de Tintas em Python
+cd backend
+python manage.py shell -c "
+from apps.fiscal.services import XmlNFeParser
+xml = open('scripts/nfe_teste_pigmentos.xml').read()
+data = XmlNFeParser().parse(xml)
+import pprint; pprint.pprint(data)
+"Page not found (404)
+Request Method:	POST
+Request URL:	http://127.0.0.1:8000/api/v1/sales/clientes/
+Using the URLconf defined in tintas_system.urls, Django tried these URL patterns, in this order:
+
+__debug__/
+admin/
+api/v1/ auth/login/ [name='login']
+api/v1/ auth/logout/ [name='logout']
+api/v1/ auth/profile/ [name='user_profile']
+api/v1/ auth/change-password/ [name='change_password']
+api/v1/ deployment/status/ [name='deployment_status']
+api/v1/ deployment/health/ [name='deployment_health']
+api/v1/ deployment/lock/ [name='deployment_lock']
+api/v1/ ^preferences/$ [name='user-preferences-list']
+api/v1/ ^preferences\.(?P<format>[a-z0-9]+)/?$ [name='user-preferences-list']
+api/v1/ ^preferences/(?P<pk>[^/.]+)/$ [name='user-preferences-detail']
+api/v1/ ^preferences/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$ [name='user-preferences-detail']
+api/v1/ ^users/$ [name='user-management-list']
+api/v1/ ^users\.(?P<format>[a-z0-9]+)/?$ [name='user-management-list']
+api/v1/ ^users/(?P<pk>[^/.]+)/$ [name='user-management-detail']
+api/v1/ ^users/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$ [name='user-management-detail']
+api/v1/ ^users/(?P<pk>[^/.]+)/reset_password/$ [name='user-management-reset-password']
+api/v1/ ^users/(?P<pk>[^/.]+)/reset_password\.(?P<format>[a-z0-9]+)/?$ [name='user-management-reset-password']
+api/v1/ ^config/$ [name='configuration-list']
+api/v1/ ^config\.(?P<format>[a-z0-9]+)/?$ [name='configuration-list']
+api/v1/ ^config/by_category/$ [name='configuration-by-category']
+api/v1/ ^config/by_category\.(?P<format>[a-z0-9]+)/?$ [name='configuration-by-category']
+api/v1/ ^config/categories/$ [name='configuration-categories']
+api/v1/ ^config/categories\.(?P<format>[a-z0-9]+)/?$ [name='configuration-categories']
+api/v1/ ^config/(?P<pk>[^/.]+)/$ [name='configuration-detail']
+api/v1/ ^config/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$ [name='configuration-detail']
+api/v1/ ^config/(?P<pk>[^/.]+)/reset_to_default/$ [name='configuration-reset-to-default']
+api/v1/ ^config/(?P<pk>[^/.]+)/reset_to_default\.(?P<format>[a-z0-9]+)/?$ [name='configuration-reset-to-default']
+api/v1/ [name='api-root']
+api/v1/ <drf_format_suffix:format> [name='api-root']
+api/v1/monitoring/
+api/v1/companies/
+api/v1/inventory/
+api/v1/sales/ estoque-disponivel/ [name='estoque-disponivel']
+api/v1/sales/ preco-multiunit/ [name='preco-multiunit']
+api/v1/sales/ rastreabilidade/ [name='rastreabilidade']
+api/v1/sales/ vendas/<str:venda_id>/nfe-status/ [name='nfe-status']
+api/v1/sales/ vendas/<str:venda_id>/nfe-elegibilidade/ [name='nfe-elegibilidade']
+api/v1/sales/ ^pedidos/$ [name='pedido-list']
+api/v1/sales/ ^pedidos\.(?P<format>[a-z0-9]+)/?$ [name='pedido-list']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/$ [name='pedido-detail']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$ [name='pedido-detail']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/finalizar/$ [name='pedido-finalizar']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/finalizar\.(?P<format>[a-z0-9]+)/?$ [name='pedido-finalizar']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/iniciar-checkout/$ [name='pedido-iniciar-checkout']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/iniciar-checkout\.(?P<format>[a-z0-9]+)/?$ [name='pedido-iniciar-checkout']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/iniciar-checkout-override/$ [name='pedido-iniciar-checkout-override']
+api/v1/sales/ ^pedidos/(?P<pk>[^/.]+)/iniciar-checkout-override\.(?P<format>[a-z0-9]+)/?$ [name='pedido-iniciar-checkout-override']
+api/v1/sales/ ^vendas/$ [name='venda-list']
+api/v1/sales/ ^vendas\.(?P<format>[a-z0-9]+)/?$ [name='venda-list']
+api/v1/sales/ ^vendas/(?P<pk>[^/.]+)/$ [name='venda-detail']
+api/v1/sales/ ^vendas/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$ [name='venda-detail']
+api/v1/sales/ ^vendas/(?P<pk>[^/.]+)/cancelar/$ [name='venda-cancelar']
+api/v1/sales/ ^vendas/(?P<pk>[^/.]+)/cancelar\.(?P<format>[a-z0-9]+)/?$ [name='venda-cancelar']
+api/v1/sales/ [name='api-root']
+api/v1/sales/ <drf_format_suffix:format> [name='api-root']
+api/v1/tintometry/
+api/v1/fiscal/
+api/v1/marketplaces/
+etiquetas/
+health/
+^static/(?P<path>.*)$
+^media/(?P<path>.*)$
+The current path, api/v1/sales/clientes/, didn’t match any of these.# Plano Técnico: Sistema de Gestão de Loja de Tintas em Python
 
 ## 📊 ANÁLISE DE VIABILIDADE EM PYTHON
 

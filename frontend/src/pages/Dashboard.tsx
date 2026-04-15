@@ -22,8 +22,8 @@ function StatCard({
 }) {
   return (
     <div className="card p-5 flex items-center gap-4">
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${danger && (value ?? 0) > 0 ? 'bg-rose-100' : 'bg-teal-50'}`}>
-        <Icon className={`h-5 w-5 ${danger && (value ?? 0) > 0 ? 'text-rose-600' : 'text-teal-600'}`} aria-hidden="true" />
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${danger && (value ?? 0) > 0 ? 'bg-rose-100' : 'bg-brand-50'}`}>
+        <Icon className={`h-5 w-5 ${danger && (value ?? 0) > 0 ? 'text-rose-600' : 'text-brand-600'}`} aria-hidden="true" />
       </div>
       <div>
         <p className={`text-2xl font-bold leading-none ${danger && (value ?? 0) > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
@@ -110,7 +110,7 @@ export default function Dashboard(): React.ReactElement {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-900">Alertas de Estoque</h2>
-            <Link to="/inventory" className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors flex items-center gap-1">
+            <Link to="/inventory" className="text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors flex items-center gap-1">
               Ver todos <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
@@ -153,7 +153,7 @@ export default function Dashboard(): React.ReactElement {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-900">Cores Populares</h2>
-            <Link to="/colors" className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors flex items-center gap-1">
+            <Link to="/colors" className="text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors flex items-center gap-1">
               Ver catálogo <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>

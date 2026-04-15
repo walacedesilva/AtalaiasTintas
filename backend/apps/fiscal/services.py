@@ -395,61 +395,473 @@ class EntradaMercadoriaService:
 
 
 # ---------------------------------------------------------------------------
-# NFEService — T012 (skeleton; full implementation in Phase 3)
+# NFEService — T012 skeleton + T041-T044 full implementation
 # ---------------------------------------------------------------------------
 
 class NFEService:
-    """Business rules for NF-e emission automation.
+    """Business rules and orchestration for NF-e emission automation.
 
-    Phase 2 provides the skeleton; full SEFAZ integration is implemented in
-    Phase 3 (T041-T046).
+    T041 — deve_emitir_nfe_automatica
+    T042 — processar_nfe_venda
+    T043 — gerar_xml_nfe
+    T044 — enviar_sefaz
     """
+
+    # Max automatic retry attempts before flagging for manual review
+    MAX_TENTATIVAS_AUTO: int = 3
+
+    # ------------------------------------------------------------------
+    # T041 — Business rule: should NF-e be emitted automatically?
+    # ------------------------------------------------------------------
 
     @staticmethod
     def deve_emitir_nfe_automatica(venda) -> bool:
         """Return True if NF-e should be emitted automatically for this sale.
 
         Rules (from spec clarification):
-        - B2B (customer has CNPJ) → True
-        - B2C (customer has CPF only) → False
+        - B2B (customer has CNPJ) → True (automatic)
+        - B2C (customer has CPF only) → False (manual, optional)
         - No customer data → False
         """
         if not hasattr(venda, 'cliente') or venda.cliente is None:
             return False
-
-        cliente = venda.cliente
-        cnpj = getattr(cliente, 'cnpj', None)
+        cnpj = getattr(venda.cliente, 'cnpj', None)
         return bool(cnpj and cnpj.strip())
 
+    # ------------------------------------------------------------------
+    # T042 — Orchestrate NF-e processing for a completed sale
+    # ------------------------------------------------------------------
+
     @staticmethod
-    def processar_nfe_venda(venda_id: str, usuario):
+    def processar_nfe_venda(venda_id: str, usuario) -> None:
         """Trigger NF-e processing for a completed sale.
 
-        In Phase 2, this is a stub that logs the intent and queues an async task.
-        Full XML generation and SEFAZ transmission are implemented in Phase 3.
+        Creates / updates the NotaFiscal record and queues the async Celery
+        task ``processar_nfe_async``.  Idempotent: calling again while a task
+        is already running has no effect.
         """
-        logger.info(
-            "NFE processamento agendado: venda=%s usuario=%s "
-            "(implementação completa na Fase 3)",
-            venda_id, getattr(usuario, 'username', usuario),
+        from apps.fiscal.models import NotaFiscal, ConfiguracaoFiscal
+        from apps.sales.models import Venda
+        from django.db import transaction
+
+        try:
+            venda = Venda.objects.select_related('cliente', 'loja', 'loja__empresa').get(pk=venda_id)
+        except Venda.DoesNotExist:
+            logger.error("processar_nfe_venda: Venda %s não encontrada", venda_id)
+            return
+
+        if not NFEService.deve_emitir_nfe_automatica(venda):
+            logger.info("Venda %s não requer NF-e automática (B2C ou sem cliente)", venda_id)
+            _update_venda_nfe(venda, situacao='NAO_APLICAVEL', tipo_emissao='NAO_EMITIR')
+            return
+
+        # Mark as pending before queuing
+        _update_venda_nfe(venda, situacao='PENDENTE', tipo_emissao='AUTOMATICA_B2B')
+
+        # Queue async processing (avoids blocking the HTTP response)
+        try:
+            from apps.fiscal.tasks import processar_nfe_async
+            processar_nfe_async.delay(str(venda_id), getattr(usuario, 'pk', None))
+            logger.info("NF-e agendada para venda %s (usuário=%s)", venda_id, getattr(usuario, 'username', usuario))
+        except Exception as exc:
+            logger.error("Falha ao agendar NF-e para venda %s: %s", venda_id, exc)
+
+    # ------------------------------------------------------------------
+    # T043 — Generate NF-e XML from Venda data
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def gerar_xml_nfe(venda_id: str) -> str:
+        """Build a NF-e 4.00 XML string from the given Venda.
+
+        The XML is NOT signed here — signing requires the A1 certificate and
+        is done inside ``enviar_sefaz``.
+
+        Returns the unsigned XML string (``<NFe>...</NFe>``).
+        Raises ``ValueError`` if required data is missing.
+        """
+        from apps.sales.models import Venda, ItemPedidoVenda
+        from apps.fiscal.models import ConfiguracaoFiscal
+        from apps.fiscal.sefaz.validators import validar_dados_nfe, SefazSchemaError
+
+        venda = (
+            Venda.objects
+            .select_related('cliente', 'loja', 'loja__empresa', 'pedido_origem')
+            .get(pk=venda_id)
+        )
+
+        itens_pedido = ItemPedidoVenda.objects.filter(
+            pedido=venda.pedido_origem
+        ).select_related('produto_variacao', 'produto_variacao__produto')
+
+        if not itens_pedido.exists():
+            raise ValueError(f"Venda {venda_id} não possui itens")
+
+        config = ConfiguracaoFiscal.objects.filter(
+            empresa=venda.loja.empresa, nfe_ativo=True
+        ).first()
+        if config is None:
+            raise ValueError(
+                f"ConfiguracaoFiscal não encontrada para empresa {venda.loja.empresa_id}"
+            )
+
+        xml = _NFeXmlBuilder(venda, itens_pedido, config).build()
+
+        # Pre-flight validation
+        from apps.fiscal.sefaz.validators import validar_dados_nfe
+        erros = validar_dados_nfe(_extract_nfe_data_for_validation(venda, itens_pedido))
+        if erros:
+            raise ValueError("Dados NF-e inválidos: " + "; ".join(erros))
+
+        return xml
+
+    # ------------------------------------------------------------------
+    # T044 — Submit signed XML to SEFAZ and update record
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def enviar_sefaz(nota_fiscal_id: str) -> dict:
+        """Send a NotaFiscal to SEFAZ and update its record.
+
+        Returns the SEFAZ response dict from ``SefazClient.autorizar_nfe``.
+        On ``SefazRejeicaoError`` or other errors the NotaFiscal is updated
+        accordingly and the exception is re-raised for the caller to handle.
+        """
+        from apps.fiscal.models import NotaFiscal, LogEventosFiscais
+        from apps.fiscal.sefaz.client import criar_sefaz_client
+        from apps.fiscal.sefaz.exceptions import SefazError, SefazRejeicaoError
+        from django.db import transaction
+        from django.utils import timezone as tz
+
+        with transaction.atomic():
+            nota = NotaFiscal.objects.select_for_update().get(pk=nota_fiscal_id)
+            nota.situacao = 'ENVIADA'
+            nota.data_envio = tz.now()
+            nota.save(update_fields=['situacao', 'data_envio', 'updated_at'])
+
+        client = criar_sefaz_client()
+
+        try:
+            resultado = client.autorizar_nfe(nota.xml_envio or "")
+        except SefazError as exc:
+            with transaction.atomic():
+                nota = NotaFiscal.objects.select_for_update().get(pk=nota_fiscal_id)
+                nota.situacao = 'REJEITADA' if isinstance(exc, SefazRejeicaoError) else 'RASCUNHO'
+                nota.save(update_fields=['situacao', 'updated_at'])
+                LogEventosFiscais.objects.create(
+                    nota_fiscal=nota,
+                    tipo_evento='ERRO_TRANSMISSAO',
+                    descricao=str(exc),
+                    codigo_retorno=getattr(exc, 'codigo', ''),
+                    mensagem_retorno=getattr(exc, 'motivo', str(exc)),
+                    xml_envio=nota.xml_envio,
+                )
+            raise
+
+        with transaction.atomic():
+            nota = NotaFiscal.objects.select_for_update().get(pk=nota_fiscal_id)
+            nota.situacao = resultado.get('status', 'AUTORIZADA')
+            nota.protocolo_autorizacao = resultado.get('numero_protocolo', '')
+            nota.chave_acesso = resultado.get('chave_acesso') or nota.chave_acesso
+            nota.data_autorizacao = tz.now() if resultado.get('status') == 'AUTORIZADA' else None
+            nota.xml_retorno = resultado.get('xml_retorno', '')
+            nota.save(update_fields=[
+                'situacao', 'protocolo_autorizacao', 'chave_acesso',
+                'data_autorizacao', 'xml_retorno', 'updated_at',
+            ])
+            LogEventosFiscais.objects.create(
+                nota_fiscal=nota,
+                tipo_evento='EMISSAO',
+                descricao=f"Autorização SEFAZ: {resultado.get('motivo_status')}",
+                codigo_retorno=resultado.get('codigo_status', ''),
+                mensagem_retorno=resultado.get('motivo_status', ''),
+                xml_envio=nota.xml_envio,
+                xml_retorno=resultado.get('xml_retorno', ''),
+            )
+
+            # Propagate protocol to Venda
+            if nota.situacao == 'AUTORIZADA' and nota.venda_id:
+                nota.venda.__class__.objects.filter(pk=nota.venda_id).update(
+                    nfe_situacao='AUTORIZADA',
+                    nfe_protocolo=nota.protocolo_autorizacao,
+                    nfe_chave_acesso=nota.chave_acesso,
+                    nfe_erro=None,
+                )
+
+        return resultado
+
+    # ------------------------------------------------------------------
+    # Helper — retry manual
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def marcar_para_retry_manual(venda_id: str, motivo: str = "") -> None:
+        """Flag a sale's NF-e as requiring manual retry."""
+        from apps.sales.models import Venda
+        Venda.objects.filter(pk=venda_id).update(
+            nfe_situacao='AGUARDANDO_RETRY',
+            nfe_requer_retry_manual=True,
+            nfe_erro=motivo or "Máximo de tentativas automáticas atingido",
         )
 
 
 # ---------------------------------------------------------------------------
-# SefazClient — T013 (stub; full implementation in Phase 3)
+# SefazClient — kept as thin facade for backwards compat (full impl in sefaz/)
 # ---------------------------------------------------------------------------
 
 class SefazClient:
-    """Stub SEFAZ client. Full implementation in Phase 3 (T035-T040)."""
+    """Thin facade re-exporting the full client from ``apps.fiscal.sefaz``."""
+
+    def __init__(self):
+        from apps.fiscal.sefaz.client import criar_sefaz_client
+        self._client = criar_sefaz_client()
 
     def autorizar_nfe(self, xml_assinado: str) -> dict:
-        raise NotImplementedError("SefazClient será implementado na Fase 3")
+        return self._client.autorizar_nfe(xml_assinado)
 
     def consultar_situacao(self, chave_acesso: str) -> dict:
-        raise NotImplementedError("SefazClient será implementado na Fase 3")
+        return self._client.consultar_situacao(chave_acesso)
 
-    def cancelar_nfe(self, chave_acesso: str, justificativa: str) -> dict:
-        raise NotImplementedError("SefazClient será implementado na Fase 3")
+    def cancelar_nfe(self, chave_acesso: str, justificativa: str, numero_protocolo: str = "") -> dict:
+        return self._client.cancelar_nfe(chave_acesso, justificativa, numero_protocolo)
+
+
+# ---------------------------------------------------------------------------
+# _NFeXmlBuilder — T043 internal helper (T045 — XML generation)
+# ---------------------------------------------------------------------------
+
+class _NFeXmlBuilder:
+    """Builds an unsigned NF-e 4.00 XML from sale data."""
+
+    _NFE_NS = 'http://www.portalfiscal.inf.br/nfe'
+
+    def __init__(self, venda, itens, config):
+        self._venda = venda
+        self._itens = list(itens)
+        self._config = config
+
+    def build(self) -> str:
+        from decouple import config as env
+        from django.utils import timezone as tz
+
+        venda = self._venda
+        cliente = venda.cliente
+        empresa = venda.loja.empresa
+        loja = venda.loja
+        now = tz.now()
+
+        # Derive sequential NF-e number — increment stored counter
+        self._config.nfe_numero_atual += 1
+        self._config.save(update_fields=['nfe_numero_atual'])
+        num_nfe = str(self._config.nfe_numero_atual).zfill(9)
+        serie = str(self._config.nfe_serie).zfill(3)
+        tp_amb = "1" if self._config.nfe_ambiente == 'PRODUCAO' else "2"
+        cnpj_emit = re.sub(r'\D', '', empresa.cnpj or '')
+        uf_ibge = env('NFE_UF_IBGE', default='35')
+
+        # Content
+        itens_xml = "".join(self._item_xml(i + 1, item) for i, item in enumerate(self._itens))
+        valor_total = sum(
+            (item.preco_total or Decimal('0')) for item in self._itens
+        )
+        valor_desconto = Decimal(str(venda.valor_desconto or '0'))
+        valor_liquido = valor_total - valor_desconto
+
+        dest_xml = self._dest_xml(cliente)
+        dhEmis = now.strftime('%Y-%m-%dT%H:%M:%S') + '-03:00'
+
+        xml = (
+            f'<NFe xmlns="{self._NFE_NS}">'
+            f'<infNFe versao="4.00" Id="NFe{cnpj_emit}000000000000000000000000000000000000000000">'
+            # Identificação
+            "<ide>"
+            f"<cUF>{uf_ibge}</cUF>"
+            f"<cNF>00000001</cNF>"
+            "<natOp>VENDA DE PRODUTO</natOp>"
+            "<mod>55</mod>"
+            f"<serie>{self._config.nfe_serie}</serie>"
+            f"<nNF>{num_nfe}</nNF>"
+            f"<dhEmi>{dhEmis}</dhEmi>"
+            "<tpNF>1</tpNF>"
+            "<idDest>1</idDest>"
+            f"<cMunFG>{loja.codigo_municipio_ibge or '0000000'}</cMunFG>"
+            "<tpImp>1</tpImp>"
+            f"<tpEmis>1</tpEmis>"
+            "<cDV>0</cDV>"
+            f"<tpAmb>{tp_amb}</tpAmb>"
+            "<finNFe>1</finNFe>"
+            "<indFinal>1</indFinal>"
+            "<indPres>1</indPres>"
+            "<procEmi>0</procEmi>"
+            "<verProc>1.0</verProc>"
+            "</ide>"
+            # Emitente
+            f"<emit>"
+            f"<CNPJ>{cnpj_emit}</CNPJ>"
+            f"<xNome>{_esc(empresa.razao_social)}</xNome>"
+            f"<xFant>{_esc(empresa.nome_fantasia or empresa.razao_social)}</xFant>"
+            "<enderEmit>"
+            f"<xLgr>{_esc(empresa.endereco or '')}</xLgr>"
+            f"<nro>{_esc(empresa.numero or 'SN')}</nro>"
+            f"<xBairro>{_esc(empresa.bairro or '')}</xBairro>"
+            f"<cMun>0000000</cMun>"
+            f"<xMun>{_esc(empresa.cidade or '')}</xMun>"
+            f"<UF>{empresa.uf or 'SP'}</UF>"
+            f"<CEP>{re.sub(chr(92) + 'D', '', empresa.cep or '00000000')}</CEP>"
+            "<cPais>1058</cPais>"
+            "<xPais>Brasil</xPais>"
+            "</enderEmit>"
+            f"<IE>{re.sub(chr(92) + 'D', '', empresa.inscricao_estadual or 'ISENTO')}</IE>"
+            "<CRT>1</CRT>"
+            "</emit>"
+            # Destinatário
+            + dest_xml
+            # Itens
+            + itens_xml
+            # Totais
+            + f"<total><ICMSTot>"
+            f"<vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson>"
+            f"<vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST>"
+            f"<vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet>"
+            f"<vProd>{valor_total:.2f}</vProd>"
+            "<vFrete>0.00</vFrete><vSeg>0.00</vSeg>"
+            f"<vDesc>{valor_desconto:.2f}</vDesc>"
+            "<vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol>"
+            "<vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS>"
+            "<vOutro>0.00</vOutro>"
+            f"<vNF>{valor_liquido:.2f}</vNF>"
+            "</ICMSTot></total>"
+            # Transporte
+            "<transp><modFrete>9</modFrete></transp>"
+            # Pagamento
+            + self._pag_xml(valor_liquido)
+            + "</infNFe></NFe>"
+        )
+        return xml
+
+    def _dest_xml(self, cliente) -> str:
+        if cliente is None:
+            return "<dest><CPF>00000000000</CPF><xNome>CONSUMIDOR</xNome><indIEDest>9</indIEDest></dest>"
+
+        doc_tag = ""
+        if cliente.cnpj:
+            cnpj = re.sub(r'\D', '', cliente.cnpj)
+            doc_tag = f"<CNPJ>{cnpj}</CNPJ>"
+        elif cliente.cpf:
+            cpf = re.sub(r'\D', '', cliente.cpf)
+            doc_tag = f"<CPF>{cpf}</CPF>"
+
+        nome = _esc(cliente.razao_social or cliente.nome or 'CONSUMIDOR')
+        return (
+            f"<dest>{doc_tag}"
+            f"<xNome>{nome}</xNome>"
+            "<indIEDest>9</indIEDest>"
+            "</dest>"
+        )
+
+    def _item_xml(self, seq: int, item) -> str:
+        pv = item.produto_variacao
+        produto = pv.produto if hasattr(pv, 'produto') else pv
+        ncm = re.sub(r'\D', '', getattr(produto, 'ncm', '') or '00000000').ljust(8, '0')[:8]
+        cfop = '5102'  # default: sale within state
+        descricao = _esc(getattr(produto, 'nome', str(produto)))
+        unidade = 'UN'
+        qtde = item.quantidade or Decimal('1')
+        vunit = item.preco_unitario or Decimal('0')
+        vtotal = item.preco_total or (qtde * vunit)
+
+        return (
+            f"<det nItem=\"{seq}\">"
+            "<prod>"
+            f"<cProd>{_esc(str(getattr(pv, 'codigo', seq)))}</cProd>"
+            "<cEAN>SEM GTIN</cEAN>"
+            f"<xProd>{descricao}</xProd>"
+            f"<NCM>{ncm}</NCM>"
+            f"<CFOP>{cfop}</CFOP>"
+            f"<uCom>{unidade}</uCom>"
+            f"<qCom>{qtde:.4f}</qCom>"
+            f"<vUnCom>{vunit:.10f}</vUnCom>"
+            f"<vProd>{vtotal:.2f}</vProd>"
+            "<cEANTrib>SEM GTIN</cEANTrib>"
+            f"<uTrib>{unidade}</uTrib>"
+            f"<qTrib>{qtde:.4f}</qTrib>"
+            f"<vUnTrib>{vunit:.10f}</vUnTrib>"
+            "<indTot>1</indTot>"
+            "</prod>"
+            "<imposto>"
+            "<ICMS><ICMS40><orig>0</orig><CST>40</CST></ICMS40></ICMS>"
+            "<PIS><PISAliq><CST>01</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISAliq></PIS>"
+            "<COFINS><COFINSAliq><CST>01</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSAliq></COFINS>"
+            "</imposto>"
+            "</det>"
+        )
+
+    def _pag_xml(self, valor: Decimal) -> str:
+        return (
+            "<pag>"
+            "<detPag>"
+            "<tPag>01</tPag>"
+            f"<vPag>{valor:.2f}</vPag>"
+            "</detPag>"
+            "</pag>"
+        )
+
+
+def _update_venda_nfe(venda, situacao: str, tipo_emissao: str | None = None, erro: str | None = None) -> None:
+    """Update NF-e fields on a Venda instance atomically."""
+    from apps.sales.models import Venda
+    update = {'nfe_situacao': situacao}
+    if tipo_emissao is not None:
+        update['nfe_tipo_emissao'] = tipo_emissao
+    if erro is not None:
+        update['nfe_erro'] = erro
+    Venda.objects.filter(pk=venda.pk).update(**update)
+
+
+def _extract_nfe_data_for_validation(venda, itens) -> dict:
+    """Build the minimal dict expected by ``validar_dados_nfe``."""
+    empresa = venda.loja.empresa
+    cliente = venda.cliente
+    return {
+        'emitente': {
+            'cnpj': getattr(empresa, 'cnpj', ''),
+            'nome': getattr(empresa, 'razao_social', ''),
+            'uf': getattr(empresa, 'uf', ''),
+        },
+        'destinatario': {
+            'cnpj': getattr(cliente, 'cnpj', None),
+            'cpf': getattr(cliente, 'cpf', None),
+        } if cliente else {},
+        'itens': [
+            {
+                'descricao': getattr(
+                    getattr(i.produto_variacao, 'produto', i.produto_variacao),
+                    'nome', str(i.produto_variacao)
+                ),
+                'ncm': getattr(
+                    getattr(i.produto_variacao, 'produto', i.produto_variacao),
+                    'ncm', '00000000'
+                ) or '00000000',
+                'cfop': '5102',
+                'quantidade': i.quantidade,
+                'valor_unitario': i.preco_unitario,
+            }
+            for i in itens
+        ],
+        'totais': {'valor_total': str(venda.valor_total or '0')},
+    }
+
+
+def _esc(text: str) -> str:
+    """Escape XML special characters."""
+    return (
+        str(text)
+        .replace('&', '&amp;')
+        .replace('<', '&lt;')
+        .replace('>', '&gt;')
+        .replace('"', '&quot;')
+        .replace("'", '&apos;')
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,6 @@
+{
+  "description": "SEFAZ NF-e authorization success (cStat=100)",
+  "url_pattern": "NFeAutorizacao",
+  "http_status": 200,
+  "response_body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\"><soap:Body><nfeResultMsg xmlns=\"http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4\"><retEnviNFe versao=\"4.00\" xmlns=\"http://www.portalfiscal.inf.br/nfe\"><tpAmb>2</tpAmb><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo><dhRecbto>2026-04-10T14:30:01-03:00</dhRecbto><protNFe versao=\"4.00\"><infProt><chNFe>35260410000000000000550010000000011000000019</chNFe><dhRecbto>2026-04-10T14:30:01-03:00</dhRecbto><nProt>135260410000000001</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe></retEnviNFe></nfeResultMsg></soap:Body></soap:Envelope>"
+}

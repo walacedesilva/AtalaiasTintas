@@ -172,6 +172,24 @@ class ItemPedidoVenda(TimeStampedModel):
     quantidade = models.DecimalField(max_digits=10, decimal_places=2)
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     preco_total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # Multi-unit fields (T057)
+    unidade_venda = models.ForeignKey(
+        'inventory.UnidadeMedida',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='itens_pedido',
+        help_text="Unidade em que a quantidade foi solicitada (lata, litro, ml, etc.)",
+    )
+    quantidade_base = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True,
+        help_text="Quantidade convertida para unidade base do produto",
+    )
+    fator_conversao_aplicado = models.DecimalField(
+        max_digits=10, decimal_places=6, null=True, blank=True,
+        help_text="Fator de conversão usado no momento da venda",
+    )
     
     # Desconto específico do item
     desconto_valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -232,7 +250,36 @@ class Venda(TimeStampedModel):
     numero_nfce = models.CharField(max_length=20, null=True, blank=True)
     chave_nfce = models.CharField(max_length=44, null=True, blank=True)
     xml_nfce = models.TextField(null=True, blank=True)
-    
+
+    # NF-e automation fields (T056)
+    NFE_SITUACOES = [
+        ('NAO_APLICAVEL', 'Não Aplicável'),
+        ('PENDENTE', 'Pendente'),
+        ('PROCESSANDO', 'Processando'),
+        ('AUTORIZADA', 'Autorizada'),
+        ('REJEITADA', 'Rejeitada'),
+        ('CANCELADA', 'Cancelada'),
+        ('ERRO_TECNICO', 'Erro Técnico'),
+        ('AGUARDANDO_RETRY', 'Aguardando Retry Manual'),
+    ]
+    NFE_TIPOS_EMISSAO = [
+        ('AUTOMATICA_B2B', 'Automática B2B'),
+        ('MANUAL_B2C', 'Manual B2C'),
+        ('NAO_EMITIR', 'Não Emitir'),
+    ]
+    nfe_situacao = models.CharField(
+        max_length=20, choices=NFE_SITUACOES, default='NAO_APLICAVEL'
+    )
+    nfe_tipo_emissao = models.CharField(
+        max_length=15, choices=NFE_TIPOS_EMISSAO, null=True, blank=True
+    )
+    nfe_tentativas = models.IntegerField(default=0)
+    nfe_ultima_tentativa = models.DateTimeField(null=True, blank=True)
+    nfe_erro = models.TextField(null=True, blank=True)
+    nfe_requer_retry_manual = models.BooleanField(default=False)
+    nfe_protocolo = models.CharField(max_length=20, null=True, blank=True)
+    nfe_chave_acesso = models.CharField(max_length=44, null=True, blank=True)
+
     # Comissão
     percentual_comissao = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     valor_comissao = models.DecimalField(max_digits=10, decimal_places=2, default=0)

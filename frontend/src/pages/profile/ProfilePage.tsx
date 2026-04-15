@@ -20,7 +20,7 @@ export default function ProfilePage(): React.ReactElement {
       {/* Profile card */}
       <div className="card overflow-hidden">
         {/* Cover */}
-        <div className="h-24 bg-gradient-to-br from-teal-600 to-teal-800" />
+        <div className="h-24 bg-gradient-to-br from-brand-600 to-brand-900" />
         <div className="px-6 pb-6">
           <div className="-mt-10 mb-4 flex items-end justify-between">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-900 border-4 border-white text-2xl font-bold text-white shadow-md">

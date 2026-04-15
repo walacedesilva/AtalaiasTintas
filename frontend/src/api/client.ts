@@ -105,11 +105,21 @@ class APIClient {
     }
 
     const data = response.data as any;
-    
+
+    // DRF field-level validation errors: { fieldName: ['msg', ...] }
+    // These don't have a top-level 'detail' or 'errors' key
+    const isFieldErrors =
+      data &&
+      typeof data === 'object' &&
+      !data.detail &&
+      !data.message &&
+      !data.errors &&
+      Object.values(data).some(Array.isArray);
+
     return {
-      detail: data?.detail || data?.message || 'Erro interno do servidor',
+      detail: data?.detail || data?.message || (isFieldErrors ? 'Erro de validação' : 'Erro interno do servidor'),
       message: data?.message,
-      errors: data?.errors,
+      errors: data?.errors ?? (isFieldErrors ? data : undefined),
       status_code: response.status
     };
   }

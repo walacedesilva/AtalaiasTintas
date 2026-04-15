@@ -3,9 +3,12 @@ import { Outlet } from 'react-router-dom';
 import Navigation from './Navigation';
 import Header from './Header';
 import { Toaster } from 'react-hot-toast';
+import { HelpProvider } from '@/providers/HelpProvider';
+import { HelpDrawer } from '@/components/help/HelpDrawer';
 
 export default function RootLayout(): React.ReactElement {
   return (
+    <HelpProvider>
     <div className="min-h-screen bg-slate-50">
       {/* Skip links for accessibility */}
       <a
@@ -48,6 +51,9 @@ export default function RootLayout(): React.ReactElement {
         }}
         containerStyle={{ top: 72 }}
       />
+
+      <HelpDrawer />
     </div>
+    </HelpProvider>
   );
 }

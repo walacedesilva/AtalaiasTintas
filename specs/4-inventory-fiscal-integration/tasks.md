@@ -192,48 +192,48 @@ Based on plan.md structure:
 
 ### Unit Testing
 
-- [ ] T069 [P] Create EstoqueService unit tests in tests/inventory/test_services.py
-- [ ] T070 [P] Create ConversaoService unit tests in tests/inventory/test_conversao.py  
-- [ ] T071 [P] Create NFEService unit tests in tests/fiscal/test_nfe_service.py
-- [ ] T072 [P] Create SefazClient unit tests with mocks in tests/fiscal/test_sefaz_integration.py
-- [ ] T073 [P] Create reservation system tests in tests/inventory/test_reservations.py
+- [x] T069 [P] Create EstoqueService unit tests in tests/inventory/test_services.py
+- [x] T070 [P] Create ConversaoService unit tests in tests/inventory/test_conversao.py  
+- [x] T071 [P] Create NFEService unit tests in tests/fiscal/test_nfe_service.py
+- [x] T072 [P] Create SefazClient unit tests with mocks in tests/fiscal/test_sefaz_integration.py
+- [x] T073 [P] Create reservation system tests in tests/inventory/test_reservations.py
 
 ### Integration Testing
 
-- [ ] T074 Create complete sale workflow integration test in tests/integration/test_inventory_fiscal_flow.py (depends on T068)
-- [ ] T075 Create B2B automatic NFe integration test (depends on T074)
-- [ ] T076 Create B2C manual NFe integration test (depends on T075)  
-- [ ] T077 Create multi-unit conversion integration test (depends on T074)
-- [ ] T078 Create manager override integration test (depends on T074)
+- [x] T074 Create complete sale workflow integration test in tests/integration/test_inventory_fiscal_flow.py (depends on T068)
+- [x] T075 Create B2B automatic NFe integration test (depends on T074)
+- [x] T076 Create B2C manual NFe integration test (depends on T075)  
+- [x] T077 Create multi-unit conversion integration test (depends on T074)
+- [x] T078 Create manager override integration test (depends on T074)
 
 ### SEFAZ Mock Testing
 
-- [ ] T079 [P] Create VCR cassettes for SEFAZ responses in tests/fiscal/cassettes/
-- [ ] T080 Create SEFAZ authorization success test with VCR (depends on T079)
-- [ ] T081 Create SEFAZ rejection handling test with VCR (depends on T079)
-- [ ] T082 Create SEFAZ timeout/error handling test (depends on T079)
+- [x] T079 [P] Create VCR cassettes for SEFAZ responses in tests/fiscal/cassettes/
+- [x] T080 Create SEFAZ authorization success test with VCR (depends on T079)
+- [x] T081 Create SEFAZ rejection handling test with VCR (depends on T079)
+- [x] T082 Create SEFAZ timeout/error handling test (depends on T079)
 
 ### Performance Testing
 
-- [ ] T083 [P] Create stock query performance tests (target < 1s)
-- [ ] T084 [P] Create NFe processing performance tests (target < 30s)  
-- [ ] T085 [P] Create reservation cleanup performance tests (target < 5min)
-- [ ] T086 Create concurrent access performance tests (depends on T083-T085)
+- [x] T083 [P] Create stock query performance tests (target < 1s)
+- [x] T084 [P] Create NFe processing performance tests (target < 30s)  
+- [x] T085 [P] Create reservation cleanup performance tests (target < 5min)
+- [x] T086 Create concurrent access performance tests (depends on T083-T085)
 
 ### Security & Compliance Testing
 
-- [ ] T087 [P] Validate fiscal compliance checklist requirements
-- [ ] T088 [P] Validate security checklist requirements  
-- [ ] T089 [P] Validate data integrity checklist requirements
-- [ ] T090 Create certificate management security test (depends on T087-T089)
+- [x] T087 [P] Validate fiscal compliance checklist requirements
+- [x] T088 [P] Validate security checklist requirements  
+- [x] T089 [P] Validate data integrity checklist requirements
+- [x] T090 Create certificate management security test (depends on T087-T089)
 
 ### Deployment Preparation
 
-- [ ] T091 [P] Create feature flag configuration for gradual rollout
-- [ ] T092 [P] Create database migration rollback procedures
-- [ ] T093 [P] Create deployment monitoring and alerting
-- [ ] T094 [P] Create operational runbook for production support
-- [ ] T095 Create production deployment checklist (depends on T091-T094)
+- [x] T091 [P] Create feature flag configuration for gradual rollout
+- [x] T092 [P] Create database migration rollback procedures
+- [x] T093 [P] Create deployment monitoring and alerting
+- [x] T094 [P] Create operational runbook for production support
+- [x] T095 Create production deployment checklist (depends on T091-T094)
 
 **Checkpoint**: All testing complete, system ready for production deployment
 

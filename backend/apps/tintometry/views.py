@@ -485,7 +485,39 @@ class MisturaTintaViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancela mistura e restaura estoque reservado.
+
+        Aceita: { "motivo": "..." }
+        Apenas misturas CALCULADA ou CONFIRMADA podem ser canceladas.
+        """
+        mistura = self.get_object()
+        motivo = request.data.get('motivo', '').strip()
+
+        if not motivo:
+            return Response(
+                {'success': False, 'error': 'O campo "motivo" é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        mixture_service = MixtureService()
+
+        try:
+            result = mixture_service.cancel_mixture(
+                mixture_id=str(mistura.id),
+                motivo=motivo,
+                user_id=str(request.user.id),
+            )
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {'success': False, 'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     @action(detail=True, methods=['get'])
     def detailed_status(self, request, pk=None):
         """Status detalhado da mistura"""

@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import LoginPage from '../pages/auth/LoginPage';
+import { authAPI } from '@/api';
 
 /**
  * LoginPage Component Tests
@@ -16,12 +17,17 @@ vi.mock('@/api', () => ({
   authAPI: {
     login: vi.fn(),
     isAuthenticated: vi.fn(() => false)
+  },
+  apiClient: {
+    isAuthenticated: vi.fn(() => false),
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    getData: vi.fn(),
+    postData: vi.fn(),
+    patchData: vi.fn(),
   }
-}));
-
-// Mock environment
-vi.mock('@/utils/env', () => ({
-  APP_NAME: 'Atalaia Tintas Test'
 }));
 
 // Test wrapper component
@@ -56,12 +62,11 @@ describe('LoginPage', () => {
         </TestWrapper>
       );
 
-      // Check for app branding
-      expect(screen.getByText('Atalaia Tintas Test')).toBeInTheDocument();
-      expect(screen.getByText('Sistema de Gestão de Tintas e Etiquetas')).toBeInTheDocument();
+      // Check for app branding (may appear multiple times due to responsive panels)
+      expect(screen.getAllByText('Atalaia Tintas')[0]).toBeInTheDocument();
 
       // Check form title
-      expect(screen.getByText('Fazer login na sua conta')).toBeInTheDocument();
+      expect(screen.getByText('Bem-vindo de volta!')).toBeInTheDocument();
 
       // Check form fields
       const usernameField = screen.getByLabelText('Nome de usuário');
@@ -151,8 +156,8 @@ describe('LoginPage', () => {
 
       // Check for validation messages
       await waitFor(() => {
-        expect(screen.getByText('Nome de usuário deve ter pelo menos 3 caracteres')).toBeInTheDocument();
-        expect(screen.getByText('Senha deve ter pelo menos 6 caracteres')).toBeInTheDocument();
+        expect(screen.getByText('Mínimo 3 caracteres')).toBeInTheDocument();
+        expect(screen.getByText('Mínimo 6 caracteres')).toBeInTheDocument();
       });
     });
 
@@ -172,9 +177,8 @@ describe('LoginPage', () => {
       await user.type(usernameField, 'validuser');
       await user.type(passwordField, 'validpassword123');
 
-      // Should not have validation error messages
-      expect(screen.queryByText(/Nome de usuário/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Senha/)).not.toBeInTheDocument();
+      // Should not have validation error alerts
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 
@@ -210,9 +214,9 @@ describe('LoginPage', () => {
     it('should disable submit button and show loading state during submission', async () => {
       const user = userEvent.setup();
       
-      // Mock delayed API response
-      const mockLogin = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
-      vi.mocked(require('@/api').authAPI.login).mockImplementation(mockLogin);
+      // Mock login with a promise that never resolves (to hold loading state)
+      const mockLogin = vi.fn(() => new Promise(() => {}));
+      vi.mocked(authAPI.login).mockImplementation(mockLogin);
 
       render(
         <TestWrapper>
@@ -234,7 +238,7 @@ describe('LoginPage', () => {
       // Check loading state
       await waitFor(() => {
         expect(submitButton).toBeDisabled();
-        expect(screen.getByText('Entrando...')).toBeInTheDocument();
+        expect(screen.getByText(/entrando/i)).toBeInTheDocument();
       });
     });
 
@@ -246,7 +250,7 @@ describe('LoginPage', () => {
         user: { id: 1, username: 'testuser' }
       });
       
-      vi.mocked(require('@/api').authAPI.login).mockImplementation(mockLogin);
+      vi.mocked(authAPI.login).mockImplementation(mockLogin);
 
       render(
         <TestWrapper>
@@ -306,9 +310,9 @@ describe('LoginPage', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        const usernameError = screen.getByRole('alert');
-        expect(usernameError).toBeInTheDocument();
-        expect(usernameError).toHaveTextContent('Nome de usuário é obrigatório');
+        const alerts = screen.getAllByRole('alert');
+        expect(alerts.length).toBeGreaterThan(0);
+        expect(alerts[0]).toHaveTextContent('Nome de usuário é obrigatório');
       });
     });
 

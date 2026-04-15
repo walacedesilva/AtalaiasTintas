@@ -2,7 +2,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth, useAuthActions } from '@/hooks/useAuth';
 import { APP_NAME } from '@/utils/env';
-import { User, LogOut, ChevronDown, Paintbrush } from 'lucide-react';
+import { User, LogOut, ChevronDown, Paintbrush, HelpCircle } from 'lucide-react';
+import { useHelp } from '@/hooks/useHelp';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard':  'Painel',
@@ -20,6 +21,7 @@ export default function Header(): React.ReactElement {
   const { user } = useAuth();
   const { logout } = useAuthActions();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { open: openHelp } = useHelp();
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? APP_NAME;
   const initials =
@@ -35,7 +37,7 @@ export default function Header(): React.ReactElement {
         className="flex items-center gap-2.5 shrink-0 group"
         aria-label="Ir para dashboard"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 shadow-md group-hover:bg-teal-500 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 shadow-md group-hover:bg-brand-700 transition-colors">
           <Paintbrush className="h-4 w-4 text-white" aria-hidden="true" />
         </div>
         <span className="hidden sm:block text-sm font-semibold text-white tracking-tight">
@@ -66,6 +68,17 @@ export default function Header(): React.ReactElement {
         </Link>
       </nav>
 
+      {/* Help button */}
+      <button
+        type="button"
+        onClick={() => openHelp()}
+        aria-label="Abrir instruções de uso"
+        title="Instruções de uso (?)"
+        className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2 focus:ring-offset-slate-900"
+      >
+        <HelpCircle className="h-4 w-4" aria-hidden="true" />
+      </button>
+
       {/* User menu */}
       <div className="relative">
         <button
@@ -74,9 +87,9 @@ export default function Header(): React.ReactElement {
           aria-expanded={menuOpen}
           aria-haspopup="true"
           aria-label="Menu do usuário"
-          className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2 focus:ring-offset-slate-900"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">
             {initials}
           </div>
           <div className="hidden sm:block text-left">

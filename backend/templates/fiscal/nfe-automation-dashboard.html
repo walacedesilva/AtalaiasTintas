@@ -1,0 +1,180 @@
+{% comment %}
+templates/fiscal/nfe-automation-dashboard.html — T052
+
+NF-e Automation Dashboard: shows pending, processing, authorized,
+rejected, and error-state emisssions with filter/search and action buttons.
+
+Extends the project's base template. Context variables:
+  notas_por_situacao   — dict keyed by situacao name → queryset count
+  pendentes_list       — recent Venda rows with nfe_situacao=PENDENTE
+  processando_list     — rows with nfe_situacao=PROCESSANDO
+  falhadas_list        — rows with nfe_situacao in (REJEITADA, ERRO_TECNICO, AGUARDANDO_RETRY)
+  autorizadas_hoje     — count of authorized today
+  page_obj             — (optional) paginator page object for the main list
+{% endcomment %}
+
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Dashboard NF-e | {{ block.super }}{% endblock %}
+
+{% block content_title %}<h1>Dashboard de Automação NF-e</h1>{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+{# ── SEFAZ status bar ── #}
+<div data-sefaz-status-widget
+     class="sefaz-status-widget sefaz-desconhecido"
+     aria-label="Verificando status SEFAZ…"
+     style="margin-bottom:1.5rem;padding:.75rem 1rem;border-radius:.5rem;display:flex;align-items:center;gap:.5rem;font-size:.9rem;">
+</div>
+
+{# ── KPI cards ── #}
+<section class="nfe-kpi-row" aria-label="Resumo NF-e">
+  {% for key, count in notas_por_situacao.items %}
+  <div class="nfe-kpi-card nfe-kpi--{{ key|lower }}">
+    <span class="nfe-kpi__count">{{ count }}</span>
+    <span class="nfe-kpi__label">{{ key|title }}</span>
+  </div>
+  {% endfor %}
+</section>
+
+{# ── Pendentes ── #}
+{% if pendentes_list %}
+<section class="nfe-section">
+  <h2 class="nfe-section__title">
+    Pendentes de Emissão
+    <span class="badge badge--yellow">{{ pendentes_list|length }}</span>
+  </h2>
+  <div class="nfe-table-wrapper">
+    <table class="nfe-table" aria-label="Vendas pendentes de NF-e">
+      <thead>
+        <tr>
+          <th scope="col">Venda</th>
+          <th scope="col">Data</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Valor</th>
+          <th scope="col">Tentativas</th>
+          <th scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in pendentes_list %}
+        <tr data-nfe-venda-id="{{ v.pk }}">
+          <td><a href="{% url 'admin:sales_venda_change' v.pk %}">{{ v.numero_venda }}</a></td>
+          <td><time datetime="{{ v.data_venda|date:'Y-m-d' }}">{{ v.data_venda|date:'d/m/Y H:i' }}</time></td>
+          <td>{{ v.cliente.nome_completo }}</td>
+          <td>R$ {{ v.valor_liquido|floatformat:2 }}</td>
+          <td>{{ v.nfe_tentativas }}</td>
+          <td>
+            <span data-nfe-badge class="nfe-badge nfe-pendente">Pendente</span>
+            <button type="button" class="btn btn--sm btn--primary"
+                    data-nfe-btn-emitir
+                    data-original-label="Emitir NF-e">
+              <span class="btn-label">Emitir NF-e</span>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{# ── Processando ── #}
+{% if processando_list %}
+<section class="nfe-section">
+  <h2 class="nfe-section__title">
+    Em Processamento
+    <span class="badge badge--blue">{{ processando_list|length }}</span>
+  </h2>
+  <div class="nfe-table-wrapper">
+    <table class="nfe-table" aria-label="NF-e em processamento">
+      <thead>
+        <tr>
+          <th scope="col">Venda</th>
+          <th scope="col">Data início</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in processando_list %}
+        <tr data-nfe-venda-id="{{ v.pk }}">
+          <td>{{ v.numero_venda }}</td>
+          <td>{{ v.nfe_ultima_tentativa|date:'d/m/Y H:i'|default:'—' }}</td>
+          <td>{{ v.cliente.nome_completo }}</td>
+          <td>
+            <span data-nfe-badge class="nfe-badge nfe-processando">Processando…</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{# ── Falhadas ── #}
+{% if falhadas_list %}
+<section class="nfe-section nfe-section--warning">
+  <h2 class="nfe-section__title">
+    Falhas / Aguardando Retry Manual
+    <span class="badge badge--red">{{ falhadas_list|length }}</span>
+  </h2>
+  <div class="nfe-table-wrapper">
+    <table class="nfe-table" aria-label="NF-e com falha">
+      <thead>
+        <tr>
+          <th scope="col">Venda</th>
+          <th scope="col">Situação</th>
+          <th scope="col">Última tentativa</th>
+          <th scope="col">Tentativas</th>
+          <th scope="col">Erro</th>
+          <th scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in falhadas_list %}
+        <tr data-nfe-venda-id="{{ v.pk }}">
+          <td><a href="{% url 'admin:sales_venda_change' v.pk %}">{{ v.numero_venda }}</a></td>
+          <td><span class="nfe-badge nfe-{{ v.nfe_situacao|lower }}">{{ v.get_nfe_situacao_display }}</span></td>
+          <td>{{ v.nfe_ultima_tentativa|date:'d/m/Y H:i'|default:'—' }}</td>
+          <td>{{ v.nfe_tentativas }}</td>
+          <td class="nfe-erro-cell" title="{{ v.nfe_erro }}">
+            {{ v.nfe_erro|truncatechars:60|default:'—' }}
+          </td>
+          <td>
+            <span data-nfe-badge class="nfe-badge">—</span>
+            <button type="button" class="btn btn--sm btn--warning"
+                    data-nfe-btn-retry
+                    data-original-label="Retry Manual">
+              <span class="btn-label">Retry Manual</span>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if not pendentes_list and not processando_list and not falhadas_list %}
+<p class="nfe-empty-msg">Nenhuma NF-e pendente no momento.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/nfe-dashboard.css' %}">
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script src="{% static 'js/fiscal/sefaz-status.js' %}"></script>
+<script src="{% static 'js/fiscal/nfe-automation.js' %}"></script>
+{% endblock %}

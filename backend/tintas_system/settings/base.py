@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.inventory',
     'apps.sales',
     'apps.tintometry',
+    'apps.tintometry.labels',
     'apps.fiscal',
     'apps.marketplaces',
     'apps.monitoring',  # New monitoring app for infrastructure
@@ -338,4 +339,17 @@ PAINT_STORE_SETTINGS = {
     'MAX_CONCURRENT_USERS': 50,
     'API_RESPONSE_TIMEOUT': 10,  # seconds
     'HEALTH_CHECK_INTERVAL': 300,  # 5 minutes
+}
+
+# =============================================================================
+# TINTOMETRY - Tintometric mixing system configuration
+# =============================================================================
+TINTOMETRY_CONFIG = {
+    'DEFAULT_FORMULA_VOLUME': 1.0,       # litros
+    'MINIMUM_MIXTURE_VOLUME': 0.1,       # litros
+    'MAXIMUM_MIXTURE_VOLUME': 20.0,      # litros
+    'PIGMENT_PRECISION_ML': 0.1,         # ml
+    'AUTO_GENERATE_MIXTURE_CODE': True,
+    'ENABLE_STOCK_ALERTS': True,
+    'COLOR_TOLERANCE_DELTA_E': 3.0,      # CIE76 Delta E tolerance
 }

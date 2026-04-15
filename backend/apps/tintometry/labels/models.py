@@ -58,11 +58,12 @@ class LabelTemplate(models.Model):
     
     # Metadados
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, 
-                                   related_name='created_templates')
+                                   related_name='labels_created_templates')
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
     
     class Meta:
+        app_label = 'labels'
         verbose_name = 'Template de Etiqueta'
         verbose_name_plural = 'Templates de Etiquetas'
         ordering = ['name']
@@ -116,7 +117,7 @@ class LabelPrintJob(models.Model):
     # Misturas incluídas
     misturas = models.ManyToManyField('tintometry.MisturaTinta', 
                                       verbose_name='Misturas',
-                                      related_name='print_jobs')
+                                      related_name='labels_print_jobs')
     
     # Configurações do trabalho
     output_type = models.CharField('Tipo de Saída', max_length=20, 
@@ -139,12 +140,14 @@ class LabelPrintJob(models.Model):
     file_size = models.PositiveIntegerField('Tamanho do Arquivo (bytes)', null=True, blank=True)
     
     # Metadados
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='labels_print_jobs_created')
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     started_at = models.DateTimeField('Iniciado em', null=True, blank=True)
     completed_at = models.DateTimeField('Concluído em', null=True, blank=True)
     
     class Meta:
+        app_label = 'labels'
         verbose_name = 'Trabalho de Impressão'
         verbose_name_plural = 'Trabalhos de Impressão'
         ordering = ['-created_at']
@@ -212,6 +215,7 @@ class LabelPrintQueue(models.Model):
     last_attempt = models.DateTimeField('Última Tentativa', null=True, blank=True)
     
     class Meta:
+        app_label = 'labels'
         verbose_name = 'Item da Fila de Impressão'
         verbose_name_plural = 'Fila de Impressão'
         ordering = ['priority', 'scheduled_for']
@@ -262,6 +266,7 @@ class PrinterConfiguration(models.Model):
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
     
     class Meta:
+        app_label = 'labels'
         verbose_name = 'Configuração de Impressora'
         verbose_name_plural = 'Configurações de Impressoras'
         ordering = ['name']

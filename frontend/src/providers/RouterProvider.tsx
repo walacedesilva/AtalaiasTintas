@@ -14,6 +14,8 @@ import EstoquePage from '@/pages/inventory/EstoquePage';
 import EtiquetasPage from '@/pages/labels/EtiquetasPage';
 import ProfilePage from '@/pages/profile/ProfilePage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import VendasPage from '@/pages/sales/VendasPage';
+import ClientesPage from '@/pages/customers/ClientesPage';
 
 /**
  * Protected route component
@@ -120,6 +122,14 @@ const router = createBrowserRouter([
       {
         path: 'profile',
         element: <ProfilePage />
+      },
+      {
+        path: 'sales',
+        element: <VendasPage />
+      },
+      {
+        path: 'customers',
+        element: <ClientesPage />
       }
     ]
   },

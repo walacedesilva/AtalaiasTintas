@@ -444,7 +444,99 @@ class MixtureService:
         except Exception as e:
             self.logger.error(f"Erro na finalização da mistura: {str(e)}")
             raise
-    
+
+    @transaction.atomic
+    def cancel_mixture(
+        self,
+        mixture_id: str,
+        motivo: str,
+        user_id: str,
+    ) -> Dict:
+        """
+        Cancela uma mistura e restaura o estoque reservado.
+
+        Apenas misturas com situação CALCULADA ou CONFIRMADA podem ser canceladas.
+        Se a mistura estava CONFIRMADA, o estoque dos pigmentos reservados é devolvido.
+
+        Args:
+            mixture_id: ID (UUID) da mistura
+            motivo: Motivo obrigatório do cancelamento
+            user_id: ID do usuário que está cancelando
+
+        Returns:
+            Dict: Resultado do cancelamento com detalhes do estoque restaurado
+        """
+        CANCELABLE_STATUSES = {'CALCULADA', 'CONFIRMADA'}
+
+        try:
+            mistura = MisturaTinta.objects.select_related(
+                'formula', 'loja'
+            ).prefetch_related('itens__pigmento').get(id=mixture_id)
+            User.objects.get(id=user_id)
+        except MisturaTinta.DoesNotExist:
+            raise ValidationError(f"Mistura não encontrada: {mixture_id}")
+        except User.DoesNotExist:
+            raise ValidationError(f"Usuário não encontrado: {user_id}")
+
+        if mistura.situacao not in CANCELABLE_STATUSES:
+            raise ValidationError(
+                f"Mistura não pode ser cancelada. Status atual: {mistura.situacao}. "
+                f"Apenas {', '.join(CANCELABLE_STATUSES)} podem ser canceladas."
+            )
+
+        if not motivo or not motivo.strip():
+            raise ValidationError("Motivo do cancelamento é obrigatório.")
+
+        estoque_restaurado = []
+
+        # Restore stock only if already reserved (CONFIRMADA)
+        if mistura.situacao == 'CONFIRMADA':
+            for item in mistura.itens.all():
+                try:
+                    estoque = EstoquePigmento.objects.get(
+                        pigmento=item.pigmento,
+                        loja=mistura.loja
+                    )
+                    quantidade_a_restaurar = item.quantidade_calculada
+                    estoque.adicionar_estoque(quantidade=quantidade_a_restaurar)
+                    estoque_restaurado.append({
+                        'pigmento': item.pigmento.nome,
+                        'quantidade_restaurada_ml': float(quantidade_a_restaurar),
+                        'saldo_apos': float(estoque.saldo_ml),
+                    })
+                    self.logger.info(
+                        f"Estoque restaurado — pigmento {item.pigmento.nome}: "
+                        f"+{quantidade_a_restaurar}ml"
+                    )
+                except EstoquePigmento.DoesNotExist:
+                    self.logger.warning(
+                        f"Estoque não encontrado para pigmento {item.pigmento.nome} "
+                        f"ao cancelar mistura {mistura.codigo_mistura}"
+                    )
+
+        mistura.situacao = 'CANCELADA'
+        mistura.motivo_cancelamento = motivo.strip()[:200]
+        mistura.data_cancelamento = timezone.now()
+        mistura.save(update_fields=['situacao', 'motivo_cancelamento', 'data_cancelamento'])
+
+        self.logger.info(
+            f"Mistura {mistura.codigo_mistura} cancelada. "
+            f"Motivo: {motivo}. Itens com estoque restaurado: {len(estoque_restaurado)}"
+        )
+
+        return {
+            'success': True,
+            'mistura': {
+                'id': str(mistura.id),
+                'codigo': mistura.codigo_mistura,
+                'situacao': mistura.situacao,
+                'motivo_cancelamento': mistura.motivo_cancelamento,
+                'data_cancelamento': mistura.data_cancelamento.isoformat(),
+            },
+            'estoque_restaurado': estoque_restaurado,
+            'itens_restaurados': len(estoque_restaurado),
+        }
+
     def get_mixture_status(self, mixture_id: str) -> Dict:
         """
         Obtém status completo de uma mistura

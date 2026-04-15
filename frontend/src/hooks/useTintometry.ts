@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import { tintometryAPI } from '@/api';
 import type {
   Pigmento,
+  LequeCorDefinida,
   FormulaTintometrica,
   MisturaTinta,
   MisturaCalculationRequest,
@@ -84,6 +85,18 @@ export function useUpdatePigmento() {
   });
 }
 
+export function useDeletePigmento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => tintometryAPI.pigmentos.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.pigmentos() });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.estoque() });
+    }
+  });
+}
+
 // Cores hooks
 export function useCores(filters?: SearchFilters) {
   return useQuery({
@@ -115,6 +128,39 @@ export function useSearchCores() {
   });
 }
 
+export function useCreateCor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (cor: Omit<LequeCorDefinida, 'id' | 'created_at' | 'updated_at'>) =>
+      tintometryAPI.cores.create(cor),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.cores() });
+    }
+  });
+}
+
+export function useUpdateCor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<LequeCorDefinida> }) =>
+      tintometryAPI.cores.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.cor(id) });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.cores() });
+    }
+  });
+}
+
+export function useDeleteCor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => tintometryAPI.cores.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.cores() });
+    }
+  });
+}
+
 // Formulas hooks
 export function useFormulas(filters?: SearchFilters) {
   return useQuery({
@@ -134,10 +180,31 @@ export function useFormula(id: number) {
 
 export function useCreateFormula() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (formula: Omit<FormulaTintometrica, 'id' | 'created_at' | 'updated_at'>) =>
       tintometryAPI.formulas.create(formula),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.formulas() });
+    }
+  });
+}
+
+export function useUpdateFormula() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<FormulaTintometrica> }) =>
+      tintometryAPI.formulas.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.formula(id) });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.formulas() });
+    }
+  });
+}
+
+export function useDeleteFormula() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => tintometryAPI.formulas.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tintometryKeys.formulas() });
     }
@@ -180,8 +247,7 @@ export function useMistura(id: number) {
     queryFn: () => tintometryAPI.misturas.get(id),
     enabled: id > 0,
     refetchInterval: (query) => {
-      // Auto-refresh if mixture is in progress
-      return query.state.data?.status === 'em_preparacao' ? 10000 : false; // 10 seconds
+      return query.state.data?.situacao === 'PRODUCAO' ? 10000 : false;
     }
   });
 }
@@ -213,12 +279,34 @@ export function useStartMistura() {
 
 export function useCompleteMistura() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, observacoes }: { id: number; observacoes?: string }) =>
       tintometryAPI.misturas.complete(id, observacoes),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: tintometryKeys.mistura(id) });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.misturas() });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.dashboard() });
+    }
+  });
+}
+
+export function useCancelMistura() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+      tintometryAPI.misturas.cancel(id, motivo),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.mistura(id) });
+      queryClient.invalidateQueries({ queryKey: tintometryKeys.misturas() });
+    }
+  });
+}
+
+export function useDeleteMistura() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => tintometryAPI.misturas.delete(id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tintometryKeys.misturas() });
       queryClient.invalidateQueries({ queryKey: tintometryKeys.dashboard() });
     }

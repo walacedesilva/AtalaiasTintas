@@ -1,0 +1,148 @@
+{% comment %}
+templates/fiscal/manual-retry-queue.html — T053
+
+Manual Retry Queue: operator view of NF-e that require human intervention
+(AGUARDANDO_RETRY). Allows reviewing the error, editing if needed,
+and submitting a retry.
+
+Context variables:
+  fila_retry      — queryset of Venda with nfe_requer_retry_manual=True
+  page_obj        — (optional) paginator pages
+{% endcomment %}
+
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Fila Retry Manual NF-e | {{ block.super }}{% endblock %}
+
+{% block content_title %}
+<h1>Fila de Retry Manual — NF-e</h1>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<p class="help-text">
+  Vendas listadas abaixo falharam no envio automático e requerem revisão manual
+  antes de uma nova tentativa. Analise o erro, corrija a causa e clique em
+  <strong>Retry</strong>.
+</p>
+
+{% if fila_retry %}
+<div class="nfe-table-wrapper">
+  <table class="nfe-table" aria-label="Fila de retry manual">
+    <thead>
+      <tr>
+        <th scope="col">Nº Venda</th>
+        <th scope="col">Cliente</th>
+        <th scope="col">Data Venda</th>
+        <th scope="col">Valor</th>
+        <th scope="col">Tentativas</th>
+        <th scope="col">Última Tentativa</th>
+        <th scope="col">Motivo Falha</th>
+        <th scope="col">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in fila_retry %}
+      <tr data-nfe-venda-id="{{ v.pk }}" class="retry-row">
+        <td>
+          <a href="{% url 'admin:sales_venda_change' v.pk %}"
+             title="Ver venda no admin">{{ v.numero_venda }}</a>
+        </td>
+        <td>{{ v.cliente.nome_completo }}</td>
+        <td><time datetime="{{ v.data_venda|date:'Y-m-d' }}">{{ v.data_venda|date:'d/m/Y H:i' }}</time></td>
+        <td>R$ {{ v.valor_liquido|floatformat:2 }}</td>
+        <td>{{ v.nfe_tentativas }}</td>
+        <td>
+          {% if v.nfe_ultima_tentativa %}
+            <time datetime="{{ v.nfe_ultima_tentativa|date:'Y-m-dTH:i' }}">
+              {{ v.nfe_ultima_tentativa|date:'d/m/Y H:i' }}
+            </time>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          <details>
+            <summary class="erro-summary">
+              {{ v.nfe_erro|truncatechars:80|default:'(sem detalhes)' }}
+            </summary>
+            <pre class="erro-full">{{ v.nfe_erro|default:'—' }}</pre>
+          </details>
+        </td>
+        <td class="retry-actions">
+          <span data-nfe-badge class="nfe-badge nfe-retry">Aguardando</span>
+          <button type="button"
+                  class="btn btn--sm btn--warning"
+                  data-nfe-btn-retry
+                  data-original-label="Retry"
+                  title="Tentar enviar novamente">
+            <span class="btn-label">Retry</span>
+          </button>
+          <a href="{% url 'admin:sales_venda_change' v.pk %}"
+             class="btn btn--sm btn--outline"
+             title="Editar venda">Editar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Pagination ── #}
+{% if page_obj and page_obj.has_other_pages %}
+<nav class="pagination" aria-label="Paginação">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="pagination__link">← Anterior</a>
+  {% endif %}
+  <span class="pagination__current">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="pagination__link">Próxima →</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{# ── Bulk Retry (retry all on this page) ── #}
+<p style="margin-top:1.5rem">
+  <button type="button" id="btn-retry-all" class="btn btn--primary">
+    Retry Todos Desta Página
+  </button>
+</p>
+<script>
+document.getElementById('btn-retry-all')?.addEventListener('click', async () => {
+  const rows = document.querySelectorAll('[data-nfe-venda-id]');
+  for (const row of rows) {
+    const btn = row.querySelector('[data-nfe-btn-retry]');
+    if (btn) btn.click();
+    await new Promise(r => setTimeout(r, 500)); // small delay between calls
+  }
+});
+</script>
+
+{% else %}
+<p class="nfe-empty-msg success-msg">
+  ✓ Nenhuma NF-e aguarda retry manual neste momento.
+</p>
+{% endif %}
+
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .help-text  { margin-bottom: 1.5rem; color: #374151; }
+  .erro-summary { cursor: pointer; color: #b45309; font-size: .8125rem; }
+  .erro-full { white-space: pre-wrap; font-size: .75rem; max-width: 40ch;
+               background: #fef9c3; padding: .5rem; border-radius: .25rem; }
+  .retry-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .success-msg { color: #065f46; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script src="{% static 'js/fiscal/nfe-automation.js' %}"></script>
+{% endblock %}

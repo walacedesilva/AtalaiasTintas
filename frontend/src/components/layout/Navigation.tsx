@@ -11,6 +11,8 @@ import {
   Tag,
   Plus,
   Printer,
+  ShoppingCart,
+  Users,
 } from 'lucide-react';
 
 interface NavItem {
@@ -26,6 +28,8 @@ export default function Navigation(): React.ReactElement {
 
   const navItems: NavItem[] = [
     { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
+    { path: '/customers',  label: 'Clientes',         icon: Users },
     { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
     { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
     { path: '/formulas',   label: 'Fórmulas',          icon: FlaskConical },
@@ -59,7 +63,7 @@ export default function Navigation(): React.ReactElement {
             className={({ isActive }) =>
               `group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-teal-600/20 text-teal-400 ring-1 ring-teal-600/30'
+                  ? 'bg-brand-600/20 text-brand-400 ring-1 ring-brand-600/30'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
               }`
             }

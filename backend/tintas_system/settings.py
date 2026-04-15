@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'apps.inventory',
     'apps.sales',
     'apps.tintometry',
+    'apps.tintometry.labels',
     'apps.fiscal',
     'apps.marketplaces',
 ]
@@ -276,6 +277,8 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3005",
+    "http://127.0.0.1:3005",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
