@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
+  Truck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI, type PedidoCreatePayload, type ItemAddPayload } from '@/api/sales';
@@ -65,15 +66,60 @@ function SituacaoBadge({ situacao }: { situacao: SituacaoPedido }) {
   );
 }
 
-// ─── Expandable row ───────────────────────────────────────────────────────────
+// ─── CancelarPedidoModal ───────────────────────────────────────────────
+function CancelarPedidoModal({
+  pedido,
+  onClose,
+  onConfirm,
+}: {
+  pedido: PedidoVenda;
+  onClose: () => void;
+  onConfirm: (motivo: string) => void;
+}) {
+  const [motivo, setMotivo] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="cancelar-pedido-title">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="border-b border-slate-100 px-6 py-4">
+          <h2 id="cancelar-pedido-title" className="font-semibold text-slate-900">Cancelar Pedido</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{pedido.numero_pedido} — {pedido.cliente_nome}</p>
+        </div>
+        <div className="px-6 py-4 space-y-3">
+          <div>
+            <label htmlFor="motivo-cancelar" className="block text-sm font-medium text-slate-700 mb-1">Motivo (obrigatório)</label>
+            <input id="motivo-cancelar" type="text" value={motivo} onChange={(e) => setMotivo(e.target.value)} className="form-input w-full" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="btn-secondary">Voltar</button>
+            <button type="button" disabled={!motivo.trim()} onClick={() => onConfirm(motivo.trim())} className="btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50">
+              Cancelar pedido
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Expandable row ───────────────────────────────────────────────
 function PedidoRow({
   pedido,
   onFinalizar,
   isFinalizando,
+  onAprovar,
+  isAprovando,
+  onFinalizarEntrega,
+  isFinalizandoEntrega,
+  onCancelar,
 }: {
   pedido: PedidoVenda;
-  onFinalizar: (id: number) => void;
+  onFinalizar: (id: string) => void;
   isFinalizando: boolean;
+  onAprovar: (id: string) => void;
+  isAprovando: boolean;
+  onFinalizarEntrega: (id: string) => void;
+  isFinalizandoEntrega: boolean;
+  onCancelar: (pedido: PedidoVenda) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (v: string) => parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -98,6 +144,15 @@ function PedidoRow({
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center justify-end gap-2">
+            {pedido.situacao === 'ORCAMENTO' && (
+              <button
+                className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-teal-700 disabled:opacity-50"
+                disabled={isAprovando}
+                onClick={() => onAprovar(pedido.id)}
+              >
+                {isAprovando ? 'Aprovando…' : 'Aprovar'}
+              </button>
+            )}
             {canFinalizar && (
               <button
                 className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
@@ -105,6 +160,25 @@ function PedidoRow({
                 onClick={() => onFinalizar(pedido.id)}
               >
                 {isFinalizando ? 'Finalizando…' : 'Finalizar Venda'}
+              </button>
+            )}
+            {pedido.situacao === 'PRONTO' && (
+              <button
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                disabled={isFinalizandoEntrega}
+                onClick={() => onFinalizarEntrega(pedido.id)}
+              >
+                <Truck className="h-3 w-3" aria-hidden="true" />
+                {isFinalizandoEntrega ? 'Registrando…' : 'Finalizar Entrega'}
+              </button>
+            )}
+            {pedido.situacao !== 'CANCELADO' && pedido.situacao !== 'ENTREGUE' && (
+              <button
+                className="rounded-lg border border-rose-200 p-1 text-rose-500 hover:bg-rose-50"
+                title="Cancelar pedido"
+                onClick={() => onCancelar(pedido)}
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
             <button
@@ -635,7 +709,10 @@ export default function PedidosPage() {
   const [situacao, setSituacao] = useState('');
   const [page, setPage] = useState(1);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [finalizandoId, setFinalizandoId] = useState<number | null>(null);
+  const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
+  const [aprovandoId, setAprovandoId] = useState<string | null>(null);
+  const [finalizandoEntregaId, setFinalizandoEntregaId] = useState<string | null>(null);
+  const [cancelarPedido, setCancelarPedido] = useState<import('@/types').PedidoVenda | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['pedidos', search, situacao, page],
@@ -650,7 +727,7 @@ export default function PedidosPage() {
   });
 
   const finalizarMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       setFinalizandoId(id);
       const checkout = await salesAPI.pedidos.iniciarCheckout(id);
       const venda = await salesAPI.pedidos.finalizar(id, checkout.sessao_checkout);
@@ -667,6 +744,43 @@ export default function PedidosPage() {
     onSettled: () => setFinalizandoId(null),
   });
 
+  const aprovarMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setAprovandoId(id);
+      return salesAPI.pedidos.aprovar(id);
+    },
+    onSuccess: () => {
+      toast.success('Pedido aprovado!');
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao aprovar pedido'),
+    onSettled: () => setAprovandoId(null),
+  });
+
+  const finalizarEntregaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setFinalizandoEntregaId(id);
+      return salesAPI.pedidos.finalizarEntrega(id);
+    },
+    onSuccess: (data) => {
+      toast.success(`Entrega finalizada! Venda ${data.numero_venda}`);
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao finalizar entrega'),
+    onSettled: () => setFinalizandoEntregaId(null),
+  });
+
+  const cancelarMutation = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      salesAPI.pedidos.cancelar(id, motivo),
+    onSuccess: () => {
+      toast.success('Pedido cancelado.');
+      qc.invalidateQueries({ queryKey: ['pedidos'] });
+      setCancelarPedido(null);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao cancelar pedido'),
+  });
+
   const totalPages = data ? Math.ceil(data.count / 20) : 1;
 
   return (
@@ -675,6 +789,13 @@ export default function PedidosPage() {
         <NovaPedidoDrawer
           onClose={() => setShowDrawer(false)}
           onSuccess={() => setShowDrawer(false)}
+        />
+      )}
+      {cancelarPedido && (
+        <CancelarPedidoModal
+          pedido={cancelarPedido}
+          onClose={() => setCancelarPedido(null)}
+          onConfirm={(motivo) => cancelarMutation.mutate({ id: cancelarPedido.id, motivo })}
         />
       )}
 
@@ -784,6 +905,11 @@ export default function PedidosPage() {
                       pedido={pedido}
                       onFinalizar={(id) => finalizarMutation.mutate(id)}
                       isFinalizando={finalizandoId === pedido.id && finalizarMutation.isPending}
+                      onAprovar={(id) => aprovarMutation.mutate(id)}
+                      isAprovando={aprovandoId === pedido.id && aprovarMutation.isPending}
+                      onFinalizarEntrega={(id) => finalizarEntregaMutation.mutate(id)}
+                      isFinalizandoEntrega={finalizandoEntregaId === pedido.id && finalizarEntregaMutation.isPending}
+                      onCancelar={setCancelarPedido}
                     />
                   ))
                 )}

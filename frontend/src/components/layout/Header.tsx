@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth, useAuthActions } from '@/hooks/useAuth';
 import { APP_NAME } from '@/utils/env';
-import { User, LogOut, ChevronDown, Paintbrush, HelpCircle } from 'lucide-react';
+import { User, LogOut, ChevronDown, Paintbrush, HelpCircle, Menu } from 'lucide-react';
 import { useHelp } from '@/hooks/useHelp';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -16,7 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/profile':    'Meu Perfil',
 };
 
-export default function Header(): React.ReactElement {
+export default function Header({ onMenuToggle }: { onMenuToggle: () => void }): React.ReactElement {
   const location = useLocation();
   const { user } = useAuth();
   const { logout } = useAuthActions();
@@ -31,6 +31,16 @@ export default function Header(): React.ReactElement {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-4">
+      {/* Hamburger button — mobile only */}
+      <button
+        type="button"
+        onClick={onMenuToggle}
+        className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2 focus:ring-offset-slate-900"
+        aria-label="Abrir menu de navegação"
+      >
+        <Menu className="h-5 w-5" aria-hidden="true" />
+      </button>
+
       {/* Brand */}
       <Link
         to="/dashboard"
@@ -53,7 +63,13 @@ export default function Header(): React.ReactElement {
       <div className="flex-1" />
 
       {/* Quick actions */}
-      <nav className="hidden lg:flex items-center gap-1" aria-label="AÃ§Ãµes rÃ¡pidas">
+      <nav className="hidden lg:flex items-center gap-1" aria-label="Ações rápidas">
+        <Link
+          to="/sales"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          Vendas
+        </Link>
         <Link
           to="/mixtures?action=new"
           className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"

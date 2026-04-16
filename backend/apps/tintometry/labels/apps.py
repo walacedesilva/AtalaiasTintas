@@ -17,7 +17,7 @@ class LabelsConfig(AppConfig):
             
             # Criar templates padrão se necessário
             from .services import LabelTemplateService
-            # LabelTemplateService.create_default_templates()
+            LabelTemplateService.create_default_templates()
             
         except Exception as e:
             # Log do erro mas não falha a inicialização

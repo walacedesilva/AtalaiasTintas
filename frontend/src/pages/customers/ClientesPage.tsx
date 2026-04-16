@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,10 +15,12 @@ import {
   Building2,
   User,
   RefreshCw,
+  History,
+  ShoppingBag,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI } from '@/api/sales';
-import type { Cliente, TipoCliente } from '@/types';
+import type { Cliente, TipoCliente, PedidoVenda } from '@/types';
 import type { ClientePayload } from '@/api/sales';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -261,6 +264,85 @@ function ClienteModal({ cliente, onClose }: ClienteModalProps) {
   );
 }
 
+// ─── Historico Panel ─────────────────────────────────────────────────────────
+function HistoricoPanel({ cliente, onClose }: { cliente: Cliente; onClose: () => void }) {
+  const navigate = useNavigate();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['clientes', cliente.id, 'historico'],
+    queryFn: () => salesAPI.clientes.historico(cliente.id),
+    staleTime: 30_000,
+  });
+
+  const pedidos: PedidoVenda[] = (data as { results?: PedidoVenda[] })?.results ?? (data as PedidoVenda[] | undefined) ?? [];
+
+  const fmt = (v: string) =>
+    parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <div className="fixed inset-0 z-40 flex" role="dialog" aria-modal="true" aria-labelledby="historico-title">
+      <button className="flex-1 bg-black/30" onClick={onClose} aria-label="Fechar painel" />
+      <div className="flex w-full max-w-lg flex-col bg-white shadow-2xl">
+        {/* header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 id="historico-title" className="font-semibold text-slate-900">Histórico de Compras</h2>
+            <p className="text-xs text-slate-500">{cliente.nome_completo}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Fechar">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        {/* body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {isLoading && <p className="text-center text-sm text-slate-400 py-8">Carregando…</p>}
+          {!isLoading && pedidos.length === 0 && (
+            <div className="flex flex-col items-center py-12 text-slate-400">
+              <ShoppingBag className="h-8 w-8 mb-2" aria-hidden="true" />
+              <p className="text-sm">Nenhum pedido encontrado</p>
+            </div>
+          )}
+          {pedidos.map((p) => (
+            <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-medium text-slate-800">{p.numero_pedido}</p>
+                  <p className="text-xs text-slate-500">{new Date(p.data_pedido).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-slate-900">{fmt(p.valor_total)}</p>
+                  <p className="text-xs text-slate-500 capitalize">{p.situacao.toLowerCase()}</p>
+                </div>
+              </div>
+              {p.itens && p.itens.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {p.itens.slice(0, 3).map((item) => (
+                    <li key={item.id} className="flex justify-between text-xs text-slate-600">
+                      <span>{item.produto_nome}</span>
+                      <span>{item.quantidade}×</span>
+                    </li>
+                  ))}
+                  {p.itens.length > 3 && (
+                    <li className="text-xs text-slate-400">…e mais {p.itens.length - 3} item(s)</li>
+                  )}
+                </ul>
+              )}
+              <div className="mt-3 flex justify-end">
+                <button
+                  className="btn-secondary text-xs py-1 px-3"
+                  onClick={() => navigate('/pdv', { state: { itens: p.itens } })}
+                >
+                  Reordenar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ClientesPage() {
   const qc = useQueryClient();
@@ -270,6 +352,7 @@ export default function ClientesPage() {
   const [apenasAtivos, setApenasAtivos] = useState(true);
   const [page, setPage] = useState(1);
   const [modalCliente, setModalCliente] = useState<Cliente | null | undefined>(undefined);
+  const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['clientes', search, tipoFiltro, apenasAtivos, page],
@@ -301,6 +384,12 @@ export default function ClientesPage() {
         <ClienteModal
           cliente={modalCliente}
           onClose={() => setModalCliente(undefined)}
+        />
+      )}
+      {historicoCliente && (
+        <HistoricoPanel
+          cliente={historicoCliente}
+          onClose={() => setHistoricoCliente(null)}
         />
       )}
 
@@ -481,6 +570,13 @@ export default function ClientesPage() {
                             ) : (
                               <ToggleLeft className="h-3.5 w-3.5 text-slate-400" />
                             )}
+                          </button>
+                          <button
+                            className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-brand-600"
+                            title="Histórico de compras"
+                            onClick={() => setHistoricoCliente(cliente)}
+                          >
+                            <History className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>

@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import {
+  Archive,
   Package,
+  Pencil,
   Plus,
   Search,
   AlertTriangle,
@@ -11,6 +13,7 @@ import {
   ChevronDown,
   RefreshCw,
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useEstoqueResumo,
   useEstoqueLoja,
@@ -19,7 +22,17 @@ import {
   useImportarXmlNFe,
   useConfirmarEntrada,
 } from '@/hooks/useInventory';
-import type { EstoqueLojaItem, LoteProduto, EntradaMercadoria, StatusEstoque } from '@/types';
+import { inventoryAPI } from '@/api';
+import type {
+  Categoria,
+  EstoqueLojaItem,
+  LoteProduto,
+  EntradaMercadoria,
+  Marca,
+  ProdutoBase,
+  ProdutoBasePayload,
+  StatusEstoque,
+} from '@/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -458,18 +471,354 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
 // Main page
 // ---------------------------------------------------------------------------
 
-type Tab = 'estoque' | 'lotes' | 'entradas';
+type Tab = 'estoque' | 'lotes' | 'entradas' | 'produtos';
+
+// ---------------------------------------------------------------------------
+// ProdutosTab — CRUD de ProdutoBase
+// ---------------------------------------------------------------------------
+
+const TIPO_LABEL: Record<string, string> = {
+  SIMPLES: 'Simples',
+  COMPOSTO: 'Composto',
+  INSUMO: 'Insumo',
+  KIT: 'Kit',
+};
+
+function ProdutosTab(): React.ReactElement {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterMarca, setFilterMarca] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ProdutoBase | null>(null);
+  const [form, setForm] = useState<Partial<ProdutoBasePayload>>({
+    tipo_produto: 'SIMPLES',
+    ativo: true,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['produtos', search, filterCategoria, filterMarca],
+    queryFn: () => {
+      const params: Parameters<typeof inventoryAPI.produtos.list>[0] = {};
+      if (search) params.search = search;
+      if (filterCategoria) params.categoria_id = Number(filterCategoria);
+      if (filterMarca) params.marca_id = Number(filterMarca);
+      return inventoryAPI.produtos.list(params);
+    },
+  });
+
+  const { data: categorias = [] } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: () => inventoryAPI.categorias.list(),
+  });
+
+  const { data: marcas = [] } = useQuery({
+    queryKey: ['marcas'],
+    queryFn: () => inventoryAPI.marcas.list(),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: ProdutoBasePayload) =>
+      editing
+        ? inventoryAPI.produtos.update(editing.id, payload)
+        : inventoryAPI.produtos.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['produtos'] });
+      closeModal();
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => inventoryAPI.produtos.deactivate(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['produtos'] }),
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ tipo_produto: 'SIMPLES', ativo: true });
+    setModalOpen(true);
+  }
+
+  function openEdit(p: ProdutoBase) {
+    setEditing(p);
+    setForm({
+      codigo: p.codigo,
+      nome: p.nome,
+      descricao: p.descricao ?? '',
+      categoria: p.categoria,
+      marca: p.marca,
+      tipo_produto: p.tipo_produto,
+      base_tintometrica: p.base_tintometrica ?? '',
+      linha_produto: p.linha_produto ?? '',
+      ativo: p.ativo,
+    });
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditing(null);
+    setForm({ tipo_produto: 'SIMPLES', ativo: true });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.codigo || !form.nome || !form.categoria || !form.marca || !form.tipo_produto) return;
+    saveMutation.mutate(form as ProdutoBasePayload);
+  }
+
+  const produtos: ProdutoBase[] = (data as { results?: ProdutoBase[] } | ProdutoBase[] | undefined)
+    ? Array.isArray(data) ? data : (data as { results: ProdutoBase[] }).results ?? []
+    : [];
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Buscar por código ou nome…"
+            className="form-input pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="relative">
+          <select
+            className="form-input appearance-none pr-8 min-w-[140px]"
+            value={filterCategoria}
+            onChange={(e) => setFilterCategoria(e.target.value)}
+          >
+            <option value="">Todas categorias</option>
+            {(categorias as Categoria[]).map((c) => (
+              <option key={c.id} value={String(c.id)}>{c.nome}</option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+        </div>
+        <div className="relative">
+          <select
+            className="form-input appearance-none pr-8 min-w-[120px]"
+            value={filterMarca}
+            onChange={(e) => setFilterMarca(e.target.value)}
+          >
+            <option value="">Todas marcas</option>
+            {(marcas as Marca[]).map((m) => (
+              <option key={m.id} value={String(m.id)}>{m.nome}</option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+        </div>
+        <button className="btn-primary self-start" onClick={openCreate}>
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Novo Produto
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Código</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Nome</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Categoria</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Marca</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Tipo</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Variações</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Carregando…</td></tr>
+              ) : produtos.length === 0 ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Nenhum produto encontrado.</td></tr>
+              ) : produtos.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{p.codigo}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{p.nome}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.categoria_nome}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.marca_nome}</td>
+                  <td className="px-4 py-3">
+                    <span className="badge badge-blue">{TIPO_LABEL[p.tipo_produto] ?? p.tipo_produto}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 tabular-nums">{p.variacoes.length}</td>
+                  <td className="px-4 py-3">
+                    <span className={p.ativo ? 'badge badge-green' : 'badge badge-red'}>
+                      {p.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button
+                        className="btn-ghost text-xs"
+                        onClick={() => openEdit(p)}
+                        aria-label={`Editar ${p.nome}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        Editar
+                      </button>
+                      {p.ativo && (
+                        <button
+                          className="btn-ghost text-xs text-rose-600 hover:text-rose-800"
+                          onClick={() => {
+                            if (confirm(`Desativar "${p.nome}"?`)) deactivateMutation.mutate(p.id);
+                          }}
+                          aria-label={`Desativar ${p.nome}`}
+                        >
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                          Desativar
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Create/Edit Modal */}
+      {modalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="produto-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 id="produto-modal-title" className="text-lg font-semibold">
+                {editing ? 'Editar Produto' : 'Novo Produto'}
+              </h2>
+              <button onClick={closeModal} className="btn-ghost" aria-label="Fechar">
+                <XCircle className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label" htmlFor="p-codigo">Código *</label>
+                  <input
+                    id="p-codigo"
+                    className="form-input"
+                    required
+                    value={form.codigo ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="p-tipo">Tipo *</label>
+                  <select
+                    id="p-tipo"
+                    className="form-input"
+                    required
+                    value={form.tipo_produto ?? 'SIMPLES'}
+                    onChange={(e) => setForm((f) => ({ ...f, tipo_produto: e.target.value as ProdutoBasePayload['tipo_produto'] }))}
+                  >
+                    <option value="SIMPLES">Simples</option>
+                    <option value="COMPOSTO">Composto (Tinta)</option>
+                    <option value="INSUMO">Insumo (Pigmento)</option>
+                    <option value="KIT">Kit</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="label" htmlFor="p-nome">Nome *</label>
+                <input
+                  id="p-nome"
+                  className="form-input"
+                  required
+                  value={form.nome ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label" htmlFor="p-categoria">Categoria *</label>
+                  <select
+                    id="p-categoria"
+                    className="form-input"
+                    required
+                    value={form.categoria ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, categoria: Number(e.target.value) }))}
+                  >
+                    <option value="">Selecione…</option>
+                    {(categorias as Categoria[]).map((c) => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="p-marca">Marca *</label>
+                  <select
+                    id="p-marca"
+                    className="form-input"
+                    required
+                    value={form.marca ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, marca: Number(e.target.value) }))}
+                  >
+                    <option value="">Selecione…</option>
+                    {(marcas as Marca[]).map((m) => (
+                      <option key={m.id} value={m.id}>{m.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="label" htmlFor="p-linha">Linha do Produto</label>
+                <input
+                  id="p-linha"
+                  className="form-input"
+                  value={form.linha_produto ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, linha_produto: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="p-base">Base Tintométrica</label>
+                <input
+                  id="p-base"
+                  className="form-input"
+                  value={form.base_tintometrica ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, base_tintometrica: e.target.value }))}
+                />
+              </div>
+              {saveMutation.isError && (
+                <p className="text-sm text-rose-600">
+                  {(saveMutation.error as Error)?.message ?? 'Erro ao salvar produto.'}
+                </p>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Salvando…' : editing ? 'Salvar Alterações' : 'Criar Produto'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function EstoquePage(): React.ReactElement {
-  const [tab, setTab] = useState<Tab>('estoque');
+  const [tab, setTab] = useState<Tab>('produtos');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   // For now use loja_id=1 (first store). TODO: store selector when multi-store.
   const loja_id = 1;
 
-  const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { key: 'estoque', label: 'Produtos', icon: Package },
+  const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
+    { key: 'produtos', label: 'Produtos', icon: Package },
+    { key: 'estoque', label: 'Saldo por Loja', icon: Archive },
     { key: 'lotes', label: 'Validade', icon: Clock },
     { key: 'entradas', label: 'Entradas NF-e', icon: Upload },
   ];
@@ -550,6 +899,7 @@ export default function EstoquePage(): React.ReactElement {
         </div>
       )}
 
+      {tab === 'produtos' && <ProdutosTab />}
       {tab === 'lotes' && <LotesTab loja_id={loja_id} />}
       {tab === 'entradas' && <EntradasTab loja_id={loja_id} />}
     </div>

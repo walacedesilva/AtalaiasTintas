@@ -22,11 +22,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.inventory.models import (
+    Categoria,
     EntradaMercadoria,
     EntradaMercadoriaItem,
     EstoqueLoja,
     EstoqueReserva,
     LoteProduto,
+    Marca,
+    ProdutoBase,
     ProdutoUnidade,
     ProdutoVariacao,
     UnidadeMedida,
@@ -577,3 +580,209 @@ class EstoqueLojaViewSet(viewsets.ReadOnlyModelViewSet):
             'estoque_baixo': baixo,
             'valor_total_custo': str(valor),
         })
+
+
+# ---------------------------------------------------------------------------
+# ProdutoBaseViewSet + ProdutoVariacaoViewSet — Product CRUD
+# ---------------------------------------------------------------------------
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = ['id', 'nome', 'codigo', 'nivel', 'parent', 'permite_tintometria', 'exige_formula', 'ativa']
+
+
+class MarcaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Marca
+        fields = ['id', 'nome', 'codigo', 'ativa']
+
+
+class ProdutoVariacaoListSerializer(serializers.ModelSerializer):
+    unidade_venda_nome = serializers.CharField(source='unidade_venda.nome', read_only=True)
+    unidade_estoque_nome = serializers.CharField(source='unidade_estoque.nome', read_only=True)
+
+    class Meta:
+        model = ProdutoVariacao
+        fields = [
+            'id', 'codigo_variacao', 'nome_variacao', 'cor', 'cor_codigo', 'tamanho',
+            'unidade_venda', 'unidade_venda_nome', 'unidade_estoque', 'unidade_estoque_nome',
+            'fator_conversao_venda', 'ncm', 'cest',
+            'preco_custo', 'preco_venda', 'margem_lucro',
+            'estoque_minimo', 'estoque_maximo', 'ativo',
+        ]
+
+
+class ProdutoVariacaoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProdutoVariacao
+        fields = [
+            'codigo_variacao', 'nome_variacao', 'cor', 'cor_codigo', 'tamanho',
+            'unidade_venda', 'unidade_estoque', 'fator_conversao_venda',
+            'ncm', 'cest', 'preco_custo', 'preco_venda', 'margem_lucro',
+            'estoque_minimo', 'estoque_maximo', 'ativo',
+        ]
+
+
+class ProdutoBaseSerializer(serializers.ModelSerializer):
+    variacoes = ProdutoVariacaoListSerializer(many=True, read_only=True)
+    categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+    marca_nome = serializers.CharField(source='marca.nome', read_only=True)
+
+    class Meta:
+        model = ProdutoBase
+        fields = [
+            'id', 'codigo', 'nome', 'descricao',
+            'categoria', 'categoria_nome', 'marca', 'marca_nome',
+            'tipo_produto', 'base_tintometrica', 'linha_produto',
+            'ativo', 'variacoes',
+        ]
+        read_only_fields = ['id']
+
+
+class ProdutoBaseWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProdutoBase
+        fields = [
+            'codigo', 'nome', 'descricao',
+            'categoria', 'marca', 'tipo_produto',
+            'base_tintometrica', 'linha_produto',
+            'especificacoes_tecnicas', 'ativo',
+        ]
+
+    def validate_codigo(self, value):
+        qs = ProdutoBase.objects.filter(codigo=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Já existe um produto com este código.')
+        return value
+
+
+class ProdutoBaseViewSet(viewsets.ModelViewSet):
+    """Full CRUD for ProdutoBase (produto mãe + variações).
+
+    GET    /api/v1/inventory/produtos/              — lista
+    POST   /api/v1/inventory/produtos/              — criar
+    GET    /api/v1/inventory/produtos/{id}/         — detalhe com variações
+    PATCH  /api/v1/inventory/produtos/{id}/         — editar
+    DELETE /api/v1/inventory/produtos/{id}/         — desativar (soft-delete)
+    GET    /api/v1/inventory/produtos/{id}/variacoes/ — listar variações
+    POST   /api/v1/inventory/produtos/{id}/variacoes/ — criar variação
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ProdutoBase.objects.select_related('categoria', 'marca').prefetch_related('variacoes')
+        search = self.request.query_params.get('search')
+        categoria_id = self.request.query_params.get('categoria_id')
+        marca_id = self.request.query_params.get('marca_id')
+        tipo = self.request.query_params.get('tipo_produto')
+        ativo = self.request.query_params.get('ativo')
+
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(Q(nome__icontains=search) | Q(codigo__icontains=search))
+        if categoria_id:
+            qs = qs.filter(categoria_id=categoria_id)
+        if marca_id:
+            qs = qs.filter(marca_id=marca_id)
+        if tipo:
+            qs = qs.filter(tipo_produto=tipo)
+        if ativo is not None:
+            qs = qs.filter(ativo=ativo.lower() == 'true')
+
+        return qs.order_by('nome')
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return ProdutoBaseWriteSerializer
+        return ProdutoBaseSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete: mark ativo=False instead of deleting."""
+        produto = self.get_object()
+        produto.ativo = False
+        produto.save(update_fields=['ativo'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['get', 'post'], url_path='variacoes')
+    def variacoes(self, request, pk=None):
+        """List or create variations for a product.
+
+        GET  /api/v1/inventory/produtos/{id}/variacoes/
+        POST /api/v1/inventory/produtos/{id}/variacoes/
+        """
+        produto = self.get_object()
+
+        if request.method == 'GET':
+            qs = ProdutoVariacao.objects.filter(produto_base=produto).select_related(
+                'unidade_venda', 'unidade_estoque'
+            )
+            return Response(ProdutoVariacaoListSerializer(qs, many=True).data)
+
+        serializer = ProdutoVariacaoWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        variacao = serializer.save(produto_base=produto)
+        return Response(
+            ProdutoVariacaoListSerializer(variacao).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ProdutoVariacaoViewSet(viewsets.ModelViewSet):
+    """CRUD for ProdutoVariacao standalone.
+
+    Supports patch and delete by variacao ID directly without going through ProdutoBase.
+
+    PATCH  /api/v1/inventory/variacoes/{id}/
+    DELETE /api/v1/inventory/variacoes/{id}/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ProdutoVariacao.objects.select_related(
+            'produto_base', 'unidade_venda', 'unidade_estoque'
+        )
+        produto_id = self.request.query_params.get('produto_id')
+        search = self.request.query_params.get('search')
+        ativo = self.request.query_params.get('ativo')
+
+        if produto_id:
+            qs = qs.filter(produto_base_id=produto_id)
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(codigo_variacao__icontains=search) | Q(nome_variacao__icontains=search)
+            )
+        if ativo is not None:
+            qs = qs.filter(ativo=ativo.lower() == 'true')
+
+        return qs.order_by('nome_variacao')
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return ProdutoVariacaoWriteSerializer
+        return ProdutoVariacaoListSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete: mark ativo=False."""
+        variacao = self.get_object()
+        variacao.ativo = False
+        variacao.save(update_fields=['ativo'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of categories for filters/dropdowns."""
+    serializer_class = CategoriaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Categoria.objects.filter(ativa=True).order_by('nivel', 'ordem', 'nome')
+
+
+class MarcaViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of brands for filters/dropdowns."""
+    serializer_class = MarcaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Marca.objects.filter(ativa=True).order_by('nome')
+

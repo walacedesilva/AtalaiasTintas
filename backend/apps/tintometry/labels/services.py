@@ -123,14 +123,14 @@ class BarcodeService:
     def generate_tracking_code(self, mistura):
         """Gera código de rastreamento único para a mistura"""
         try:
-            # Formato: AT + YYYY + MM + DD + ID (6 dígitos)
+            # Formato: AT + YYYY + MM + DD + primeiros 8 chars do ID (sem hífens)
             now = timezone.now()
             date_part = now.strftime('%Y%m%d')
-            id_part = f"{mistura.id:06d}"
+            id_part = str(mistura.id).replace('-', '')[:8].upper()
             tracking_code = f"AT{date_part}{id_part}"
-            
+
             return tracking_code
-            
+
         except Exception as e:
             logger.error(f"Erro ao gerar código de rastreamento para mistura {mistura.id}: {e}")
             raise
@@ -467,10 +467,89 @@ class LabelGeneratorService:
                 f.write(pdf_bytes)
             
             return file_path
-            
+
         except Exception as e:
             logger.error(f"Erro ao salvar arquivo de etiqueta {filename}: {e}")
             raise
+
+    def generate_label_data(self, mistura_id, template_id):
+        """Gera dados estruturados da etiqueta para uma mistura (aceita ID)"""
+        from ..models import MisturaTinta
+
+        mistura = MisturaTinta.objects.select_related(
+            'formula__cor_definida',
+            'loja',
+            'usuario_operacao',
+        ).prefetch_related('itens__pigmento').get(pk=mistura_id)
+
+        qr_data = self.qr_service.generate_qr_data(mistura)
+        qr_image = self.qr_service.generate_qr_image(qr_data)
+
+        tracking_code = self.barcode_service.generate_tracking_code(mistura)
+        barcode_image = self.barcode_service.generate_barcode_image(tracking_code)
+
+        return {
+            'mistura_id': str(mistura.id),
+            'codigo_mistura': mistura.codigo_mistura,
+            'qr_code': {
+                'data': qr_data,
+                'data_summary': mistura.codigo_mistura,
+                'image_base64': qr_image,
+            },
+            'barcode': {
+                'code': tracking_code,
+                'image_base64': barcode_image,
+            },
+            'label_data': {
+                'cliente_nome': mistura.cliente_nome,
+                'formula_codigo': mistura.formula.codigo_formula,
+                'cor_nome': mistura.formula.cor_definida.nome_cor,
+                'cor_hex': mistura.formula.cor_definida.cor_hex,
+                'volume': float(mistura.volume_solicitado),
+                'custo_total': float(mistura.custo_total),
+                'loja': mistura.loja.codigo if mistura.loja else '',
+                'situacao': mistura.situacao,
+                'data_criacao': mistura.created_at.isoformat(),
+            },
+        }
+
+    def create_label_record(self, mistura_id, template_id):
+        """Cria ou recupera o registro de etiqueta para uma mistura"""
+        import json as _json
+        from ..models import MisturaTinta, EtiquetaMistura
+
+        mistura = MisturaTinta.objects.get(pk=mistura_id)
+        qr_data = self.qr_service.generate_qr_data(mistura)
+        tracking_code = self.barcode_service.generate_tracking_code(mistura)
+
+        codigo_etiqueta = (
+            f"ET{timezone.now().strftime('%Y%m%d')}"
+            f"{str(mistura.id).replace('-', '')[:8].upper()}"
+        )
+
+        etiqueta, _ = EtiquetaMistura.objects.get_or_create(
+            mistura=mistura,
+            defaults={
+                'codigo_etiqueta': codigo_etiqueta,
+                'qr_code_data': _json.dumps(qr_data, ensure_ascii=False)[:200],
+                'codigo_barras': tracking_code,
+            },
+        )
+
+        return etiqueta
+
+    def get_cached_label_data(self, mistura_id, template_id):
+        """Retorna dados da etiqueta do cache ou gera novos"""
+        from django.core.cache import cache
+
+        cache_key = f"label_data_{mistura_id}_{template_id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return cached_data
+
+        data = self.generate_label_data(mistura_id, template_id)
+        cache.set(cache_key, data, 300)  # Cache por 5 minutos
+        return data
 
 
 class LabelTemplateService:

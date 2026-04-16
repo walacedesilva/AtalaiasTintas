@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Cliente, PedidoVenda
+from .models import Cliente, PedidoVenda, Venda, PagamentoVenda, Recebivel, DescontoAuditLog
 
 
 @admin.register(Cliente)
@@ -90,3 +90,108 @@ class PedidoVendaAdmin(admin.ModelAdmin):
             '<span style="background:{};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px">{}</span>',
             color, obj.get_situacao_display()
         )
+
+
+# ---------------------------------------------------------------------------
+# T008 — VendaAdmin + PagamentoVenda inline
+# ---------------------------------------------------------------------------
+
+class PagamentoVendaInline(admin.TabularInline):
+    model = PagamentoVenda
+    extra = 0
+    readonly_fields = ['troco']
+    fields = ['forma', 'valor', 'valor_recebido', 'troco', 'referencia_externa', 'observacoes']
+
+
+@admin.register(Venda)
+class VendaAdmin(admin.ModelAdmin):
+    list_display = ['numero_venda', 'cliente', 'loja', 'valor_liquido', 'data_venda', 'cancelada']
+    list_filter = ['cancelada', 'tem_devolucao', 'loja', 'nfe_situacao']
+    search_fields = ['numero_venda', 'cliente__nome', 'cliente__cpf', 'cliente__cnpj']
+    list_select_related = ['cliente', 'loja', 'vendedor']
+    date_hierarchy = 'data_venda'
+    readonly_fields = ['numero_venda', 'data_venda', 'created_at', 'updated_at']
+    list_per_page = 25
+    inlines = [PagamentoVendaInline]
+
+    fieldsets = (
+        ('Venda', {
+            'fields': ('numero_venda', 'loja', 'cliente', 'vendedor', 'data_venda', 'pedido_origem'),
+        }),
+        ('Valores', {
+            'fields': ('valor_total', 'valor_desconto', 'valor_liquido'),
+        }),
+        ('Status', {
+            'fields': ('cancelada', 'motivo_cancelamento', 'data_cancelamento', 'cancelado_por',
+                       'tem_devolucao'),
+        }),
+        ('NFe', {
+            'fields': ('nfe_situacao', 'nfe_tipo_emissao', 'nfe_chave_acesso', 'nfe_protocolo'),
+            'classes': ('collapse',),
+        }),
+    )
+
+
+# ---------------------------------------------------------------------------
+# T008 — RecebivelAdmin
+# ---------------------------------------------------------------------------
+
+@admin.register(Recebivel)
+class RecebivelAdmin(admin.ModelAdmin):
+    list_display = ['id', 'cliente', 'venda', 'valor_original', 'valor_pago', 'valor_saldo',
+                    'situacao', 'data_vencimento', 'loja']
+    list_filter = ['situacao', 'loja', 'criado_com_override']
+    search_fields = ['cliente__nome', 'cliente__cpf', 'cliente__cnpj', 'venda__numero_venda']
+    list_select_related = ['cliente', 'venda', 'loja']
+    date_hierarchy = 'data_vencimento'
+    readonly_fields = ['valor_saldo', 'created_at', 'updated_at']
+    list_per_page = 25
+
+    fieldsets = (
+        ('Recebível', {
+            'fields': ('cliente', 'venda', 'loja', 'data_vencimento', 'situacao'),
+        }),
+        ('Valores', {
+            'fields': ('valor_original', 'valor_pago', 'valor_saldo'),
+        }),
+        ('Override de Crédito', {
+            'fields': ('criado_com_override', 'aprovador_override'),
+            'classes': ('collapse',),
+        }),
+        ('Cancelamento', {
+            'fields': ('cancelado_por', 'data_cancelamento', 'motivo_cancelamento'),
+            'classes': ('collapse',),
+        }),
+        ('Observações', {
+            'fields': ('observacoes',),
+            'classes': ('collapse',),
+        }),
+    )
+
+
+# ---------------------------------------------------------------------------
+# T008 — DescontoAuditLogAdmin (read-only — SEC-4)
+# ---------------------------------------------------------------------------
+
+@admin.register(DescontoAuditLog)
+class DescontoAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['id', 'pedido', 'tipo_desconto', 'percentual', 'valor_antes', 'valor_depois',
+                    'solicitante', 'aprovador', 'aprovado_com_pin', 'created_at']
+    list_filter = ['tipo_desconto', 'aprovado_com_pin']
+    search_fields = ['pedido__numero_pedido', 'solicitante__username', 'aprovador__username']
+    list_select_related = ['pedido', 'solicitante', 'aprovador', 'item']
+    readonly_fields = ['pedido', 'solicitante', 'aprovador', 'tipo_desconto', 'item',
+                       'valor_antes', 'valor_depois', 'percentual', 'motivo',
+                       'aprovado_com_pin', 'created_at', 'updated_at']
+    list_per_page = 50
+
+    # Audit log: no add / change / delete via Admin (SEC-4)
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+

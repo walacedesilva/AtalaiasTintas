@@ -15,6 +15,9 @@ import {
   ClipboardList,
   Users,
   Pipette,
+  Monitor,
+  Receipt,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -25,13 +28,20 @@ interface NavItem {
   badgeDanger?: boolean | undefined;
 }
 
-export default function Navigation(): React.ReactElement {
+interface NavigationProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Navigation({ isOpen, onClose }: NavigationProps): React.ReactElement {
   const { data: stats } = useDashboardStats();
 
   const navItems: NavItem[] = [
     { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/pdv',        label: 'PDV',              icon: Monitor },
     { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
     { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
+    { path: '/recebiveis', label: 'Recebíveis',       icon: Receipt },
     { path: '/customers',  label: 'Clientes',         icon: Users },
     { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
     { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
@@ -52,9 +62,21 @@ export default function Navigation(): React.ReactElement {
   return (
     <nav
       id="navigation"
-      className="custom-scrollbar fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-slate-900 border-r border-slate-800 overflow-y-auto flex flex-col"
+      className={`custom-scrollbar fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-slate-900 border-r border-slate-800 overflow-y-auto flex flex-col z-30 transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}
       aria-label="Navegação principal"
     >
+      {/* Mobile close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="lg:hidden absolute top-3 right-3 flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+        aria-label="Fechar menu"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+      </button>
+
       <div className="flex-1 p-4 space-y-1">
         {/* Section label */}
         <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
@@ -65,6 +87,7 @@ export default function Navigation(): React.ReactElement {
           <NavLink
             key={path}
             to={path}
+            onClick={onClose}
             className={({ isActive }) =>
               `group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                 isActive
@@ -99,6 +122,7 @@ export default function Navigation(): React.ReactElement {
           </p>
           <NavLink
             to="/mixtures?action=new"
+            onClick={onClose}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/10 transition-colors"
           >
             <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -106,6 +130,7 @@ export default function Navigation(): React.ReactElement {
           </NavLink>
           <NavLink
             to="/tintometry"
+            onClick={onClose}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-violet-400 hover:bg-violet-600/10 transition-colors"
           >
             <Pipette className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -113,6 +138,7 @@ export default function Navigation(): React.ReactElement {
           </NavLink>
           <NavLink
             to="/labels?action=generate"
+            onClick={onClose}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sky-400 hover:bg-sky-600/10 transition-colors"
           >
             <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
