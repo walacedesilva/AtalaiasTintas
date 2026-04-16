@@ -118,7 +118,7 @@ function NovaMisturaModal({ onClose, onSave }: { onClose: () => void; onSave: (f
             {errors.cliente_nome && <p className="mt-0.5 text-xs text-red-600">{errors.cliente_nome}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Telefone</label>
               <input type="tel" className="form-input text-sm" placeholder="(11) 99999-0000" value={form.cliente_telefone} onChange={e => setForm(f => ({ ...f, cliente_telefone: e.target.value }))} />

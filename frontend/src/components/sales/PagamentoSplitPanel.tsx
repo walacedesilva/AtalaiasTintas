@@ -109,7 +109,7 @@ export default function PagamentoSplitPanel({
               step="0.01"
               value={entry.valor}
               onChange={(e) => updateEntry(entry.id, 'valor', e.target.value)}
-              className="form-input w-32 text-right"
+              className="form-input w-full sm:w-32 text-right"
               placeholder="0,00"
               disabled={disabled}
             />

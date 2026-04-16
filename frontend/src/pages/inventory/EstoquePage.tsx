@@ -297,6 +297,7 @@ function LotesTab({ loja_id }: { loja_id: number }) {
         </div>
       ) : (
         <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -332,6 +333,7 @@ function LotesTab({ loja_id }: { loja_id: number }) {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -415,6 +417,7 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
         </div>
       ) : (
         <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
@@ -461,6 +464,7 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -702,7 +706,7 @@ function ProdutosTab(): React.ReactElement {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label" htmlFor="p-codigo">Código *</label>
                   <input
@@ -739,7 +743,7 @@ function ProdutosTab(): React.ReactElement {
                   onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label" htmlFor="p-categoria">Categoria *</label>
                   <select

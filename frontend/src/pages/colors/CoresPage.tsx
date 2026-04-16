@@ -125,11 +125,11 @@ function CorModal({
           <h2 className="text-lg font-semibold text-slate-900">{cor ? 'Editar Cor' : 'Nova Cor'}</h2>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {field('codigo_cor', 'Código', { placeholder: 'Ex: AZ-001' })}
             {field('nome_cor', 'Nome da Cor', { placeholder: 'Ex: Azul Royal' })}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {field('familia_cor', 'Família / Categoria', { placeholder: 'Ex: Azuis' })}
             {field('linha_produto', 'Linha do Produto', { placeholder: 'Ex: Premium' })}
           </div>
@@ -152,7 +152,7 @@ function CorModal({
                 onChange={e => handleColorPicker(e.target.value)}
                 className="h-10 w-14 rounded cursor-pointer border border-slate-200"
               />
-              <div className="grid grid-cols-3 gap-2 flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 flex-1">
                 {(['r', 'g', 'b'] as const).map(ch => (
                   <div key={ch}>
                     <label className="block text-xs text-slate-500 mb-0.5 uppercase">{ch}</label>
@@ -172,7 +172,7 @@ function CorModal({
           {/* CIE Lab values */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-2">Valores CIE Lab</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {field('l_value', 'L* (0–100)', { type: 'number', step: '0.001' })}
               {field('a_value', 'a* (-128–127)', { type: 'number', step: '0.001' })}
               {field('b_value', 'b* (-128–127)', { type: 'number', step: '0.001' })}

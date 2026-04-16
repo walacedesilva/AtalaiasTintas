@@ -21,6 +21,7 @@ import ClientesPage from '@/pages/customers/ClientesPage';
 import TintometryPage from '@/pages/TintometryPage';
 import PigmentStockPage from '@/pages/PigmentStockPage';
 import PDVPage from '@/pages/pdv/PDVPage';
+import NotaFiscalPage from '@/pages/fiscal/NotaFiscalPage';
 
 /**
  * Protected route component
@@ -155,6 +156,10 @@ const router = createBrowserRouter([
       {
         path: 'tintometry/stock',
         element: <PigmentStockPage />
+      },
+      {
+        path: 'fiscal',
+        element: <NotaFiscalPage />
       }
     ]
   },

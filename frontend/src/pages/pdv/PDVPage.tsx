@@ -98,6 +98,9 @@ export default function PDVPage() {
   // Success state
   const [vendaNumero, setVendaNumero] = useState<string | null>(null);
 
+  // Mobile panel toggle
+  const [activePanel, setActivePanel] = useState<'products' | 'cart'>('products');
+
   const { subtotal, valorDesconto, liquido } = calcTotals(cart, parseFloat(desconto) || 0);
 
   // ── Product search debounce ────────────────────────────────────────────────
@@ -251,10 +254,26 @@ export default function PDVPage() {
         </div>
       </div>
 
-      {/* Body: two-column */}
+      {/* Body: two-column on desktop, single panel on mobile */}
+      {/* Mobile panel toggle */}
+      <div className="flex border-b border-slate-200 lg:hidden">
+        <button
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activePanel === 'products' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          onClick={() => setActivePanel('products')}
+        >
+          Produtos
+        </button>
+        <button
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activePanel === 'cart' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          onClick={() => setActivePanel('cart')}
+        >
+          Carrinho {cart.length > 0 && <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">{cart.length}</span>}
+        </button>
+      </div>
+
       <div className="flex flex-1 gap-0 overflow-hidden">
         {/* LEFT: search + cart */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <div className={`flex flex-1 flex-col gap-4 overflow-y-auto p-6 ${activePanel === 'products' ? 'flex' : 'hidden'} lg:flex`}>
           {/* Cliente */}
           <div>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -382,7 +401,7 @@ export default function PDVPage() {
         </div>
 
         {/* RIGHT: totals + payment */}
-        <div className="flex w-80 flex-col gap-4 border-l border-slate-200 bg-slate-50 p-6">
+        <div className={`flex w-full flex-col gap-4 border-t border-slate-200 bg-slate-50 p-6 lg:w-80 lg:border-l lg:border-t-0 ${activePanel === 'cart' ? 'flex' : 'hidden'} lg:flex`}>
           {/* Totals summary */}
           <div className="rounded-2xl bg-white px-5 py-4 shadow-sm space-y-2 text-sm">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resumo</h2>

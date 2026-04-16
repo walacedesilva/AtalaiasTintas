@@ -34,7 +34,7 @@ function ItemRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-2 items-center">
+    <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-center">
       <select
         className="form-input text-sm"
         value={item.pigmento_id || ''}
@@ -195,11 +195,11 @@ function FormulaModal({
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-5">
           {/* Identification */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {F('codigo_formula', 'Código da Fórmula', { placeholder: 'Ex: FORM-AZ-001' })}
             {F('nome_formula', 'Nome', { placeholder: 'Ex: Azul Royal 3.6L' })}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {F('versao', 'Versão', { placeholder: '1.0' })}
             {F('volume_base', 'Volume Base (L)', { type: 'number', step: '0.01', min: '0.01' })}
           </div>
@@ -262,7 +262,7 @@ function FormulaModal({
               </p>
             ) : (
               <div className="space-y-2">
-                <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-2 text-xs text-slate-500 px-0.5">
+                <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_auto] gap-2 text-xs text-slate-500 px-0.5">
                   <span>Pigmento</span><span>Qtde (ml)</span><span>Seq.</span><span />
                 </div>
                 {itens.map((it, i) => (

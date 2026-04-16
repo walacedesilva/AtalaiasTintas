@@ -17,6 +17,7 @@ import {
   Pipette,
   Monitor,
   Receipt,
+  FileText,
   X,
 } from 'lucide-react';
 
@@ -57,6 +58,7 @@ export default function Navigation({ isOpen, onClose }: NavigationProps): React.
     { path: '/labels',     label: 'Etiquetas',        icon: Tag,          badge: stats?.etiquetas_geradas },
     { path: '/tintometry', label: 'Tintometria',      icon: Pipette,      badge: undefined },
     { path: '/tintometry/stock', label: 'Estoque Pigmentos', icon: Beaker, badge: undefined },
+    { path: '/fiscal',     label: 'Nota Fiscal',      icon: FileText,     badge: undefined },
   ];
 
   return (

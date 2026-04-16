@@ -228,7 +228,7 @@ function PigmentoModal({ editing, onClose }: PigmentoModalProps) {
               <p className="text-sm font-medium text-slate-700 mb-2">Cor de referência visual</p>
               <div className="flex items-center gap-4">
                 <ColorSwatch hex={previewHex} size="lg" />
-                <div className="grid grid-cols-3 gap-3 flex-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
                   {(['r', 'g', 'b'] as const).map((ch) => (
                     <Field key={ch} label={ch.toUpperCase()} error={undefined}>
                       <input

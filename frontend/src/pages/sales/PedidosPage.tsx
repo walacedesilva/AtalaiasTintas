@@ -194,6 +194,7 @@ function PedidoRow({
       {expanded && pedido.itens.length > 0 && (
         <tr className="border-b border-slate-100 bg-slate-50">
           <td colSpan={6} className="px-6 py-3">
+            <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-slate-500">
@@ -214,6 +215,7 @@ function PedidoRow({
                 ))}
               </tbody>
             </table>
+            </div>
           </td>
         </tr>
       )}
@@ -543,7 +545,7 @@ function NovaPedidoDrawer({
           </div>
 
           {/* Pagamento */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="col-span-2">
               <label className="mb-1 block text-xs font-medium text-slate-700">Pagamento *</label>
               <select value={forma} onChange={(e) => setForma(e.target.value)} className="form-input w-full">
@@ -592,6 +594,7 @@ function NovaPedidoDrawer({
               <div className="bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Itens do Pedido
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-white text-xs text-slate-500">
@@ -658,6 +661,7 @@ function NovaPedidoDrawer({
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </div>
           )}
 
@@ -915,8 +919,7 @@ export default function PedidosPage() {
                 )}
               </tbody>
             </table>
-          </div>
-
+              </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
               <span className="text-xs text-slate-500">

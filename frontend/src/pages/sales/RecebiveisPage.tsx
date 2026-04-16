@@ -282,7 +282,7 @@ export default function RecebiveisPage() {
             {lojas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
           </select>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <label className="text-xs text-slate-500" htmlFor="data-inicio">De</label>
           <input id="data-inicio" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="form-input text-sm" />
           <label className="text-xs text-slate-500" htmlFor="data-fim">Até</label>

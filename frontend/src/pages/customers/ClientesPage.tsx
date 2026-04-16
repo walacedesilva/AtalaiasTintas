@@ -178,7 +178,7 @@ function ClienteModal({ cliente, onClose }: ClienteModalProps) {
           {/* PJ fields */}
           {tipo === 'PJ' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">CNPJ *</label>
                   <input
@@ -217,7 +217,7 @@ function ClienteModal({ cliente, onClose }: ClienteModalProps) {
           )}
 
           {/* Contact */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Telefone</label>
               <input
