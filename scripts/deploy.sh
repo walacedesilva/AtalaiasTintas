@@ -29,7 +29,9 @@ cd "$PROJECT_DIR"
 # 1. Baixar últimas alterações
 log ">> Atualizando código..."
 GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=30 \
-    timeout 120 git pull origin Develop
+    timeout 60 git fetch origin
+git reset --hard origin/Develop
+git clean -fd
 
 # 2. Rebuild das imagens Docker (apenas se mudou o backend)
 if git diff HEAD@{1} HEAD --name-only | grep -qE "^backend/|^requirements/|^deployment/docker/Dockerfile"; then
