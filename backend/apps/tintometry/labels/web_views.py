@@ -16,8 +16,8 @@ import json
 import logging
 
 from apps.tintometry.models import (
-    ProducaoTinta, FormulaTintometrica, Pigmento,
-    LequeCorDefinida, ProdutoVariacao
+    MisturaTinta, FormulaTintometrica,
+    LequeCorDefinida
 )
 from apps.companies.models import Loja
 from .services import LabelGeneratorService, QRCodeService, BarcodeService
@@ -36,32 +36,31 @@ def dashboard_view(request):
         month_start = today.replace(day=1)
         
         # Contadores principais
-        total_misturas = ProducaoTinta.objects.filter(
-            operador=request.user
+        total_misturas = MisturaTinta.objects.filter(
+            usuario_operacao=request.user
         ).count()
-        
-        misturas_hoje = ProducaoTinta.objects.filter(
-            operador=request.user,
+
+        misturas_hoje = MisturaTinta.objects.filter(
+            usuario_operacao=request.user,
             created_at__date=today
         ).count()
-        
-        misturas_semana = ProducaoTinta.objects.filter(
-            operador=request.user,
+
+        misturas_semana = MisturaTinta.objects.filter(
+            usuario_operacao=request.user,
             created_at__date__gte=week_start
         ).count()
-        
+
         # Misturas recentes
-        misturas_recentes = ProducaoTinta.objects.filter(
-            operador=request.user
+        misturas_recentes = MisturaTinta.objects.filter(
+            usuario_operacao=request.user
         ).select_related(
             'formula__cor_definida',
-            'formula__produto_base',
             'loja'
         ).order_by('-created_at')[:10]
-        
+
         # Estatísticas de volume e custo
-        stats_volume = ProducaoTinta.objects.filter(
-            operador=request.user,
+        stats_volume = MisturaTinta.objects.filter(
+            usuario_operacao=request.user,
             created_at__date__gte=month_start
         ).aggregate(
             volume_total=Sum('volume_solicitado'),
@@ -99,11 +98,10 @@ def misturas_list_view(request):
     """Lista todas as misturas com filtros e busca"""
     try:
         # Base queryset
-        misturas = ProducaoTinta.objects.select_related(
+        misturas = MisturaTinta.objects.select_related(
             'formula__cor_definida',
-            'formula__produto_base', 
             'loja',
-            'operador'
+            'usuario_operacao'
         ).prefetch_related('itens__pigmento')
         
         # Filtros
@@ -117,7 +115,7 @@ def misturas_list_view(request):
         # Aplicar filtros
         if search:
             misturas = misturas.filter(
-                Q(numero_producao__icontains=search) |
+                Q(codigo_mistura__icontains=search) |
                 Q(cliente_nome__icontains=search) |
                 Q(formula__cor_definida__nome_cor__icontains=search) |
                 Q(formula__codigo_formula__icontains=search)
@@ -142,7 +140,7 @@ def misturas_list_view(request):
         
         # Ordenação
         ordem = request.GET.get('ordem', '-created_at')
-        if ordem in ['-created_at', 'created_at', 'numero_producao', 
+        if ordem in ['-created_at', 'created_at', 'codigo_mistura',
                      '-volume_solicitado', 'situacao']:
             misturas = misturas.order_by(ordem)
         else:
@@ -155,10 +153,10 @@ def misturas_list_view(request):
         
         # Dados para filtros
         lojas = Loja.objects.all().order_by('nome')
-        familias_cor = CorDefinida.objects.values_list(
+        familias_cor = LequeCorDefinida.objects.values_list(
             'familia_cor', flat=True
         ).distinct().order_by('familia_cor')
-        
+
         context = {
             'misturas': misturas_page,
             'lojas': lojas,
@@ -172,7 +170,7 @@ def misturas_list_view(request):
                 'cor_familia': cor_familia,
                 'ordem': ordem,
             },
-            'status_choices': ProducaoTinta.SITUACOES,
+            'status_choices': MisturaTinta.SITUACAO_CHOICES,
         }
         
         return render(request, 'etiquetas/misturas.html', context)
@@ -201,27 +199,34 @@ def nova_mistura_view(request):
             if not formula_id or not cliente_nome or volume_solicitado <= 0:
                 messages.error(request, "Preencha todos os campos obrigatórios.")
                 return redirect('etiquetas:nova_mistura')
-            
-            # Obter fórmula
+
+            if not loja_id:
+                messages.error(request, "Selecione a loja.")
+                return redirect('etiquetas:nova_mistura')
+
+            # Obter fórmula e loja
             formula = get_object_or_404(FormulaTintometrica, id=formula_id)
-            loja = get_object_or_404(Loja, id=loja_id) if loja_id else None
-            
+            loja = get_object_or_404(Loja, id=loja_id)
+
             # Criar mistura
-            mistura = ProducaoTinta.objects.create(
+            mistura = MisturaTinta.objects.create(
                 formula=formula,
-                cliente_nome=cliente_nome,
-                produto_base=formula.produto_base,
-                volume_solicitado=volume_solicitado,
                 loja=loja,
-                observacoes_qualidade=observacoes_qualidade,
-                operador=request.user,
-                situacao='PENDENTE'
+                usuario_operacao=request.user,
+                cliente_nome=cliente_nome,
+                pedido_venda_id=pedido_venda_id or None,
+                volume_solicitado=volume_solicitado,
+                observacoes_internas=observacoes_qualidade or '',
+                custo_total=0,
+                custo_base=0,
+                custo_pigmentos=0,
+                situacao='CALCULADA',
             )
-            
+
             # Mistura criada com sucesso
             messages.success(
-                request, 
-                f"Produção {mistura.numero_producao} criada com sucesso!"
+                request,
+                f"Mistura {mistura.codigo_mistura} criada com sucesso!"
             )
             
             # Verificar se deve imprimir automaticamente
@@ -243,12 +248,12 @@ def nova_mistura_view(request):
     try:
         # Dados para o formulário
         formulas = FormulaTintometrica.objects.filter(
-            is_active=True
+            ativa=True
         ).select_related('cor_definida', 'produto_base').order_by(
             'cor_definida__nome_cor'
         )
-        
-        lojas = Loja.objects.filter(is_active=True).order_by('nome')
+
+        lojas = Loja.objects.filter(ativa=True).order_by('nome')
         
         # Organizar fórmulas por família de cor
         formulas_por_familia = {}
@@ -277,26 +282,43 @@ def preview_etiqueta_view(request, mistura_id):
     """Preview da etiqueta antes de gerar PDF"""
     try:
         mistura = get_object_or_404(
-            ProducaoTinta.objects.select_related(
+            MisturaTinta.objects.select_related(
                 'formula__cor_definida',
-                'formula__produto_base',
                 'loja',
-                'operador'
+                'usuario_operacao',
             ).prefetch_related('itens__pigmento'),
             id=mistura_id
         )
-        
+
         # Verificar se usuário tem acesso
-        if mistura.operador != request.user and not request.user.is_superuser:
+        if mistura.usuario_operacao != request.user and not request.user.is_superuser:
             messages.error(request, "Acesso negado a esta mistura.")
             return redirect('etiquetas:misturas')
-        
+
+        # Gerar QR Code e código de barras para o preview
+        qr_image_b64 = None
+        barcode_image_b64 = None
+        tracking_code = None
+        try:
+            qr_service = QRCodeService()
+            barcode_service = BarcodeService()
+            qr_data = qr_service.generate_qr_data(mistura)
+            qr_image_b64 = qr_service.generate_qr_image(qr_data, size=(150, 150))
+            tracking_code = barcode_service.generate_tracking_code(mistura)
+            barcode_image_b64 = barcode_service.generate_barcode_image(tracking_code)
+        except Exception as e:
+            logger.warning(f"Erro ao gerar imagens para preview {mistura_id}: {e}")
+
         context = {
             'mistura': mistura,
+            'qr_image_b64': qr_image_b64,
+            'barcode_image_b64': barcode_image_b64,
+            'tracking_code': tracking_code,
+            'templates': LabelTemplate.objects.filter(is_active=True).order_by('name'),
         }
-        
+
         return render(request, 'etiquetas/preview.html', context)
-        
+
     except Exception as e:
         logger.error(f"Erro no preview da etiqueta {mistura_id}: {str(e)}")
         messages.error(request, "Erro ao carregar preview da etiqueta.")
@@ -308,32 +330,73 @@ def gerar_etiqueta_view(request, mistura_id=None):
     """Interface para geração de etiquetas"""
     try:
         context = {}
-        
+        mistura = None
+
         if mistura_id:
-            # Geração para mistura específica
+            # Carregar mistura específica
             mistura = get_object_or_404(
-                ProducaoTinta.objects.select_related(
+                MisturaTinta.objects.select_related(
                     'formula__cor_definida',
-                    'formula__produto_base',
-                    'loja'
-                ),
+                    'loja',
+                    'usuario_operacao',
+                ).prefetch_related('itens__pigmento'),
                 id=mistura_id
             )
-            
+
             # Verificar acesso
-            if mistura.operador != request.user and not request.user.is_superuser:
+            if mistura.usuario_operacao != request.user and not request.user.is_superuser:
                 messages.error(request, "Acesso negado a esta mistura.")
                 return redirect('etiquetas:misturas')
-                
+
             context['mistura'] = mistura
-            context['mistura_id'] = mistura_id
-        
+            context['mistura_id'] = str(mistura_id)
+
         # Templates disponíveis
         templates = LabelTemplate.objects.filter(is_active=True).order_by('name')
         context['templates'] = templates
-        
+
+        # --- POST: gerar PDF e devolver como download ---
+        if request.method == 'POST' and mistura:
+            template_id = request.POST.get('template_id')
+            copies = int(request.POST.get('copies', 1))
+            paper_size = request.POST.get('paper_size', 'a4')
+            include_qr = request.POST.get('include_qr', 'true').lower() != 'false'
+            include_barcode = request.POST.get('include_barcode', 'true').lower() != 'false'
+
+            # Obter template selecionado
+            template_obj = None
+            if template_id:
+                template_obj = LabelTemplate.objects.filter(
+                    id=template_id, is_active=True
+                ).first()
+            if not template_obj:
+                template_obj = LabelTemplate.objects.filter(
+                    is_active=True, is_default=True
+                ).first()
+            if not template_obj:
+                template_obj = LabelTemplate.objects.filter(is_active=True).first()
+
+            if not template_obj:
+                messages.error(request, "Nenhum template disponível para geração.")
+                return render(request, 'etiquetas/gerar.html', context)
+
+            config = {
+                'paper_size': paper_size,
+                'copies': max(1, min(copies, 10)),
+                'include_qr': include_qr,
+                'include_barcode': include_barcode,
+            }
+
+            label_service = LabelGeneratorService()
+            pdf_bytes = label_service.generate_label_pdf(mistura, template_obj, config)
+
+            filename = f"etiqueta_{mistura.codigo_mistura}.pdf"
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
         return render(request, 'etiquetas/gerar.html', context)
-        
+
     except Exception as e:
         logger.error(f"Erro na interface de geração: {str(e)}")
         messages.error(request, "Erro ao carregar interface de geração.")
@@ -391,23 +454,23 @@ def batch_action_view(request):
             })
         
         # Verificar permissões
-        misturas = ProducaoTinta.objects.filter(
+        misturas = MisturaTinta.objects.filter(
             id__in=mistura_ids,
-            operador=request.user
+            usuario_operacao=request.user
         )
-        
+
         if misturas.count() != len(mistura_ids):
             return JsonResponse({
                 'success': False,
                 'error': 'Algumas misturas não foram encontradas ou você não tem acesso'
             })
-        
+
         # Executar ação
         success_count = 0
-        
+
         if action == 'change_status':
             new_status = data.get('new_status', '')
-            if new_status in dict(ProducaoTinta.SITUACOES):
+            if new_status in dict(MisturaTinta.SITUACAO_CHOICES):
                 success_count = misturas.update(situacao=new_status)
                 
         elif action == 'generate_labels':

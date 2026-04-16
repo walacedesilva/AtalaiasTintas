@@ -5,6 +5,7 @@ from apps.companies.models import Loja
 from apps.inventory.models import ProdutoVariacao
 from apps.tintometry.models import ProducaoTinta, CorPersonalizada
 import uuid
+from decimal import Decimal
 
 
 class Cliente(TimeStampedModel):
@@ -110,7 +111,13 @@ class PedidoVenda(TimeStampedModel):
     
     # Dados básicos
     loja = models.ForeignKey(Loja, on_delete=models.PROTECT)
-    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Nulo para vendas balcão anônimo (BR-001)",
+    )
     vendedor = models.ForeignKey(
         User, 
         on_delete=models.PROTECT,
@@ -145,17 +152,34 @@ class PedidoVenda(TimeStampedModel):
     endereco_entrega = models.TextField(null=True, blank=True)
     valor_frete = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     
+    # Desconto — auditoria e aprovação (T001)
+    desconto_aprovador = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='descontos_aprovados',
+        help_text="Usuário que aprovou o desconto via PIN",
+    )
+    desconto_motivo = models.CharField(max_length=500, null=True, blank=True)
+    desconto_aprovado_em = models.DateTimeField(null=True, blank=True)
+
     # Observações
     observacoes = models.TextField(null=True, blank=True)
     observacoes_internas = models.TextField(null=True, blank=True)
     
     def __str__(self):
-        return f"Pedido {self.numero_pedido} - {self.cliente.nome_completo}"
+        if self.cliente:
+            return f"Pedido {self.numero_pedido} - {self.cliente.nome_completo}"
+        return f"Pedido {self.numero_pedido} - BALCÃO ANÔNIMO"
     
     class Meta:
         verbose_name = 'Pedido de Venda'
         verbose_name_plural = 'Pedidos de Venda'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['loja', 'situacao', 'created_at'], name='pedidovenda_loja_sit_idx'),
+        ]
 
 
 class ItemPedidoVenda(TimeStampedModel):
@@ -286,18 +310,221 @@ class Venda(TimeStampedModel):
     comissao_paga = models.BooleanField(default=False)
     data_pagamento_comissao = models.DateTimeField(null=True, blank=True)
     
+    # Devolução (T002)
+    tem_devolucao = models.BooleanField(default=False)
+
     # Status
     cancelada = models.BooleanField(default=False)
     motivo_cancelamento = models.CharField(max_length=200, null=True, blank=True)
     data_cancelamento = models.DateTimeField(null=True, blank=True)
+    cancelado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendas_canceladas',
+    )
     
     def __str__(self):
-        return f"Venda {self.numero_venda} - {self.cliente.nome_completo}"
+        return f"Venda {self.numero_venda} - {self.cliente.nome_completo if self.cliente else 'BALCÃO ANÔNIMO'}"
     
     class Meta:
         verbose_name = 'Venda'
         verbose_name_plural = 'Vendas'
         ordering = ['-created_at']
+
+
+# ---------------------------------------------------------------------------
+# T003 — PagamentoVenda (split payment)
+# ---------------------------------------------------------------------------
+
+class PagamentoVenda(TimeStampedModel):
+    """Pagamentos de uma venda — permite múltiplas formas (split payment)."""
+
+    venda = models.ForeignKey(
+        Venda,
+        on_delete=models.CASCADE,
+        related_name='pagamentos',
+    )
+    forma = models.CharField(
+        max_length=20,
+        choices=PedidoVenda.FORMAS_PAGAMENTO,
+    )
+    valor = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    # Troco — preenchido somente para DINHEIRO
+    valor_recebido = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Valor entregue pelo cliente (somente DINHEIRO)",
+    )
+    troco = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Referência externa (ID de transação PIX, autorização de cartão, etc.)
+    referencia_externa = models.CharField(max_length=100, null=True, blank=True)
+    observacoes = models.CharField(max_length=300, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Pagamento de Venda'
+        verbose_name_plural = 'Pagamentos de Venda'
+        ordering = ['created_at']
+
+    def __str__(self) -> str:
+        return f"{self.get_forma_display()} R$ {self.valor} — {self.venda.numero_venda}"
+
+
+# ---------------------------------------------------------------------------
+# T004 — Recebivel (crediário / fiado)
+# ---------------------------------------------------------------------------
+
+class Recebivel(TimeStampedModel):
+    """Recebíveis gerados por vendas no crediário/fiado."""
+
+    SITUACOES = [
+        ('ABERTO', 'Em Aberto'),
+        ('PAGO', 'Pago'),
+        ('PARCIAL', 'Parcialmente Pago'),
+        ('VENCIDO', 'Vencido'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name='recebiveis',
+    )
+    venda = models.ForeignKey(
+        Venda,
+        on_delete=models.PROTECT,
+        related_name='recebiveis',
+        null=True,
+        blank=True,
+    )
+    loja = models.ForeignKey(Loja, on_delete=models.PROTECT)
+
+    valor_original = models.DecimalField(max_digits=12, decimal_places=2)
+    valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_saldo = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text="Computed from valor_original - valor_pago; always >= 0",
+    )
+    data_vencimento = models.DateField()
+    situacao = models.CharField(
+        max_length=10, choices=SITUACOES, default='ABERTO',
+    )
+    observacoes = models.TextField(null=True, blank=True)
+
+    # Override de limite de crédito (US005 AC2)
+    criado_com_override = models.BooleanField(
+        default=False,
+        help_text="True quando limite de crédito foi excedido e aprovado por gerência",
+    )
+    aprovador_override = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='overrides_credito',
+    )
+
+    # Cancelamento
+    cancelado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recebiveis_cancelados',
+    )
+    data_cancelamento = models.DateTimeField(null=True, blank=True)
+    motivo_cancelamento = models.CharField(max_length=500, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Compute valor_saldo before every save
+        self.valor_saldo = max(Decimal('0.00'), self.valor_original - self.valor_pago)
+        # Sync situacao if fully paid / zero balance
+        if self.valor_saldo == 0 and self.situacao not in ('PAGO', 'CANCELADO'):
+            self.situacao = 'PAGO'
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = 'Recebível'
+        verbose_name_plural = 'Recebíveis'
+        ordering = ['data_vencimento']
+        indexes = [
+            models.Index(fields=['cliente', 'situacao'], name='recebivel_cliente_sit_idx'),
+            models.Index(fields=['loja', 'data_vencimento', 'situacao'], name='recebivel_loja_venc_sit_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(valor_saldo__gte=0),
+                name='recebivel_saldo_nao_negativo',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Recebível {self.pk} — {self.cliente.nome_completo} R$ {self.valor_saldo} ({self.situacao})"
+
+
+# ---------------------------------------------------------------------------
+# T005 — DescontoAuditLog (imutável)
+# ---------------------------------------------------------------------------
+
+class DescontoAuditLog(TimeStampedModel):
+    """Log imutável de todos os descontos aplicados em pedidos."""
+
+    TIPOS_DESCONTO = [
+        ('ITEM', 'Por Item'),
+        ('TOTAL', 'No Total'),
+    ]
+
+    pedido = models.ForeignKey(
+        PedidoVenda,
+        on_delete=models.PROTECT,
+        related_name='logs_desconto',
+    )
+    solicitante = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='descontos_solicitados',
+    )
+    aprovador = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='descontos_aprovados_log',
+    )
+    tipo_desconto = models.CharField(max_length=10, choices=TIPOS_DESCONTO)
+    # FK ao item — somente se tipo_desconto == 'ITEM'
+    item = models.ForeignKey(
+        ItemPedidoVenda,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs_desconto',
+    )
+    valor_antes = models.DecimalField(max_digits=12, decimal_places=2)
+    valor_depois = models.DecimalField(max_digits=12, decimal_places=2)
+    percentual = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    motivo = models.CharField(max_length=500, null=True, blank=True)
+    aprovado_com_pin = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Log de Desconto'
+        verbose_name_plural = 'Logs de Desconto'
+        ordering = ['-created_at']
+        # Audit log is append-only — no update/delete in the ORM layer
+
+    def __str__(self) -> str:
+        return (
+            f"Desconto {self.percentual}% no pedido {self.pedido.numero_pedido} "
+            f"por {self.solicitante}"
+        )
 
 
 class CoresCliente(TimeStampedModel):

@@ -680,7 +680,7 @@ class EstoquePigmentoViewSet(viewsets.ModelViewSet):
     serializer_class = EstoquePigmentoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['loja', 'estoque_critico', 'alerta_ativo', 'ativo']
+    filterset_fields = ['loja', 'alerta_ativo', 'ativo']
     search_fields = ['pigmento__nome', 'pigmento__codigo', 'lote_atual']
     ordering_fields = ['saldo_ml', 'percentual_estoque', 'validade_lote']
     ordering = ['pigmento__nome']

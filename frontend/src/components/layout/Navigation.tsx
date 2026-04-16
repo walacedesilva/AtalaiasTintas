@@ -15,6 +15,8 @@ import {
   ClipboardList,
   Users,
   Pipette,
+  Monitor,
+  Receipt,
 } from 'lucide-react';
 
 interface NavItem {
@@ -30,8 +32,10 @@ export default function Navigation(): React.ReactElement {
 
   const navItems: NavItem[] = [
     { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/pdv',        label: 'PDV',              icon: Monitor },
     { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
     { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
+    { path: '/recebiveis', label: 'Recebíveis',       icon: Receipt },
     { path: '/customers',  label: 'Clientes',         icon: Users },
     { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
     { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },

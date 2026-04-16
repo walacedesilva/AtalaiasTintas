@@ -53,7 +53,13 @@ export default function Header(): React.ReactElement {
       <div className="flex-1" />
 
       {/* Quick actions */}
-      <nav className="hidden lg:flex items-center gap-1" aria-label="AÃ§Ãµes rÃ¡pidas">
+      <nav className="hidden lg:flex items-center gap-1" aria-label="Ações rápidas">
+        <Link
+          to="/sales"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          Vendas
+        </Link>
         <Link
           to="/mixtures?action=new"
           className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
