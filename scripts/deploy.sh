@@ -14,7 +14,6 @@ ENV_FILE=".env.prod"
 
 # Node 20 instalado em /usr/local/bin
 export PATH=/usr/local/bin:$PATH
-export DOCKER_BUILDKIT=1
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -35,9 +34,9 @@ GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=30 \
 # 2. Rebuild das imagens Docker (apenas se mudou o backend)
 if git diff HEAD@{1} HEAD --name-only | grep -qE "^backend/|^requirements/|^deployment/docker/Dockerfile"; then
     log ">> Alterações no backend detectadas. Rebuild das imagens..."
-    sudo -E docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build web worker
+    sudo docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build web worker
     log ">> Restart dos containers..."
-    sudo -E docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d web worker
+    sudo docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d web worker
     # Aguardar subir
     sleep 20
     sudo docker logs atalaias_web 2>&1 | grep -E "Listening|ERROR" | tail -5 | tee -a "$LOG_FILE"
@@ -47,7 +46,7 @@ if git diff HEAD@{1} HEAD --name-only | grep -qE "^backend/|^requirements/|^depl
 else
     log ">> Sem alterações no backend. Pulando rebuild das imagens."
     # Restart leve para pegar mudanças de código (volume bind)
-    sudo -E docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart web worker
+    sudo docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart web worker
 fi
 
 # 3. Rebuild do frontend (apenas se mudou)
