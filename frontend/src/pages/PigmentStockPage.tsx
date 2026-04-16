@@ -156,6 +156,7 @@ export default function PigmentStockPage(): React.ReactElement {
         )}
 
         {!isLoading && items.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -226,6 +227,7 @@ export default function PigmentStockPage(): React.ReactElement {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

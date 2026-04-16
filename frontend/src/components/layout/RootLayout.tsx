@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navigation from './Navigation';
 import Header from './Header';
@@ -7,6 +7,8 @@ import { HelpProvider } from '@/providers/HelpProvider';
 import { HelpDrawer } from '@/components/help/HelpDrawer';
 
 export default function RootLayout(): React.ReactElement {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <HelpProvider>
     <div className="min-h-screen bg-slate-50">
@@ -19,16 +21,25 @@ export default function RootLayout(): React.ReactElement {
       </a>
 
       {/* Header */}
-      <Header />
+      <Header onMenuToggle={() => setSidebarOpen((v) => !v)} />
 
       <div className="flex pt-16">
+        {/* Mobile backdrop overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Sidebar Navigation */}
-        <Navigation />
+        <Navigation isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         {/* Main Content */}
         <main
           id="main-content"
-          className="flex-1 ml-64 min-h-[calc(100vh-4rem)] p-6"
+          className="flex-1 lg:ml-64 min-h-[calc(100vh-4rem)] p-4 sm:p-6"
           role="main"
           aria-label="Conteúdo principal"
         >
