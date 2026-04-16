@@ -28,7 +28,8 @@ cd "$PROJECT_DIR"
 
 # 1. Baixar últimas alterações
 log ">> Atualizando código..."
-git pull origin Develop
+GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=30 \
+    timeout 120 git pull origin Develop
 
 # 2. Rebuild das imagens Docker (apenas se mudou o backend)
 if git diff HEAD@{1} HEAD --name-only | grep -qE "^backend/|^requirements/|^deployment/docker/Dockerfile"; then
@@ -39,6 +40,9 @@ if git diff HEAD@{1} HEAD --name-only | grep -qE "^backend/|^requirements/|^depl
     # Aguardar subir
     sleep 20
     sudo docker logs atalaias_web 2>&1 | grep -E "Listening|ERROR" | tail -5 | tee -a "$LOG_FILE"
+    # Rodar migrations
+    log ">> Rodando migrations..."
+    sudo docker exec atalaias_web bash -c "cd backend && python manage.py migrate --no-input" | tee -a "$LOG_FILE"
 else
     log ">> Sem alterações no backend. Pulando rebuild das imagens."
     # Restart leve para pegar mudanças de código (volume bind)
