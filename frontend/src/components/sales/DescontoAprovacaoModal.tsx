@@ -13,7 +13,7 @@ interface AprovadorOption {
 }
 
 interface DescontoAprovacaoModalProps {
-  pedidoId: number;
+  pedidoId: string;
   percentual: string;
   nivel: 'gerente' | 'diretor';
   tipo: 'TOTAL' | 'ITEM';
@@ -151,7 +151,7 @@ export default function DescontoAprovacaoModal({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="px-6 py-5 space-y-4">
           {/* Aprovador */}
           <div>
             <label htmlFor="aprovador" className="block text-sm font-medium text-slate-700 mb-1">

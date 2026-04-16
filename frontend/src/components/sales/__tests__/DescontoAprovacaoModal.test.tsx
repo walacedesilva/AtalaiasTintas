@@ -24,7 +24,7 @@ const mockAprovadores = [
 ];
 
 const defaultProps = {
-  pedidoId: 42,
+  pedidoId: 'test-uuid-0042',
   percentual: '15',
   nivel: 'gerente' as const,
   tipo: 'TOTAL' as const,
@@ -63,7 +63,7 @@ describe('DescontoAprovacaoModal', () => {
 
     it('renders aprovador select with all options', () => {
       renderModal();
-      const select = screen.getByLabelText(/aprovador/i);
+      const select = screen.getByLabelText(/^aprovador/i);
       expect(select).toBeInTheDocument();
       expect(screen.getByText('Ana Costa (Gerente)')).toBeInTheDocument();
       expect(screen.getByText('João Lima (Diretor)')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('DescontoAprovacaoModal', () => {
 
     it('auto-selects aprovador when only one is provided', () => {
       renderModal({ aprovadores: [mockAprovadores[0]] });
-      const select = screen.getByLabelText(/aprovador/i) as HTMLSelectElement;
+      const select = screen.getByLabelText(/^aprovador/i) as HTMLSelectElement;
       expect(select.value).toBe('1');
     });
 
@@ -205,7 +205,7 @@ describe('DescontoAprovacaoModal', () => {
 
       await waitFor(() =>
         expect(salesAPI.pedidos.aprovarDesconto).toHaveBeenCalledWith(
-          42,
+          'test-uuid-0042',
           expect.objectContaining({
             percentual: '15',
             motivo: 'Promoção especial',

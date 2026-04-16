@@ -1,10 +1,16 @@
 import { apiClient } from './client';
 import type {
+  Categoria,
   EstoqueLojaItem,
   EstoqueResumo,
   LoteProduto,
   EntradaMercadoria,
+  Marca,
   PaginatedResponse,
+  ProdutoBase,
+  ProdutoBasePayload,
+  ProdutoVariacao,
+  ProdutoVariacaoPayload,
 } from '@/types';
 
 export interface EstoqueFilters {
@@ -79,6 +85,74 @@ export const inventoryAPI = {
 
     async confirmar(id: number): Promise<EntradaMercadoria> {
       return apiClient.postData<EntradaMercadoria>(`/inventory/entradas/${id}/confirmar/`, {});
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Produtos (ProdutoBase + ProdutoVariacao CRUD)
+  // -------------------------------------------------------------------------
+  produtos: {
+    async list(params?: {
+      search?: string;
+      categoria_id?: number;
+      marca_id?: number;
+      tipo_produto?: string;
+      ativo?: boolean;
+    }): Promise<PaginatedResponse<ProdutoBase>> {
+      return apiClient.getData<PaginatedResponse<ProdutoBase>>('/inventory/produtos/', params);
+    },
+
+    async get(id: string): Promise<ProdutoBase> {
+      return apiClient.getData<ProdutoBase>(`/inventory/produtos/${id}/`);
+    },
+
+    async create(data: ProdutoBasePayload): Promise<ProdutoBase> {
+      return apiClient.postData<ProdutoBase>('/inventory/produtos/', data);
+    },
+
+    async update(id: string, data: Partial<ProdutoBasePayload>): Promise<ProdutoBase> {
+      const response = await apiClient.patch<ProdutoBase>(`/inventory/produtos/${id}/`, data);
+      return response.data;
+    },
+
+    async deactivate(id: string): Promise<void> {
+      await apiClient.delete(`/inventory/produtos/${id}/`);
+    },
+
+    async listVariacoes(produtoId: string): Promise<ProdutoVariacao[]> {
+      return apiClient.getData<ProdutoVariacao[]>(`/inventory/produtos/${produtoId}/variacoes/`);
+    },
+
+    async createVariacao(produtoId: string, data: ProdutoVariacaoPayload): Promise<ProdutoVariacao> {
+      return apiClient.postData<ProdutoVariacao>(`/inventory/produtos/${produtoId}/variacoes/`, data);
+    },
+  },
+
+  variacoes: {
+    async update(id: string, data: Partial<ProdutoVariacaoPayload>): Promise<ProdutoVariacao> {
+      const response = await apiClient.patch<ProdutoVariacao>(`/inventory/variacoes/${id}/`, data);
+      return response.data;
+    },
+
+    async deactivate(id: string): Promise<void> {
+      await apiClient.delete(`/inventory/variacoes/${id}/`);
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Categorias e Marcas (auxiliares para filtros/dropdowns)
+  // -------------------------------------------------------------------------
+  categorias: {
+    async list(): Promise<Categoria[]> {
+      const res = await apiClient.getData<{ results: Categoria[] } | Categoria[]>('/inventory/categorias/');
+      return Array.isArray(res) ? res : res.results;
+    },
+  },
+
+  marcas: {
+    async list(): Promise<Marca[]> {
+      const res = await apiClient.getData<{ results: Marca[] } | Marca[]>('/inventory/marcas/');
+      return Array.isArray(res) ? res : res.results;
     },
   },
 };

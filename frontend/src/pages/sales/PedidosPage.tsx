@@ -113,11 +113,11 @@ function PedidoRow({
   onCancelar,
 }: {
   pedido: PedidoVenda;
-  onFinalizar: (id: number) => void;
+  onFinalizar: (id: string) => void;
   isFinalizando: boolean;
-  onAprovar: (id: number) => void;
+  onAprovar: (id: string) => void;
   isAprovando: boolean;
-  onFinalizarEntrega: (id: number) => void;
+  onFinalizarEntrega: (id: string) => void;
   isFinalizandoEntrega: boolean;
   onCancelar: (pedido: PedidoVenda) => void;
 }) {
@@ -709,9 +709,9 @@ export default function PedidosPage() {
   const [situacao, setSituacao] = useState('');
   const [page, setPage] = useState(1);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [finalizandoId, setFinalizandoId] = useState<number | null>(null);
-  const [aprovandoId, setAprovandoId] = useState<number | null>(null);
-  const [finalizandoEntregaId, setFinalizandoEntregaId] = useState<number | null>(null);
+  const [finalizandoId, setFinalizandoId] = useState<string | null>(null);
+  const [aprovandoId, setAprovandoId] = useState<string | null>(null);
+  const [finalizandoEntregaId, setFinalizandoEntregaId] = useState<string | null>(null);
   const [cancelarPedido, setCancelarPedido] = useState<import('@/types').PedidoVenda | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -727,7 +727,7 @@ export default function PedidosPage() {
   });
 
   const finalizarMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       setFinalizandoId(id);
       const checkout = await salesAPI.pedidos.iniciarCheckout(id);
       const venda = await salesAPI.pedidos.finalizar(id, checkout.sessao_checkout);
@@ -745,7 +745,7 @@ export default function PedidosPage() {
   });
 
   const aprovarMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       setAprovandoId(id);
       return salesAPI.pedidos.aprovar(id);
     },
@@ -758,7 +758,7 @@ export default function PedidosPage() {
   });
 
   const finalizarEntregaMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       setFinalizandoEntregaId(id);
       return salesAPI.pedidos.finalizarEntrega(id);
     },
@@ -771,7 +771,7 @@ export default function PedidosPage() {
   });
 
   const cancelarMutation = useMutation({
-    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
       salesAPI.pedidos.cancelar(id, motivo),
     onSuccess: () => {
       toast.success('Pedido cancelado.');

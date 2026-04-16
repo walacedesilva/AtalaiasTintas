@@ -5,7 +5,7 @@
  * - ↑↓ keys navigate results
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ClienteQuickSearch from '../ClienteQuickSearch';
 import type { Cliente } from '@/types';
@@ -86,12 +86,11 @@ describe('ClienteQuickSearch', () => {
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
 
+      // Fire the debounce timer; API call happens synchronously
       vi.advanceTimersByTime(300);
 
-      await waitFor(() =>
-        expect(salesAPI.clientes.list).toHaveBeenCalledWith(
-          expect.objectContaining({ search: 'An' })
-        )
+      expect(salesAPI.clientes.list).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'An' })
       );
     });
 
@@ -120,9 +119,10 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
+      // Advance debounce AND flush mock promise resolution inside act()
+      await act(async () => { vi.advanceTimersByTime(300); });
 
-      expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
+      expect(screen.getByText('Ana Silva')).toBeInTheDocument();
       expect(screen.getByText('Bruno Costa')).toBeInTheDocument();
     });
 
@@ -138,9 +138,9 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
+      await act(async () => { vi.advanceTimersByTime(300); });
 
-      await screen.findByText('Ana Silva');
+      // Dropdown is open — click the first result
       await user.click(screen.getByText('Ana Silva'));
 
       expect(onSelect).toHaveBeenCalledWith(mockClientes[0]);
@@ -163,9 +163,8 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
+      await act(async () => { vi.advanceTimersByTime(300); });
 
-      await screen.findByText('Ana Silva');
       await user.keyboard('{ArrowDown}');
 
       const items = screen.getAllByRole('option');
@@ -178,9 +177,8 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
+      await act(async () => { vi.advanceTimersByTime(300); });
 
-      await screen.findByText('Ana Silva');
       await user.keyboard('{ArrowDown}');
       await user.keyboard('{Enter}');
 
@@ -193,9 +191,7 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
-
-      await screen.findByText('Ana Silva');
+      await act(async () => { vi.advanceTimersByTime(300); });
 
       await user.keyboard('{ArrowDown}');
       await user.keyboard('{ArrowDown}');
@@ -213,9 +209,8 @@ describe('ClienteQuickSearch', () => {
 
       const input = screen.getByRole('combobox');
       await user.type(input, 'An');
-      vi.advanceTimersByTime(300);
+      await act(async () => { vi.advanceTimersByTime(300); });
 
-      await screen.findByText('Ana Silva');
       await user.keyboard('{Escape}');
 
       expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
@@ -237,15 +232,13 @@ describe('ClienteQuickSearch', () => {
 
       await user.type(input, 'An');
       vi.advanceTimersByTime(300);
-      // First call triggered
+      // First call triggered (spy recorded synchronously)
 
       await user.type(input, 'a'); // 'Ana' now — triggers new debounce
       vi.advanceTimersByTime(300);
 
-      // Both calls were made; we just verify no crash and only latest matters
-      await waitFor(() =>
-        expect(salesAPI.clientes.list).toHaveBeenCalledTimes(2)
-      );
+      // Both debounces fired — spy called twice synchronously
+      expect(salesAPI.clientes.list).toHaveBeenCalledTimes(2);
       // Component should handle AbortError gracefully (no throw)
       void capturedSignal;
     });

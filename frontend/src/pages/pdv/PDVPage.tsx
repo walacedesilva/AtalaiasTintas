@@ -20,8 +20,8 @@ import type { PDVCartItem, Cliente, FormaPagamento, EstoqueLojaItem, Loja } from
 
 type CartAction =
   | { type: 'ADD'; item: PDVCartItem }
-  | { type: 'UPDATE_QTY'; id: number; qty: number }
-  | { type: 'REMOVE'; id: number }
+  | { type: 'UPDATE_QTY'; id: string; qty: string }
+  | { type: 'REMOVE'; id: string }
   | { type: 'CLEAR' };
 
 function cartReducer(state: PDVCartItem[], action: CartAction): PDVCartItem[] {
@@ -29,18 +29,19 @@ function cartReducer(state: PDVCartItem[], action: CartAction): PDVCartItem[] {
     case 'ADD': {
       const idx = state.findIndex((i) => i.produto_variacao_id === action.item.produto_variacao_id);
       if (idx >= 0) {
-        return state.map((i, index) =>
-          index === idx
-            ? { ...i, quantidade: i.quantidade + action.item.quantidade, preco_total: (i.quantidade + action.item.quantidade) * i.preco_unitario }
-            : i
-        );
+        return state.map((i, index) => {
+          if (index !== idx) return i;
+          const newQty = (parseFloat(i.quantidade) + parseFloat(action.item.quantidade)).toString();
+          const newTotal = (parseFloat(newQty) * parseFloat(i.preco_unitario)).toFixed(2);
+          return { ...i, quantidade: newQty, preco_total: newTotal };
+        });
       }
       return [...state, action.item];
     }
     case 'UPDATE_QTY':
       return state.map((i) =>
         i.produto_variacao_id === action.id
-          ? { ...i, quantidade: action.qty, preco_total: action.qty * i.preco_unitario }
+          ? { ...i, quantidade: action.qty, preco_total: (parseFloat(action.qty) * parseFloat(i.preco_unitario)).toFixed(2) }
           : i
       );
     case 'REMOVE':
@@ -57,7 +58,7 @@ function cartReducer(state: PDVCartItem[], action: CartAction): PDVCartItem[] {
 const DISCOUNT_THRESHOLD = 5; // % above which approval is needed
 
 function calcTotals(items: PDVCartItem[], desconto = 0) {
-  const subtotal = items.reduce((a, i) => a + i.preco_total, 0);
+  const subtotal = items.reduce((a, i) => a + parseFloat(i.preco_total), 0);
   const valorDesconto = (subtotal * desconto) / 100;
   return { subtotal, valorDesconto, liquido: subtotal - valorDesconto };
 }
@@ -128,15 +129,15 @@ export default function PDVPage() {
     dispatch({
       type: 'ADD',
       item: {
-        produto_variacao_id: item.id,
+        produto_variacao_id: item.produto_id,
         sku: item.produto_codigo,
         nome: `${item.produto_base_nome} — ${item.produto_nome}`,
-        quantidade: 1,
+        quantidade: '1',
         unidade_id: 0,
-        preco_unitario: parseFloat(item.preco_venda),
-        desconto_valor: 0,
-        preco_total: parseFloat(item.preco_venda),
-        estoque_disponivel: parseFloat(item.quantidade_disponivel),
+        preco_unitario: item.preco_venda,
+        desconto_valor: '0',
+        preco_total: item.preco_venda,
+        estoque_disponivel: item.quantidade_disponivel,
       },
     });
     setSearchTerm('');
@@ -180,10 +181,10 @@ export default function PDVPage() {
           quantidade: i.quantidade,
           unidade_id: i.unidade_id || undefined,
           preco_unitario: i.preco_unitario,
-          desconto_valor: i.desconto_valor || 0,
+          desconto_valor: i.desconto_valor,
         })),
-        pagamentos,
-        desconto_total: parseFloat(desconto) || undefined,
+        pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor: p.valor.toFixed(2) })),
+        desconto_total: valorDesconto > 0 ? valorDesconto.toFixed(2) : undefined,
       }),
     onSuccess: (data) => {
       setVendaNumero(data.numero_venda);
@@ -441,7 +442,7 @@ export default function PDVPage() {
       {/* Desconto Aprovação Modal */}
       {showDescontoModal && (
         <DescontoAprovacaoModal
-          pedidoId={0}
+          pedidoId=""
           percentual={pendingDesconto}
           nivel="gerente"
           tipo="TOTAL"

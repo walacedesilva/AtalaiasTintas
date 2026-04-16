@@ -50,7 +50,8 @@ export default function PagamentoSplitPanel({
       : 0;
 
   const diff = Math.abs(somaValores - valorLiquido);
-  const isBalanceado = diff < 0.005;
+  // Troco > 0 means DINHEIRO covers total — payment is valid even though somaValores > valorLiquido
+  const isBalanceado = diff < 0.005 || troco > 0;
 
   const addEntry = () => setEntries((prev) => [...prev, newEntry()]);
 

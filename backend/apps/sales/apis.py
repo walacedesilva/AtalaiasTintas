@@ -225,16 +225,18 @@ class PedidoVendaViewSet(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Create a PedidoVenda; auto-sets vendedor and generates numero_pedido."""
-        import uuid as _uuid
         data = request.data.copy()
         data.setdefault('vendedor', request.user.pk)
-        data.setdefault('numero_pedido', f'PED-{_uuid.uuid4().hex[:8].upper()}')
         data.setdefault('situacao', 'ORCAMENTO')
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        import uuid as _uuid
+        serializer.save(numero_pedido=f'PED-{_uuid.uuid4().hex[:8].upper()}')
 
     @action(detail=True, methods=['post'], url_path='add-item')
     def add_item(self, request, pk=None):

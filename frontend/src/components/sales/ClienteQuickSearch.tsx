@@ -91,11 +91,11 @@ export default function ClienteQuickSearch({
     }
   };
 
-  // Scroll active item into view
+  // Scroll active item into view (optional chaining guards jsdom environments)
   useEffect(() => {
     if (listRef.current && activeIdx >= 0) {
       const item = listRef.current.children[activeIdx] as HTMLElement;
-      item?.scrollIntoView({ block: 'nearest' });
+      item?.scrollIntoView?.({ block: 'nearest' });
     }
   }, [activeIdx]);
 

@@ -465,7 +465,7 @@ export interface ItemPedidoVenda {
 }
 
 export interface PedidoVenda {
-  id: number;
+  id: string;
   numero_pedido: string;
   loja: number;
   cliente: number;
@@ -591,4 +591,98 @@ export interface AprovarDescontoPayload {
   aprovador_id: number;
   tipo: 'TOTAL' | 'ITEM';
   item_id?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Inventory — Product types
+// ---------------------------------------------------------------------------
+
+export interface Categoria {
+  id: number;
+  nome: string;
+  codigo: string;
+  nivel: number;
+  parent: number | null;
+  permite_tintometria: boolean;
+  exige_formula: boolean;
+  ativa: boolean;
+}
+
+export interface Marca {
+  id: number;
+  nome: string;
+  codigo: string;
+  ativa: boolean;
+}
+
+export type TipoProduto = 'SIMPLES' | 'COMPOSTO' | 'INSUMO' | 'KIT';
+
+export interface ProdutoVariacao {
+  id: string;
+  codigo_variacao: string;
+  nome_variacao: string;
+  cor: string | null;
+  cor_codigo: string | null;
+  tamanho: string | null;
+  unidade_venda: number;
+  unidade_venda_nome: string;
+  unidade_estoque: number;
+  unidade_estoque_nome: string;
+  fator_conversao_venda: string;
+  ncm: string | null;
+  cest: string | null;
+  preco_custo: string;
+  preco_venda: string;
+  margem_lucro: string;
+  estoque_minimo: string;
+  estoque_maximo: string | null;
+  ativo: boolean;
+}
+
+export interface ProdutoBase {
+  id: string;
+  codigo: string;
+  nome: string;
+  descricao: string | null;
+  categoria: number;
+  categoria_nome: string;
+  marca: number;
+  marca_nome: string;
+  tipo_produto: TipoProduto;
+  base_tintometrica: string | null;
+  linha_produto: string | null;
+  ativo: boolean;
+  variacoes: ProdutoVariacao[];
+}
+
+export interface ProdutoBasePayload {
+  codigo: string;
+  nome: string;
+  descricao?: string;
+  categoria: number;
+  marca: number;
+  tipo_produto: TipoProduto;
+  base_tintometrica?: string;
+  linha_produto?: string;
+  especificacoes_tecnicas?: Record<string, unknown>;
+  ativo?: boolean;
+}
+
+export interface ProdutoVariacaoPayload {
+  codigo_variacao: string;
+  nome_variacao: string;
+  cor?: string;
+  cor_codigo?: string;
+  tamanho?: string;
+  unidade_venda: number;
+  unidade_estoque: number;
+  fator_conversao_venda?: string;
+  ncm?: string;
+  cest?: string;
+  preco_custo: string;
+  preco_venda: string;
+  margem_lucro?: string;
+  estoque_minimo?: string;
+  estoque_maximo?: string;
+  ativo?: boolean;
 }

@@ -180,7 +180,7 @@ export const salesAPI = {
       return apiClient.getData<PaginatedResponse<PedidoVenda>>('/sales/pedidos/', params);
     },
 
-    async get(id: number): Promise<PedidoVenda> {
+    async get(id: string): Promise<PedidoVenda> {
       return apiClient.getData<PedidoVenda>(`/sales/pedidos/${id}/`);
     },
 
@@ -188,37 +188,37 @@ export const salesAPI = {
       return apiClient.postData<PedidoVenda>('/sales/pedidos/', data);
     },
 
-    async addItem(pedidoId: number, item: ItemAddPayload): Promise<ItemPedidoVenda> {
+    async addItem(pedidoId: string, item: ItemAddPayload): Promise<ItemPedidoVenda> {
       return apiClient.postData<ItemPedidoVenda>(`/sales/pedidos/${pedidoId}/add-item/`, item);
     },
 
-    async removeItem(pedidoId: number, itemId: number): Promise<void> {
+    async removeItem(pedidoId: string, itemId: number): Promise<void> {
       await apiClient.deleteData(`/sales/pedidos/${pedidoId}/remove-item/${itemId}/`);
     },
 
-    async aprovar(id: number, data_entrega_prevista?: string): Promise<PedidoVenda> {
+    async aprovar(id: string, data_entrega_prevista?: string): Promise<PedidoVenda> {
       return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar/`, { data_entrega_prevista });
     },
 
-    async iniciarCheckout(id: number): Promise<{ sessao_checkout: string; reservas_criadas: number; avisos: string[] }> {
+    async iniciarCheckout(id: string): Promise<{ sessao_checkout: string; reservas_criadas: number; avisos: string[] }> {
       return apiClient.postData(`/sales/pedidos/${id}/iniciar-checkout/`, {});
     },
 
-    async finalizar(pedidoId: number, sessaoCheckout: string): Promise<Venda> {
+    async finalizar(pedidoId: string, sessaoCheckout: string): Promise<Venda> {
       return apiClient.postData<Venda>(`/sales/pedidos/${pedidoId}/finalizar/`, {
         sessao_checkout: sessaoCheckout,
       });
     },
 
-    async cancelar(id: number, motivo: string): Promise<PedidoVenda> {
+    async cancelar(id: string, motivo: string): Promise<PedidoVenda> {
       return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/cancelar/`, { motivo });
     },
 
-    async aprovarDesconto(id: number, payload: AprovarDescontoPayload): Promise<PedidoVenda> {
+    async aprovarDesconto(id: string, payload: AprovarDescontoPayload): Promise<PedidoVenda> {
       return apiClient.postData<PedidoVenda>(`/sales/pedidos/${id}/aprovar-desconto/`, payload);
     },
 
-    async finalizarEntrega(id: number): Promise<{ pedido_id: string; venda_id: string; numero_venda: string }> {
+    async finalizarEntrega(id: string): Promise<{ pedido_id: string; venda_id: string; numero_venda: string }> {
       return apiClient.postData(`/sales/pedidos/${id}/finalizar-entrega/`, {});
     },
   },
