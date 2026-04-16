@@ -26,6 +26,10 @@ log "========================================="
 
 cd "$PROJECT_DIR"
 
+# Garantir permissões corretas para o runner (evita falhas após operações root)
+chown -R root:github-runner "$PROJECT_DIR/.git" 2>/dev/null || true
+chmod -R g+rw "$PROJECT_DIR/.git" 2>/dev/null || true
+
 # 1. Baixar últimas alterações
 log ">> Atualizando código..."
 GIT_TERMINAL_PROMPT=0 GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=30 \
