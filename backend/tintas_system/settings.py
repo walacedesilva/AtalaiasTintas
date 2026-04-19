@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
+import django
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    # T015: API Documentation
+    'drf_spectacular',
     # Aplicações locais
     'apps.core',
     'apps.companies',
@@ -163,10 +167,18 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'apps.core.middleware.PermissionsPolicyMiddleware',
+    # T017: Enhanced Error Handling and Rate Limiting Middleware
+    'apps.core.middleware.RequestIdMiddleware',           # Request ID tracking
+    'apps.core.middleware.RateLimitingMiddleware',        # Advanced rate limiting
+    'apps.core.middleware.ErrorContextMiddleware',        # Error context enhancement
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.signals.AuditRequestMiddleware',  # T007 - Audit logging request context
+    # T019: Permission Validation Middleware
+    'apps.core.middleware.PermissionValidationMiddleware',  # Real-time permission validation
+    'apps.core.middleware.PermissionCacheInvalidationMiddleware',  # Permission cache management
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -256,11 +268,27 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Django REST Framework configuration
+# =============================================================================
+# T013: ENHANCED AUTHENTICATION CONFIGURATION
+# =============================================================================
+
+# Authentication backends in priority order - NEW SECURE CONFIGURATION
+AUTHENTICATION_BACKENDS = [
+    'apps.core.authentication.CombinedAuthentication',  # Primary combined backend
+    'apps.core.authentication.JWTAuthentication',       # JWT token authentication
+    'apps.core.authentication.APIKeyAuthentication',    # API key authentication
+    'apps.core.authentication.EnhancedTokenAuthentication',  # Enhanced DRF tokens
+    'django.contrib.auth.backends.ModelBackend',        # Django default (fallback)
+]
+
+# Django REST Framework configuration - ENHANCED FOR T013 + T015 + T017
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'apps.core.authentication.CombinedAuthentication',      # Multi-method auth
+        'apps.core.authentication.JWTAuthentication',           # JWT tokens
+        'apps.core.authentication.APIKeyAuthentication',        # API keys
+        'apps.core.authentication.EnhancedTokenAuthentication', # Enhanced tokens
+        'rest_framework.authentication.SessionAuthentication',  # Session auth
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -272,7 +300,442 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # Security enhancements for T013
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'api_key': '10000/hour',
+        'jwt': '5000/hour',
+    },
+    # T017: Custom Exception Handler for comprehensive error handling
+    'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
+    # T015: API Documentation with DRF Spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# =============================================================================
+# JWT AUTHENTICATION SETTINGS
+# =============================================================================
+
+# JWT configuration for secure token-based authentication
+JWT_AUTH = {
+    # Token settings
+    'JWT_SECRET_KEY': SECRET_KEY,
+    'JWT_ALGORITHM': 'HS256',
+    'JWT_ACCESS_TOKEN_LIFETIME': 30,  # minutes
+    'JWT_REFRESH_TOKEN_LIFETIME': 7,   # days
+    
+    # Security settings
+    'JWT_VERIFY_SIGNATURE': True,
+    'JWT_VERIFY_EXPIRATION': True,
+    'JWT_LEEWAY': 0,
+    'JWT_AUDIENCE': None,
+    'JWT_ISSUER': 'atalaia-tintas-system',
+    
+    # Headers and encoding
+    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+    'JWT_AUTH_HEADER': 'HTTP_AUTHORIZATION',
+    'JWT_ENCODE_HANDLER': 'rest_framework_jwt.utils.jwt_encode_handler',
+    'JWT_DECODE_HANDLER': 'rest_framework_jwt.utils.jwt_decode_handler',
+    
+    # Token refresh settings
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_REFRESH_EXPIRATION_DELTA': 7 * 24 * 60 * 60,  # 7 days in seconds
+    
+    # Blacklisting
+    'JWT_BLACKLIST_ENABLED': True,
+    'JWT_BLACKLIST_GRACE_PERIOD': 60,  # seconds
+}
+
+# =============================================================================
+# API KEY AUTHENTICATION SETTINGS
+# =============================================================================
+
+# API Key configuration for programmatic access
+API_KEY_AUTH = {
+    # Key generation
+    'KEY_LENGTH': 32,
+    'KEY_PREFIX': 'ak_',
+    
+    # Security settings
+    'RATE_LIMIT_ENABLED': True,
+    'DEFAULT_RATE_LIMIT': 1000,  # requests per hour
+    'SCOPE_VALIDATION_ENABLED': True,
+    
+    # Usage tracking
+    'USAGE_TRACKING_ENABLED': True,
+    'USAGE_LOG_RETENTION_DAYS': 90,
+    
+    # Key management
+    'AUTO_EXPIRATION_ENABLED': True,
+    'DEFAULT_EXPIRATION_DAYS': 365,
+    'MAX_KEYS_PER_USER': 10,
+}
+
+# =============================================================================
+# T017: ERROR HANDLING AND RATE LIMITING CONFIGURATION
+# =============================================================================
+
+# Rate limiting configuration for T017 middleware
+RATE_LIMIT_ANONYMOUS = 60       # Requests per minute for anonymous users
+RATE_LIMIT_AUTHENTICATED = 300  # Requests per minute for authenticated users
+RATE_LIMIT_API_READ = 1000      # Requests per minute for API read operations
+RATE_LIMIT_API_WRITE = 100      # Requests per minute for API write operations
+RATE_LIMIT_ADMIN = 500          # Requests per minute for admin users
+
+# Trusted IPs that bypass rate limiting (e.g., load balancers, monitoring)
+RATE_LIMIT_TRUSTED_IPS = [
+    '127.0.0.1',
+    '::1',
+    # Add production load balancer IPs here
+]
+
+# Maintenance mode configuration
+MAINTENANCE_MODE = False
+MAINTENANCE_MESSAGE = 'System is temporarily unavailable for maintenance. Please try again later.'
+MAINTENANCE_BYPASS_IPS = [
+    '127.0.0.1',
+    '::1',
+    # Add admin/developer IPs here
+]
+
+# Security configuration for error handling
+ERROR_LOGGING = {
+    'SANITIZE_ERROR_MESSAGES': True,
+    'HIDE_INTERNAL_IDS': True,
+    'MAX_ERROR_MESSAGE_LENGTH': 500,
+    'LOG_LEVEL_FOR_ERRORS': 'WARNING',
+    'LOG_LEVEL_FOR_EXCEPTIONS': 'ERROR',
+}
+
+# Business rule validation configuration
+VALIDATION_SETTINGS = {
+    'MAX_PERMISSION_CODE_LENGTH': 100,
+    'HIGH_RISK_PERMISSION_MAX_DAYS': 90,
+    'CRITICAL_RISK_PERMISSION_MAX_DAYS': 30,
+    'ENFORCE_PERMISSION_CODE_FORMAT': True,
+    'AUTO_LOWERCASE_PERMISSION_CODES': True,
+}
+
+# =============================================================================
+# T019: PERMISSION VALIDATION MIDDLEWARE CONFIGURATION
+# =============================================================================
+
+# URL-permission mapping for granular access control
+PERMISSION_URL_MAPPING = {
+    # Admin endpoints
+    '/admin/': ['core.admin.access'],
+    '/api/admin/': ['core.admin.access'],
+    
+    # Permission management endpoints
+    '/api/permissions/': {
+        'GET': 'core.permission.view',
+        'POST': 'core.permission.create',
+        'PUT': 'core.permission.update',
+        'PATCH': 'core.permission.update',
+        'DELETE': 'core.permission.delete',
+    },
+    
+    # User management endpoints  
+    '/api/users/': {
+        'GET': 'core.user.view',
+        'POST': 'core.user.create',
+        'PUT': 'core.user.update', 
+        'PATCH': 'core.user.update',
+        'DELETE': 'core.user.delete',
+    },
+    
+    # Group management endpoints
+    '/api/groups/': {
+        'GET': 'core.group.view',
+        'POST': 'core.group.create',
+        'PUT': 'core.group.update',
+        'PATCH': 'core.group.update', 
+        'DELETE': 'core.group.delete',
+    },
+    
+    # Tintometry endpoints
+    '/api/tintometry/': {
+        'GET': 'tintometry.view',
+        'POST': 'tintometry.create',
+        'PUT': 'tintometry.update',
+        'PATCH': 'tintometry.update',
+        'DELETE': 'tintometry.delete',
+    },
+    
+    # Inventory endpoints
+    '/api/inventory/': {
+        'GET': 'inventory.view',
+        'POST': 'inventory.create', 
+        'PUT': 'inventory.update',
+        'PATCH': 'inventory.update',
+        'DELETE': 'inventory.delete',
+    },
+    
+    # Sales endpoints
+    '/api/sales/': {
+        'GET': 'sales.view',
+        'POST': 'sales.create',
+        'PUT': 'sales.update',
+        'PATCH': 'sales.update',
+        'DELETE': 'sales.delete',
+    },
+}
+
+# Protected URL patterns (require authentication + permission validation)
+PERMISSION_PROTECTED_PATTERNS = [
+    r'^/api/admin/',
+    r'^/api/permissions/',
+    r'^/api/users/',
+    r'^/api/groups/',
+    r'^/admin/',
+    r'^/api/tintometry/',
+    r'^/api/inventory/',
+    r'^/api/sales/',
+    r'^/api/fiscal/',
+]
+
+# Bypass patterns (public endpoints that don't require validation)
+PERMISSION_BYPASS_PATTERNS = [
+    r'^/api/auth/login/',
+    r'^/api/auth/logout/',
+    r'^/api/auth/token/',
+    r'^/api/auth/refresh/',
+    r'^/api/health/',
+    r'^/static/',
+    r'^/media/',
+    r'^/$',
+    r'^/favicon\.ico$',
+]
+
+# Permission validation caching configuration
+PERMISSION_CACHE_TIMEOUT = 300  # 5 minutes cache for permission validation results
+PERMISSION_PERFORMANCE_THRESHOLD = 0.1  # 100ms performance threshold for slow validation warnings
+
+# Failure mode - what to do when permission validation fails
+# 'allow' = fail open (allow request), 'deny' = fail closed (block request)  
+PERMISSION_FAILURE_MODE = 'allow'  # Change to 'deny' for production security
+
+# Audit configuration for permission validation
+PERMISSION_AUDIT_ENABLED = True
+PERMISSION_AUDIT_PERFORMANCE = False  # Set to True to audit all validations (high volume)
+
+# =============================================================================
+# MULTI-FACTOR AUTHENTICATION SETTINGS
+# =============================================================================
+
+# MFA configuration
+MFA_SETTINGS = {
+    # TOTP settings
+    'TOTP_ENABLED': True,
+    'TOTP_ISSUER': 'Atalaia Tintas',
+    'TOTP_WINDOW': 1,
+    'TOTP_DIGITS': 6,
+    'TOTP_ALGORITHM': 'SHA1',
+    
+    # SMS settings (if SMS provider configured)
+    'SMS_ENABLED': False,  # Enable when SMS provider is configured
+    'SMS_PROVIDER': None,
+    'SMS_TEMPLATE': 'Your Atalaia Tintas verification code is: {code}',
+    
+    # Email settings
+    'EMAIL_ENABLED': True,
+    'EMAIL_TEMPLATE': 'mfa/verification_email.html',
+    'EMAIL_SUBJECT': 'Atalaia Tintas - Código de Verificação',
+    
+    # Backup codes
+    'BACKUP_CODES_ENABLED': True,
+    'BACKUP_CODES_COUNT': 10,
+    'BACKUP_CODES_AUTO_GENERATE': True,
+    
+    # Security
+    'REQUIRED_FOR_ADMIN': True,
+    'REQUIRED_FOR_API': False,  # Set to True to require MFA for API access
+    'GRACE_PERIOD_HOURS': 24,   # Hours before MFA is required again
+}
+
+# =============================================================================
+# T015: API DOCUMENTATION WITH DRF SPECTACULAR
+# =============================================================================
+
+# Import schema configuration from core app
+from apps.core.schema import SPECTACULAR_SETTINGS, API_INFO, API_SERVERS
+
+# DRF Spectacular configuration for OpenAPI 3.0 documentation
+SPECTACULAR_SETTINGS.update({
+    'TITLE': API_INFO['title'],
+    'VERSION': API_INFO['version'], 
+    'DESCRIPTION': API_INFO['description'],
+    'TERMS_OF_SERVICE': API_INFO.get('termsOfService'),
+    'CONTACT': API_INFO.get('contact', {}),
+    'LICENSE': API_INFO.get('license', {}),
+    'SERVERS': API_SERVERS,
+    
+    # Schema generation settings
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'SCHEMA_PATH_PREFIX_TRIM': True,
+    'SCHEMA_COERCE_METHOD_NAMES': {
+        'retrieve': 'get',
+        'create': 'post', 
+        'update': 'put',
+        'partial_update': 'patch',
+        'destroy': 'delete',
+    },
+    
+    # Security schemes
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'tokenAuth': {
+                'type': 'apiKey',
+                'in': 'header',
+                'name': 'Authorization',
+                'description': 'Token authentication using format: "Token <your-token>"'
+            },
+            'jwtAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'JWT authentication using format: "Bearer <your-jwt>"'
+            },
+            'apiKeyAuth': {
+                'type': 'apiKey',
+                'in': 'header',
+                'name': 'X-API-Key',
+                'description': 'API Key authentication'
+            }
+        }
+    },
+    
+    # Authentication for documentation access
+    'AUTHENTICATION_WHITELIST': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    
+    # Custom preprocessing
+    'PREPROCESSING_HOOKS': [
+        'apps.core.schema.preprocess_openapi_spec',
+    ],
+    
+    # Development settings
+    'SERVE_INCLUDE_SCHEMA': not DEBUG,  # Don't include schema endpoint in production
+    'SERVE_PUBLIC': DEBUG,  # Allow public access in development
+})
+
+# =============================================================================
+# ENHANCED SECURITY SETTINGS FOR T013
+# =============================================================================
+
+# Session security enhancements
+SESSION_COOKIE_SECURE = not DEBUG  # Use secure cookies in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# CSRF protection enhancements
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Strict'
+
+# Login attempt protection
+LOGIN_SECURITY = {
+    # Rate limiting
+    'MAX_ATTEMPTS_PER_IP': 10,
+    'MAX_ATTEMPTS_PER_USERNAME': 5,
+    'LOCKOUT_DURATION_MINUTES': 15,
+    
+    # Logging
+    'LOG_ALL_ATTEMPTS': True,
+    'LOG_SUCCESSFUL_ONLY': False,
+    'RETENTION_DAYS': 90,
+    
+    # Notifications
+    'ALERT_ON_MULTIPLE_FAILURES': True,
+    'ALERT_THRESHOLD': 3,
+    'ALERT_RECIPIENTS': ['admin@atalaia-tintas.com'],
+}
+
+# Enhanced password requirements
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 12,  # Increased from default 8
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    # Custom validator for strong passwords
+    {
+        'NAME': 'apps.core.validators.StrongPasswordValidator',
+        'OPTIONS': {
+            'require_uppercase': True,
+            'require_lowercase': True,
+            'require_digits': True,
+            'require_symbols': True,
+            'min_unique_chars': 8,
+        }
+    },
+]
+
+# Account security settings
+ACCOUNT_SECURITY = {
+    # Password policy
+    'PASSWORD_HISTORY_COUNT': 5,  # Remember last 5 passwords
+    'PASSWORD_MAX_AGE_DAYS': 90,
+    'PASSWORD_EXPIRY_WARNING_DAYS': 7,
+    
+    # Account lockout
+    'ACCOUNT_LOCKOUT_ENABLED': True,
+    'LOCKOUT_AFTER_FAILURES': 5,
+    'LOCKOUT_DURATION_MINUTES': 30,
+    'AUTO_UNLOCK_ENABLED': True,
+    
+    # Session management
+    'MAX_CONCURRENT_SESSIONS': 3,
+    'SESSION_TIMEOUT_MINUTES': 60,
+    'IDLE_TIMEOUT_MINUTES': 30,
+    
+    # Security monitoring
+    'MONITOR_SUSPICIOUS_LOGIN': True,
+    'REQUIRE_EMAIL_VERIFICATION': True,
+    'NOTIFY_PASSWORD_CHANGE': True,
+}
+
+# =============================================================================
+# SECURITY HEADERS AND MIDDLEWARE - T013 ENHANCEMENTS
+# =============================================================================
+
+# Add security middleware for enhanced authentication
+MIDDLEWARE.insert(4, 'apps.core.middleware.EnhancedSecurityMiddleware')  # After CSRF
+MIDDLEWARE.insert(5, 'apps.core.middleware.LoginAttemptMiddleware')       # Track attempts
+MIDDLEWARE.insert(6, 'apps.core.middleware.SessionSecurityMiddleware')   # Session security
+
+# Security headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Content Security Policy
+CSP_DEFAULT_SRC = ["'self'"]
+CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net']
+CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdn.jsdelivr.net']
+CSP_FONT_SRC = ["'self'", 'fonts.gstatic.com']
+CSP_IMG_SRC = ["'self'", 'data:', 'https:']
+CSP_CONNECT_SRC = ["'self'"]
 
 # CORS settings para desenvolvimento
 CORS_ALLOWED_ORIGINS = [
@@ -286,19 +749,31 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Cache configuration com Redis
-_redis_host = os.environ.get('REDIS_HOST', '127.0.0.1')
-_redis_password = os.environ.get('REDIS_PASSWORD', '')
-_redis_auth = f':{_redis_password}@' if _redis_password else ''
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://{_redis_auth}{_redis_host}:6379/1',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }
-}
+# =============================================================================
+# T008: PERMISSION CACHE INFRASTRUCTURE
+# =============================================================================
+
+# Import optimized cache configuration for permission system
+from .settings.cache import (
+    CACHES,
+    PERMISSION_CACHE_SETTINGS,
+    CACHE_WARMING_SETTINGS,
+    CACHE_MONITORING_SETTINGS,
+    validate_cache_configuration
+)
+
+# Validate cache configuration on startup
+try:
+    cache_validation = validate_cache_configuration()
+    if not cache_validation['valid']:
+        print(f"Cache configuration warnings: {cache_validation['warnings']}")
+        print(f"Cache configuration errors: {cache_validation['errors']}")
+except Exception as e:
+    print(f"Cache validation failed during startup: {e}")
+
+# Session cache backend (use dedicated Redis DB for sessions)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'sessions'  # Use dedicated sessions cache
 
 # Configuração de usuário personalizado
 AUTH_USER_MODEL = 'core.User'
@@ -358,3 +833,135 @@ LOGGING = {
         },
     },
 }
+
+# =============================================================================
+# T005: PERMISSION SYSTEM CONFIGURATION
+# =============================================================================
+
+# Permission system settings
+PERMISSION_SYSTEM = {
+    # Caching configuration for permission checking
+    'CACHE_PERMISSIONS': True,
+    'CACHE_TTL': 300,  # 5 minutes in seconds
+    'CACHE_KEY_PREFIX': 'permissions:',
+    
+    # Permission checking behavior
+    'CHECK_GROUPS_BY_DEFAULT': True,
+    'ENABLE_HIERARCHICAL_GROUPS': True,
+    'ENABLE_TEMPORAL_PERMISSIONS': True,
+    
+    # Legacy permission integration
+    'MAINTAIN_LEGACY_COMPATIBILITY': True,
+    'AUTO_SYNC_LEGACY_PERMISSIONS': True,
+    'LEGACY_PERMISSION_MAPPING': {
+        'pode_vender': 'sales.order.create',
+        'pode_gerenciar_estoque': 'inventory.stock.manage',
+        'pode_acessar_financeiro': 'financial.report.view',
+        'pode_administrar': 'system.administration.manage',
+    },
+    
+    # Audit configuration
+    'ENABLE_AUDIT_LOGGING': True,
+    'AUDIT_IP_TRACKING': True,
+    'AUDIT_USER_AGENT_TRACKING': True,
+    'AUDIT_SESSION_TRACKING': True,
+    
+    # Security settings
+    'REQUIRE_CONFIRMATION_FOR_CRITICAL': ['delete', 'manage', 'administration'],
+    'REQUIRE_APPROVAL_FOR_DENY': True,
+    'ENABLE_PERMISSION_INHERITANCE': True,
+    
+    # Performance settings
+    'BULK_OPERATION_BATCH_SIZE': 100,
+    'MAX_HIERARCHY_DEPTH': 10,
+    'PERMISSION_QUERY_TIMEOUT': 30,  # seconds
+    
+    # Default permissions for new users
+    'DEFAULT_USER_PERMISSIONS': [
+        'system.profile.view',
+        'system.profile.update',
+    ],
+    
+    # Module access configuration
+    'MODULE_DEFINITIONS': {
+        'sales': {
+            'display_name': 'Vendas e Pedidos',
+            'icon': 'bi-cart',
+            'legacy_permission': 'pode_vender',
+            'default_actions': ['view', 'create', 'update'],
+        },
+        'inventory': {
+            'display_name': 'Controle de Estoque',
+            'icon': 'bi-boxes',
+            'legacy_permission': 'pode_gerenciar_estoque',
+            'default_actions': ['view', 'update', 'count'],
+        },
+        'financial': {
+            'display_name': 'Financeiro e Relatórios',
+            'icon': 'bi-graph-up',
+            'legacy_permission': 'pode_acessar_financeiro',
+            'default_actions': ['view', 'report', 'export'],
+        },
+        'system': {
+            'display_name': 'Administração do Sistema',
+            'icon': 'bi-gear',
+            'legacy_permission': 'pode_administrar',
+            'default_actions': ['view', 'manage', 'configure'],
+        },
+        'tintometry': {
+            'display_name': 'Tintometria',
+            'icon': 'bi-palette',
+            'legacy_permission': None,
+            'default_actions': ['view', 'mix', 'formula'],
+        },
+    }
+}
+
+# Redis cache configuration for permissions (if available)
+if os.environ.get('REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'tintas_system',
+            'TIMEOUT': PERMISSION_SYSTEM['CACHE_TTL'],
+        }
+    }
+else:
+    # Fallback to database cache if Redis not available
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'cache_table',
+            'TIMEOUT': PERMISSION_SYSTEM['CACHE_TTL'],
+        }
+    }
+
+# Session configuration for permission tracking
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'default'
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
+
+# =============================================================================
+# T007: AUDIT LOGGING CONFIGURATION
+# =============================================================================
+
+# Audit logging settings for T007 implementation
+AUDIT_LOGGING_ENABLED = True
+AUDIT_ASYNC_ENABLED = True
+AUDIT_HASH_CHAINING_ENABLED = True
+AUDIT_ALERT_ON_FAILURE = True
+
+# Performance optimization settings
+AUDIT_BATCH_SIZE = 100
+AUDIT_CACHE_TIMEOUT = 300  # 5 minutes
+AUDIT_MAX_DETAILS_SIZE = 8192  # Maximum size for audit details JSON field
+
+# System information for audit context
+PYTHON_VERSION = sys.version
+DJANGO_VERSION = django.get_version()
+PROCESS_ID = os.getpid()

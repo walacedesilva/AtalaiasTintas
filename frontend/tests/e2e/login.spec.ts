@@ -16,13 +16,13 @@ test.describe('Login Flow', () => {
     await expect(page).toHaveTitle(/Atalaia Tintas/);
 
     // Check main elements are visible
-    await expect(page.getByText('Atalaia Tintas')).toBeVisible();
-    await expect(page.getByText('Sistema de Gestão de Tintas e Etiquetas')).toBeVisible();
-    await expect(page.getByText('Fazer login na sua conta')).toBeVisible();
+    await expect(page.getByText('Atalaia Tintas').first()).toBeVisible();
+    await expect(page.getByText('Gestão inteligente para a sua tintaria')).toBeVisible();
+    await expect(page.getByText('Bem-vindo de volta!')).toBeVisible();
 
     // Check form fields
     await expect(page.getByLabel('Nome de usuário')).toBeVisible();
-    await expect(page.getByLabel('Senha')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
     await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
   });
 
@@ -43,7 +43,7 @@ test.describe('Login Flow', () => {
   test('should show validation errors for short inputs', async ({ page }) => {
     // Fill with short inputs
     await page.getByLabel('Nome de usuário').fill('ab');
-    await page.getByLabel('Senha').fill('123');
+    await page.locator('#password').fill('123');
     await page.getByRole('button', { name: /entrar/i }).click();
 
     // Should show specific validation errors
@@ -52,8 +52,8 @@ test.describe('Login Flow', () => {
   });
 
   test('should toggle password visibility', async ({ page }) => {
-    const passwordField = page.getByLabel('Senha');
-    const toggleButton = page.getByLabel('Mostrar senha');
+    const passwordField = page.locator('#password');
+    const toggleButton = page.getByRole('button', { name: 'Mostrar senha' });
 
     // Initially password should be hidden
     await expect(passwordField).toHaveAttribute('type', 'password');
@@ -61,12 +61,12 @@ test.describe('Login Flow', () => {
     // Click to show password
     await toggleButton.click();
     await expect(passwordField).toHaveAttribute('type', 'text');
-    await expect(page.getByLabel('Ocultar senha')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ocultar senha' })).toBeVisible();
 
     // Click to hide password again
-    await page.getByLabel('Ocultar senha').click();
+    await page.getByRole('button', { name: 'Ocultar senha' }).click();
     await expect(passwordField).toHaveAttribute('type', 'password');
-    await expect(page.getByLabel('Mostrar senha')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mostrar senha' })).toBeVisible();
   });
 
   test('should handle failed login attempt', async ({ page }) => {
@@ -83,7 +83,7 @@ test.describe('Login Flow', () => {
 
     // Fill form with credentials
     await page.getByLabel('Nome de usuário').fill('wronguser');
-    await page.getByLabel('Senha').fill('wrongpassword123');
+    await page.locator('#password').fill('wrongpassword123');
     await page.getByRole('button', { name: /entrar/i }).click();
 
     // Should show error message
@@ -130,7 +130,7 @@ test.describe('Login Flow', () => {
 
     // Fill and submit login form
     await page.getByLabel('Nome de usuário').fill('admin');
-    await page.getByLabel('Senha').fill('admin123');
+    await page.locator('#password').fill('admin123');
     await page.getByRole('button', { name: /entrar/i }).click();
 
     // Should show success message
@@ -149,7 +149,7 @@ test.describe('Login Flow', () => {
 
     // Tab to password field
     await page.keyboard.press('Tab');
-    await expect(page.getByLabel('Senha')).toBeFocused();
+    await expect(page.locator('#password')).toBeFocused();
 
     // Tab to password toggle button
     await page.keyboard.press('Tab');
@@ -161,7 +161,7 @@ test.describe('Login Flow', () => {
 
     // Enter should submit the form
     await page.getByLabel('Nome de usuário').fill('testuser');
-    await page.getByLabel('Senha').fill('testpass123');
+    await page.locator('#password').fill('testpass123');
     await page.getByRole('button', { name: /entrar/i }).focus();
     await page.keyboard.press('Enter');
 
@@ -174,17 +174,17 @@ test.describe('Login Flow', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Check that elements are still visible and usable
-    await expect(page.getByText('Atalaia Tintas')).toBeVisible();
+    await expect(page.getByText('Atalaia Tintas').first()).toBeVisible();
     await expect(page.getByLabel('Nome de usuário')).toBeVisible();
-    await expect(page.getByLabel('Senha')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
     await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
 
     // Form should still be functional
     await page.getByLabel('Nome de usuário').fill('mobile');
-    await page.getByLabel('Senha').fill('password123');
+    await page.locator('#password').fill('password123');
     
     // Inputs should be filled correctly
     await expect(page.getByLabel('Nome de usuário')).toHaveValue('mobile');
-    await expect(page.getByLabel('Senha')).toHaveValue('password123');
+    await expect(page.locator('#password')).toHaveValue('password123');
   });
 });

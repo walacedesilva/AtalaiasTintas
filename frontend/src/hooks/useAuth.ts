@@ -38,9 +38,20 @@ export function useAuth(): AuthState {
     }
   });
 
+  // If we have a token but user query failed due to 401, clear the token
+  if (error?.status_code === 401 && apiClient.isAuthenticated()) {
+    apiClient.clearAuthToken();
+  }
+
+  // User is authenticated if we have a token and either:
+  // 1. User data is loaded successfully, OR
+  // 2. We have a token but query is still loading (prevents redirect loops)
+  const hasValidToken = apiClient.isAuthenticated();
+  const isAuthenticated = hasValidToken && (!!user || (isLoading && !error));
+
   return {
     user: user || null,
-    isAuthenticated: !!user && !error,
+    isAuthenticated,
     isLoading
   };
 }

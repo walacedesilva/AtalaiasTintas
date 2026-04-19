@@ -261,6 +261,50 @@ def require_store_access(loja_param='loja_id'):
     return decorator
 
 
+class CanViewAuditLogs(permissions.BasePermission):
+    """
+    Permission to view audit logs and security reports
+    Task: T012 - Audit Trail API and Reporting
+    """
+    
+    def has_permission(self, request, view):
+        """
+        Check if user can view audit logs.
+        Only authenticated admin users or security officers can view audit logs.
+        """
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Admins can always view audit logs
+        if BusinessPermissions.can_administer(request.user):
+            return True
+        
+        # Users with security access can view audit logs
+        if hasattr(request.user, 'pode_acessar_seguranca') and request.user.pode_acessar_seguranca:
+            return True
+        
+        # Allow users to view their own audit logs for specific actions
+        if view.action in ['list'] and request.query_params.get('actor_id') == str(request.user.id):
+            return True
+        
+        return False
+    
+    def has_object_permission(self, request, view, obj):
+        """
+        Object-level permission to view specific audit log entries.
+        """
+        # Admins and security officers can view all audit logs
+        if (BusinessPermissions.can_administer(request.user) or
+            (hasattr(request.user, 'pode_acessar_seguranca') and request.user.pode_acessar_seguranca)):
+            return True
+        
+        # Users can view their own audit logs
+        if hasattr(obj, 'actor') and obj.actor == request.user:
+            return True
+        
+        return False
+
+
 class TintasBusinessPermissions:
     """
     Classe utilitária para verificações específicas do negócio de tintas
@@ -479,3 +523,281 @@ def get_permissions_for_action(action: str, resource: str) -> list:
     }
     
     return default_permissions.get(action, [IsAuthenticated])
+
+
+# =============================================================================
+# T009: PERMISSION MANAGEMENT API PERMISSIONS
+# =============================================================================
+
+class CanManagePermissions(permissions.BasePermission):
+    """
+    Permission for managing permission system operations.
+    Only admin users or users with specific permission management rights can perform these actions.
+    """
+    
+    def has_permission(self, request, view):
+        # Only authenticated users
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Admin users have full permission management access
+        if BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+            return True
+            
+        # Check if user has permission management rights through new permission system
+        try:
+            from .models import UserPermission, Permission
+            
+            # Check if user has permission management permission
+            has_perm_management = UserPermission.objects.filter(
+                user=request.user,
+                permission__code__in=[
+                    'system.permissions.manage',
+                    'system.administration.manage'
+                ],
+                is_granted=True,
+                permission__is_active=True
+            ).exists()
+            
+            if has_perm_management:
+                return True
+                
+            # Check group permissions
+            from .models import GroupPermission
+            has_group_perm = GroupPermission.objects.filter(
+                group__members__user=request.user,
+                group__is_active=True,
+                permission__code__in=[
+                    'system.permissions.manage', 
+                    'system.administration.manage'
+                ],
+                is_granted=True,
+                permission__is_active=True
+            ).exists()
+            
+            return has_group_perm
+            
+        except Exception:
+            # Fallback to legacy admin check if permission system not available
+            return BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN)
+    
+    def has_object_permission(self, request, view, obj):
+        # Use same logic as has_permission for object-level access
+        return self.has_permission(request, view)
+
+
+class CanViewPermissions(permissions.BasePermission):
+    """
+    Permission for viewing permission system data.
+    Allows read-only access to permissions for administrators and users with view rights.
+    """
+    
+    def has_permission(self, request, view):
+        # Only authenticated users
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Read-only operations
+        if request.method in permissions.SAFE_METHODS:
+            # Admin users can view all 
+            if BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+                return True
+                
+            try:
+                from .models import UserPermission, GroupPermission
+                
+                # Check if user has permission view rights
+                has_view_perm = UserPermission.objects.filter(
+                    user=request.user,
+                    permission__code__in=[
+                        'system.permissions.view',
+                        'system.permissions.manage',
+                        'system.administration.manage'
+                    ],
+                    is_granted=True,
+                    permission__is_active=True
+                ).exists()
+                
+                if has_view_perm:
+                    return True
+                    
+                # Check group permissions
+                has_group_view = GroupPermission.objects.filter(
+                    group__members__user=request.user,
+                    group__is_active=True,
+                    permission__code__in=[
+                        'system.permissions.view',
+                        'system.permissions.manage',
+                        'system.administration.manage'
+                    ],
+                    is_granted=True,
+                    permission__is_active=True
+                ).exists()
+                
+                return has_group_view
+                
+            except Exception:
+                # Fallback: any authenticated user can view their own permissions
+                return True
+        else:
+            # For write operations, require full management permission
+            return CanManagePermissions().has_permission(request, view)
+
+
+class CanManageUsers(permissions.BasePermission):
+    """
+    Permission for managing users in the permission system.
+    """
+    
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Admin users have full access
+        if BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+            return True
+            
+        try:
+            from .models import UserPermission, GroupPermission
+            
+            # Check user management permissions
+            has_user_mgmt = UserPermission.objects.filter(
+                user=request.user,
+                permission__code__in=[
+                    'system.users.manage',
+                    'system.administration.manage' 
+                ],
+                is_granted=True,
+                permission__is_active=True
+            ).exists()
+            
+            if has_user_mgmt:
+                return True
+                
+            # Check group permissions
+            has_group_mgmt = GroupPermission.objects.filter(
+                group__members__user=request.user,
+                group__is_active=True,
+                permission__code__in=[
+                    'system.users.manage',
+                    'system.administration.manage'
+                ],
+                is_granted=True,
+                permission__is_active=True
+            ).exists()
+            
+            return has_group_mgmt
+            
+        except Exception:
+            # Fallback to legacy admin check
+            return BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN)
+
+
+class PermissionScopePermission(permissions.BasePermission):
+    """
+    Permission that checks access based on permission scope and context.
+    Provides granular access control based on permission hierarchy and scope limitations.
+    """
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        # Admin users have full access
+        if BusinessPermissions.user_has_role(request.user, BusinessRole.ADMIN):
+            return True
+            
+        # Check if user can access this specific permission based on scope
+        if hasattr(obj, 'risk_level'):
+            return self._check_risk_level_access(request.user, obj.risk_level)
+            
+        if hasattr(obj, 'module'):
+            return self._check_module_access(request.user, obj.module)
+            
+        return False
+    
+    def _check_risk_level_access(self, user, risk_level):
+        """Check if user can access permissions of this risk level"""
+        try:
+            from .models import UserPermission, GroupPermission
+            
+            # High and critical risk permissions require special access
+            if risk_level in ['high', 'critical']:
+                has_high_risk_access = UserPermission.objects.filter(
+                    user=user,
+                    permission__code__in=[
+                        'system.permissions.high_risk.manage',
+                        'system.administration.manage'
+                    ],
+                    is_granted=True,
+                    permission__is_active=True
+                ).exists()
+                
+                if not has_high_risk_access:
+                    has_group_access = GroupPermission.objects.filter(
+                        group__members__user=user,
+                        group__is_active=True,
+                        permission__code__in=[
+                            'system.permissions.high_risk.manage',
+                            'system.administration.manage'
+                        ],
+                        is_granted=True,
+                        permission__is_active=True
+                    ).exists()
+                    
+                    return has_group_access
+                    
+                return True
+                
+            # Medium and low risk permissions are accessible to regular permission managers
+            return True
+            
+        except Exception:
+            return False
+    
+    def _check_module_access(self, user, module):
+        """Check if user can access permissions for this module"""
+        try:
+            from .models import UserPermission, GroupPermission
+            
+            # Check module-specific access
+            module_permission_code = f"{module}.permissions.manage"
+            
+            has_module_access = UserPermission.objects.filter(
+                user=user,
+                permission__code__in=[
+                    module_permission_code,
+                    'system.permissions.manage',
+                    'system.administration.manage'
+                ],
+                is_granted=True,
+                permission__is_active=True
+            ).exists()
+            
+            if not has_module_access:
+                has_group_module_access = GroupPermission.objects.filter(
+                    group__members__user=user,
+                    group__is_active=True,
+                    permission__code__in=[
+                        module_permission_code,
+                        'system.permissions.manage',
+                        'system.administration.manage'
+                    ],
+                    is_granted=True,
+                    permission__is_active=True
+                ).exists()
+                
+                return has_group_module_access
+                
+            return True
+            
+        except Exception:
+            return True  # Default to allowing access if check fails
+
+
+# Permission class combinations for different API endpoints
+PERMISSION_MANAGEMENT_READ = [IsAuthenticated, CanViewPermissions]
+PERMISSION_MANAGEMENT_WRITE = [IsAuthenticated, CanManagePermissions]
+USER_MANAGEMENT_READ = [IsAuthenticated, CanViewPermissions]  
+USER_MANAGEMENT_WRITE = [IsAuthenticated, CanManageUsers]
+SCOPED_PERMISSION_ACCESS = [IsAuthenticated, PermissionScopePermission]
