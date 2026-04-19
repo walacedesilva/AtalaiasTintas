@@ -114,7 +114,12 @@ class AuditLogger:
             
             # Create audit log entry
             with transaction.atomic():
-                audit_log = PermissionAuditLog.objects.create(**audit_data)
+                audit_log = PermissionAuditLog.log_action(
+                    action=audit_data.get('action', action),
+                    actor=audit_data.get('user', user),
+                    target_user=audit_data.get('target_user'),
+                    details=audit_data.get('details', {})
+                )
                 
                 # Update hash chain cache
                 if self.hash_chaining:

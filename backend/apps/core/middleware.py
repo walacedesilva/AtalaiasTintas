@@ -914,6 +914,7 @@ class EnhancedSecurityMiddleware(MiddlewareMixin):
         if PermissionAuditLog:
             PermissionAuditLog.log_action(
                 action='ip_blocked',
+                actor=None,  # System action
                 reason=f'IP blocked: {reason}',
                 details={
                     'ip_address': ip_address,
@@ -964,13 +965,13 @@ class EnhancedSecurityMiddleware(MiddlewareMixin):
             # Log suspicious request
             PermissionAuditLog.log_action(
                 action='suspicious_headers_detected',
+                actor=None,  # System action
                 reason='Suspicious headers in request',
                 details={
                     'suspicious_headers': found_suspicious,
                     'ip_address': self._get_client_ip(request),
                     'user_agent': request.META.get('HTTP_USER_AGENT', ''),
-                },
-                request=request
+                }
             )
 
 
@@ -1176,6 +1177,7 @@ class LoginAttemptMiddleware(MiddlewareMixin):
             if PermissionAuditLog:
                 PermissionAuditLog.log_action(
                     action='ip_locked_out',
+                    actor=None,  # System action
                     reason=f'IP locked after {ip_attempts} failed login attempts',
                     details={
                         'ip_address': client_ip,
@@ -1199,6 +1201,7 @@ class LoginAttemptMiddleware(MiddlewareMixin):
                 if PermissionAuditLog:
                     PermissionAuditLog.log_action(
                         action='user_locked_out',
+                        actor=None,  # System action
                         reason=f'User {username} locked after {user_attempts} failed attempts',
                         details={
                             'username': username,
@@ -1427,10 +1430,9 @@ class SessionSecurityMiddleware(MiddlewareMixin):
             for error in validation_result['errors']:
                 PermissionAuditLog.log_action(
                     action='session_security_violation',
-                    actor=request.user,
+                    actor=request.user if request.user.is_authenticated else None,
                     reason=error['message'],
-                    details=error['details'],
-                    request=request
+                    details=error['details']
                 )
         
         # Determine response based on violation type
@@ -1634,8 +1636,7 @@ def handle_enhanced_user_login(sender, request, user, **kwargs):
                     'login_timestamp': timezone.now().isoformat(),
                     'ip_address': request.META.get('REMOTE_ADDR', ''),
                     'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
-                },
-                request=request
+                }
             )
 
 
@@ -1666,8 +1667,7 @@ def handle_enhanced_user_logout(sender, request, user, **kwargs):
                     'logout_timestamp': timezone.now().isoformat(),
                     'ip_address': request.META.get('REMOTE_ADDR', ''),
                     'session_duration_minutes': 0  # Calculate if possible
-                },
-                request=request
+                }
             )
 
 
@@ -2203,13 +2203,15 @@ class PermissionValidationMiddleware(MiddlewareMixin):
             if not validation_result['allowed'] or self.audit_performance:
                 try:
                     from .models import PermissionAuditLog
-                    PermissionAuditLog.objects.create(
-                        actor=user if hasattr(user, 'id') else None,
+                    PermissionAuditLog.log_action(
                         action='permission_validation',
-                        resource_type='endpoint',
-                        resource_id=request.path_info,
-                        details=audit_entry,
-                        ip_address=audit_entry['ip_address']
+                        actor=user if hasattr(user, 'id') else None,
+                        details={
+                            'resource_type': 'endpoint',
+                            'resource_id': request.path_info,
+                            'audit_entry': audit_entry,
+                            'ip_address': audit_entry['ip_address']
+                        }
                     )
                 except ImportError:
                     # PermissionAuditLog model may not exist yet
@@ -2239,13 +2241,15 @@ class PermissionValidationMiddleware(MiddlewareMixin):
         # Store critical failures in database
         try:
             from .models import PermissionAuditLog
-            PermissionAuditLog.objects.create(
-                actor=user if user and hasattr(user, 'id') else None,
+            PermissionAuditLog.log_action(
                 action='system_failure',
-                resource_type='middleware',
-                resource_id='permission_validation',
-                details=failure_entry,
-                ip_address=failure_entry['ip_address']
+                actor=user if user and hasattr(user, 'id') else None,
+                details={
+                    'resource_type': 'middleware',
+                    'resource_id': 'permission_validation',
+                    'failure_entry': failure_entry,
+                    'ip_address': failure_entry['ip_address']
+                }
             )
         except (ImportError, Exception) as db_error:
             logger.error(f"Could not store failure in database: {db_error}")

@@ -479,19 +479,25 @@ class PermissionAuditLogManager(models.Manager):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Details must be JSON serializable: {e}")
         
-        # Create audit entry with integrity hash
+        # Create audit entry with extra fields in details
+        enhanced_details = dict(details)
+        enhanced_details.update({
+            'reason': reason[:500],  # Truncate reason to prevent abuse
+            'ip_address': ip_address[:45],  # IPv6 max length
+            'user_agent': user_agent[:500],  # Reasonable user agent limit
+            'session_key': session_key[:40],  # Django session key length
+            'result': 'success',  # Default to success, caller can update if needed
+            'target_group_id': target_group.id if target_group else None,
+            'target_group_name': target_group.name if target_group else None,
+            'permission_id': permission.id if permission else None,
+            'permission_code': permission.codename if permission else None,
+        })
+        
         audit_entry = self.create(
             action=action,
             actor=actor,
             target_user=target_user,
-            target_group=target_group,
-            permission=permission,
-            details=details,
-            reason=reason[:500],  # Truncate reason to prevent abuse
-            ip_address=ip_address[:45],  # IPv6 max length
-            user_agent=user_agent[:500],  # Reasonable user agent limit
-            session_key=session_key[:40],  # Django session key length
-            result='success'  # Default to success, caller can update if needed
+            details=enhanced_details
         )
         
         logger.info(f"Audit log created: {action} by {actor.username} for {target_user or target_group}")

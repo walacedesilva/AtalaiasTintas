@@ -8,7 +8,7 @@ import uuid
 # Import managers for permission system
 from .managers import (
     CustomUserManager, PermissionManager, UserGroupManager,
-    PermissionAuditLogManager, GroupMembershipManager
+    GroupMembershipManager
 )
 
 
@@ -1257,157 +1257,6 @@ class GroupPermission(TimeStampedModel):
         return f"{self.group.name} - {self.permission.code} ({self.grant_type})"
 
 
-class PermissionAuditLog(TimeStampedModel):
-    """
-    Log de auditoria para todas as alterações de permissões
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Informações da ação
-    ACTION_CHOICES = [
-        ('grant_user', 'Conceder Permissão a Usuário'),
-        ('revoke_user', 'Revogar Permissão de Usuário'),
-        ('grant_group', 'Conceder Permissão a Grupo'),
-        ('revoke_group', 'Revogar Permissão de Grupo'),
-        ('add_to_group', 'Adicionar ao Grupo'),
-        ('remove_from_group', 'Remover do Grupo'),
-        ('create_group', 'Criar Grupo'),
-        ('update_group', 'Atualizar Grupo'),
-        ('delete_group', 'Excluir Grupo'),
-        ('create_permission', 'Criar Permissão'),
-        ('update_permission', 'Atualizar Permissão'),
-        ('delete_permission', 'Excluir Permissão'),
-    ]
-    action = models.CharField(
-        max_length=20, 
-        choices=ACTION_CHOICES,
-        verbose_name='Ação'
-    )
-    
-    # Entidades envolvidas
-    actor = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        related_name='audit_actions',
-        verbose_name='Usuário que executou'
-    )
-    target_user = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='audit_targets',
-        verbose_name='Usuário alvo'
-    )
-    target_group = models.ForeignKey(
-        UserGroup, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='audit_targets',
-        verbose_name='Grupo alvo'
-    )
-    permission = models.ForeignKey(
-        Permission, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='audit_logs',
-        verbose_name='Permissão'
-    )
-    
-    # Detalhes da ação
-    details = models.JSONField(
-        default=dict, 
-        blank=True, 
-        verbose_name='Detalhes da Ação'
-    )
-    reason = models.CharField(
-        max_length=255, 
-        blank=True, 
-        verbose_name='Justificativa'
-    )
-    result = models.CharField(
-        max_length=20, 
-        choices=[
-            ('success', 'Sucesso'),
-            ('failure', 'Falha'),
-            ('partial', 'Parcial'),
-        ],
-        default='success',
-        verbose_name='Resultado'
-    )
-    
-    # Contexto técnico
-    ip_address = models.GenericIPAddressField(
-        null=True, 
-        blank=True, 
-        verbose_name='Endereço IP'
-    )
-    user_agent = models.TextField(blank=True, verbose_name='User Agent')
-    session_key = models.CharField(
-        max_length=40, 
-        blank=True, 
-        verbose_name='Chave de Sessão'
-    )
-    
-    # Manager
-    objects = PermissionAuditLogManager()
-    
-    class Meta:
-        verbose_name = 'Log de Auditoria de Permissões'
-        verbose_name_plural = 'Logs de Auditoria de Permissões'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['action', 'created_at']),
-            models.Index(fields=['actor', 'created_at']),
-            models.Index(fields=['target_user', 'created_at']),
-        ]
-        
-    def __str__(self):
-        return f"{self.action} - {self.actor} ({self.created_at})"
-        
-    @classmethod
-    def log_action(cls, action, actor=None, target_user=None, target_group=None, 
-                   permission=None, reason='', details=None, result='success', 
-                   request=None, **kwargs):
-        """
-        Método de conveniência para registrar ações de auditoria
-        """
-        log_data = {
-            'action': action,
-            'actor': actor,
-            'target_user': target_user,
-            'target_group': target_group,
-            'permission': permission,
-            'reason': reason,
-            'details': details or {},
-            'result': result,
-        }
-        
-        # Extrair informações da requisição se fornecida
-        if request:
-            log_data['ip_address'] = cls._get_client_ip(request)
-            log_data['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
-            log_data['session_key'] = request.session.session_key or ''
-        
-        # Adicionar dados extras
-        log_data.update(kwargs)
-        
-        return cls.objects.create(**log_data)
-    
-    @staticmethod
-    def _get_client_ip(request):
-        """Extrai o IP do cliente da requisição"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
-
-
 # ============================================================================
 # T013: ENHANCED AUTHENTICATION MODELS
 # ============================================================================
@@ -2404,7 +2253,7 @@ class Configuracao(models.Model):
 
 # Permission Audit Log for tracking permission changes
 class PermissionAuditLog(models.Model):
-    actor = models.ForeignKey(User, on_delete=models.CASCADE)
+    actor = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     target_user = models.ForeignKey(
         User, 
         related_name='permission_audit_logs', 
@@ -2428,15 +2277,38 @@ class PermissionAuditLog(models.Model):
         ]
         
     def __str__(self):
-        return f"{self.action} - {self.actor} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+        actor_name = self.actor.username if self.actor else 'System'
+        return f"{self.action} - {actor_name} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
         
     @classmethod
-    def log_action(cls, action, actor, **kwargs):
-        """Método helper para criar registros de auditoria"""
+    def log_action(cls, action, actor=None, **kwargs):
+        """Método helper para criar registros de auditoria - updated for debug"""
+        # Filter kwargs to only include valid model fields
+        valid_fields = {'target_user', 'details'}
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
+        
+        # Initialize details if not present
+        if 'details' not in filtered_kwargs:
+            filtered_kwargs['details'] = {}
+        elif not isinstance(filtered_kwargs['details'], dict):
+            filtered_kwargs['details'] = {}
+            
+        # Handle additional fields by adding them to details
+        ignored_fields = {'target_user', 'details', 'action', 'actor', 'request'}
+        for key, value in kwargs.items():
+            if key not in ignored_fields:
+                # Convert non-serializable objects to string
+                try:
+                    import json
+                    json.dumps(value)  # Test if serializable
+                    filtered_kwargs['details'][key] = value
+                except (TypeError, ValueError):
+                    filtered_kwargs['details'][key] = str(value)
+        
         return cls.objects.create(
             action=action,
             actor=actor,
-            **kwargs
+            **filtered_kwargs
         )
 
 

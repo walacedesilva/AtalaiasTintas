@@ -1568,21 +1568,6 @@ window.UIEnhancements = {
     ScrollAnimations,
     InteractionEnhancer
 };
-            
-            // Simulate API call to server
-            setTimeout(() => {
-                window.LoadingManager.hideGlobalLoading();
-                this.showNotification('Configurações salvas com sucesso!', 'success');
-                
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('customizeActionsModal'));
-                if (modal) modal.hide();
-            }, 1000);
-        } catch (error) {
-            console.error('Failed to save quick actions preferences:', error);
-            this.showNotification('Erro ao salvar configurações', 'error');
-        }
-    }
 
     /**
      * Setup custom actions display

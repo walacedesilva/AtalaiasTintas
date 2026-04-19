@@ -241,19 +241,33 @@ class PerformanceOptimizer {
      * Optimize font loading
      */
     optimizeFontLoading() {
-        // Use font-display: swap for web fonts
-        const fontCSS = `
-            @font-face {
-                font-family: 'Figtree';
-                src: url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
-                font-display: swap;
-            }
-        `;
+        // Ensure proper font loading without conflicting @font-face rules
+        // Only add preload hints for actually used fonts
+        const existingFontLinks = document.querySelectorAll('link[href*="fonts.googleapis.com"]');
+        
+        if (existingFontLinks.length > 0) {
+            existingFontLinks.forEach(link => {
+                if (!link.hasAttribute('rel') || link.rel !== 'preload') {
+                    // Convert to preload for better performance
+                    const preloadLink = document.createElement('link');
+                    preloadLink.rel = 'preload';
+                    preloadLink.as = 'style';
+                    preloadLink.href = link.href;
+                    preloadLink.crossOrigin = 'anonymous';
+                    document.head.insertBefore(preloadLink, link);
+                }
+            });
+        }
 
+        // Add font-display: swap via CSS
         if (!document.querySelector('#font-optimization')) {
             const style = document.createElement('style');
             style.id = 'font-optimization';
-            style.textContent = fontCSS;
+            style.textContent = `
+                * {
+                    font-display: swap;
+                }
+            `;
             document.head.appendChild(style);
         }
     }
@@ -790,16 +804,17 @@ class PerformanceOptimizer {
      * Add preload hints for critical resources
      */
     addPreloadHints() {
-        // Preload critical fonts
-        if (!document.querySelector('link[href*="figtree"]')) {
-            const fontLink = document.createElement('link');
-            fontLink.rel = 'preload';
-            fontLink.as = 'font';
-            fontLink.type = 'font/woff2';
-            fontLink.crossOrigin = '';
-            fontLink.href = 'https://fonts.gstatic.com/s/figtree/v5/Figt_UWrh_qp8INz9gU_mGU.woff2';
-            document.head.appendChild(fontLink);
-        }
+        // Preload critical CSS that's already referenced in HTML
+        const criticalCSS = document.querySelectorAll('link[rel="stylesheet"][href*="bootstrap"], link[rel="stylesheet"][href*="main"]');
+        criticalCSS.forEach(css => {
+            if (!document.querySelector(`link[rel="preload"][href="${css.href}"]`)) {
+                const preloadLink = document.createElement('link');
+                preloadLink.rel = 'preload';
+                preloadLink.as = 'style';
+                preloadLink.href = css.href;
+                document.head.insertBefore(preloadLink, css);
+            }
+        });
     }
 
     /**

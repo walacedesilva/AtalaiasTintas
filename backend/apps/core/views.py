@@ -1591,17 +1591,16 @@ class PermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     instance = serializer.save(created_by=request.user)
                     
                     # Log creation
-                    PermissionAuditLog.objects.create(
-                        user=request.user,
-                        permission=instance,
+                    PermissionAuditLog.log_action(
                         action='create',
+                        actor=request.user,
                         details={
                             'permission_code': instance.code,
                             'permission_name': instance.name,
                             'risk_level': instance.risk_level,
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                 
                 # Invalidate relevant caches
@@ -1693,10 +1692,9 @@ class PermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     updated_instance = serializer.save(updated_by=request.user)
                     
                     # Log update
-                    PermissionAuditLog.objects.create(
-                        user=request.user,
-                        permission=updated_instance,
+                    PermissionAuditLog.log_action(
                         action='update',
+                        actor=request.user,
                         details={
                             'old_values': old_values,
                             'new_values': {
@@ -1704,10 +1702,10 @@ class PermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                                 'description': updated_instance.description,
                                 'risk_level': updated_instance.risk_level,
                                 'is_active': updated_instance.is_active
-                            }
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            },
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                 
                 # Invalidate caches
@@ -1739,19 +1737,18 @@ class PermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
             
             with transaction.atomic():
                 # Log deletion before actually deleting
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    permission=instance,
+                PermissionAuditLog.log_action(
                     action='delete',
+                    actor=request.user,
                     details={
                         'deleted_permission': {
                             'code': instance.code,
                             'name': instance.name,
                             'risk_level': instance.risk_level
-                        }
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        },
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
                 # Remove from cache before deletion
@@ -2154,18 +2151,17 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     instance = serializer.save(granted_by=request.user)
                     
                     # Log permission grant
-                    PermissionAuditLog.objects.create(
-                        user=request.user,
-                        target_user=instance.user,
-                        permission=instance.permission,
+                    PermissionAuditLog.log_action(
                         action='grant',
+                        actor=request.user,
+                        target_user=instance.user,
                         details={
                             'granted_to': instance.user.username,
                             'permission_code': instance.permission.code,
-                            'expires_at': instance.expires_at.isoformat() if instance.expires_at else None
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'expires_at': instance.expires_at.isoformat() if instance.expires_at else None,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                 
                 # Invalidate user's permission cache
@@ -2255,18 +2251,17 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
             
             with transaction.atomic():
                 # Log revocation
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    target_user=instance.user,
-                    permission=instance.permission,
+                PermissionAuditLog.log_action(
                     action='revoke',
+                    actor=request.user,
+                    target_user=instance.user,
                     details={
                         'revoked_from': instance.user.username,
                         'permission_code': instance.permission.code,
-                        'was_granted': instance.is_granted
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'was_granted': instance.is_granted,
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
                 # Instead of deleting, mark as revoked
@@ -2415,19 +2410,18 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                         )
                         
                         # Log assignment
-                        PermissionAuditLog.objects.create(
-                            user=granter,
-                            target_user=user,
-                            permission=permission,
+                        PermissionAuditLog.log_action(
                             action='bulk_grant',
+                            actor=granter,
+                            target_user=user,
                             details={
                                 'granted_to': user.username,
                                 'permission_code': permission.code,
                                 'expires_at': expires_at.isoformat() if expires_at else None,
-                                'bulk_operation': True
-                            },
-                            ip_address=self._get_client_ip(request),
-                            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                                'bulk_operation': True,
+                                'ip_address': self._get_client_ip(request),
+                                'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                            }
                         )
                         
                         successful.append({
@@ -2632,21 +2626,20 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                 )
                 
                 # Log delegation
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    target_user=delegate_to_user,
-                    permission=permission,
+                PermissionAuditLog.log_action(
                     action='delegate',
+                    actor=request.user,
+                    target_user=delegate_to_user,
                     details={
                         'delegated_to': delegate_to_user.username,
                         'permission_code': permission.code,
                         'expires_at': expires_at.isoformat(),
                         'duration_hours': duration_hours,
                         'scope_restrictions': scope_restrictions,
-                        'reason': reason
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'reason': reason,
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
                 # Send notification to delegate
@@ -2748,11 +2741,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
         try:
             # This would integrate with your notification system
             # For now, we'll just log it as an audit event
-            PermissionAuditLog.objects.create(
-                user=delegator,
-                target_user=delegate_user,
-                permission=permission,
+            PermissionAuditLog.log_action(
                 action='delegation_notification',
+                actor=delegator,
+                target_user=delegate_user,
                 details={
                     'notification_type': 'permission_delegated',
                     'delegated_permission': permission.code,
@@ -2824,21 +2816,20 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                 delegation.save()
                 
                 # Log revocation
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    target_user=delegation.user,
-                    permission=delegation.permission,
+                PermissionAuditLog.log_action(
                     action='revoke_delegation',
+                    actor=request.user,
+                    target_user=delegation.user,
                     details={
                         'delegation_id': delegation.id,
                         'delegated_from': delegation.delegation_source_user.username,
                         'delegated_to': delegation.user.username,
                         'permission_code': delegation.permission.code,
                         'revocation_reason': reason,
-                        'original_expires_at': delegation.expires_at.isoformat() if delegation.expires_at else None
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'original_expires_at': delegation.expires_at.isoformat() if delegation.expires_at else None,
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
             
             # Invalidate caches
@@ -3169,19 +3160,18 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             if resolution_strategy == 'prefer_individual':
                 # Keep individual permission, document group conflict
-                PermissionAuditLog.objects.create(
-                    user=resolver,
-                    target_user=user,
-                    permission=direct_perm.permission,
+                PermissionAuditLog.log_action(
                     action='conflict_resolve_prefer_individual',
+                    actor=resolver,
+                    target_user=user,
                     details={
                         'resolution_strategy': resolution_strategy,
                         'direct_permission_id': direct_perm.id,
                         'conflicting_groups': [gp.group.name for gp in group_perms],
-                        'action_taken': 'kept_individual_permission'
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'action_taken': 'kept_individual_permission',
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
             elif resolution_strategy == 'prefer_group':
@@ -3191,38 +3181,36 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                 direct_perm.revoked_by = resolver
                 direct_perm.save()
                 
-                PermissionAuditLog.objects.create(
-                    user=resolver,
-                    target_user=user,
-                    permission=direct_perm.permission,
+                PermissionAuditLog.log_action(
                     action='conflict_resolve_prefer_group',
+                    actor=resolver,
+                    target_user=user,
                     details={
                         'resolution_strategy': resolution_strategy,
                         'revoked_individual_permission_id': direct_perm.id,
                         'kept_group_sources': [gp.group.name for gp in group_perms],
-                        'action_taken': 'removed_individual_permission'
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'action_taken': 'removed_individual_permission',
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
             elif resolution_strategy == 'most_permissive':
                 # Keep the permission that has the longest duration or highest privileges
                 # For now, keep individual and document decision
-                PermissionAuditLog.objects.create(
-                    user=resolver,
-                    target_user=user,
-                    permission=direct_perm.permission,
+                PermissionAuditLog.log_action(
                     action='conflict_resolve_most_permissive',
+                    actor=resolver,
+                    target_user=user,
                     details={
                         'resolution_strategy': resolution_strategy,
                         'direct_permission_id': direct_perm.id,
                         'direct_expires_at': direct_perm.expires_at.isoformat() if direct_perm.expires_at else 'never',
                         'conflicting_groups': [gp.group.name for gp in group_perms],
-                        'action_taken': 'kept_most_permissive_option'
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'action_taken': 'kept_most_permissive_option',
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
             
             # Invalidate user cache after conflict resolution
@@ -3325,11 +3313,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     approval_tasks.append(task)
                 
                 # Log the approval request
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    target_user=target_user,
-                    permission=permission,
+                PermissionAuditLog.log_action(
                     action='request_approval',
+                    actor=request.user,
+                    target_user=target_user,
                     details={
                         'approval_request_id': approval_request.id,
                         'target_user': target_user.username,
@@ -3337,10 +3324,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                         'justification': justification,
                         'duration_hours': duration_hours,
                         'approvers': [a.username for a in approvers],
-                        'request_expires_at': request_expires_at.isoformat()
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'request_expires_at': request_expires_at.isoformat(),
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
                 
                 # Send notifications to approvers
@@ -3443,11 +3430,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
         try:
             for task in approval_tasks:
                 # Log notification
-                PermissionAuditLog.objects.create(
-                    user=approval_request.requester,
-                    target_user=task.approver,
-                    permission=approval_request.permission,
+                PermissionAuditLog.log_action(
                     action='approval_notification',
+                    actor=approval_request.requester,
+                    target_user=task.approver,
                     details={
                         'notification_type': 'approval_requested',
                         'approval_request_id': approval_request.id,
@@ -3561,11 +3547,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     self._grant_approved_permission(approval_request, request.user, request)
                 
                 # Log the approval decision
-                PermissionAuditLog.objects.create(
-                    user=request.user,
-                    target_user=approval_request.target_user,
-                    permission=approval_request.permission,
+                PermissionAuditLog.log_action(
                     action=f'approval_{decision}',
+                    actor=request.user,
+                    target_user=approval_request.target_user,
                     details={
                         'approval_request_id': approval_request.id,
                         'approval_task_id': approval_task.id,
@@ -3574,10 +3559,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                         'target_user': approval_request.target_user.username,
                         'permission_code': approval_request.permission.code,
                         'overall_status': approval_request.status,
-                        'remaining_pending_approvals': pending_tasks
-                    },
-                    ip_address=self._get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                        'remaining_pending_approvals': pending_tasks,
+                        'ip_address': self._get_client_ip(request),
+                        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                    }
                 )
             
             return Response({
@@ -3624,20 +3609,19 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
             )
             
             # Log the grant
-            PermissionAuditLog.objects.create(
-                user=approval_request.requester,
-                target_user=approval_request.target_user,
-                permission=approval_request.permission,
+            PermissionAuditLog.log_action(
                 action='grant_after_approval',
+                actor=approval_request.requester,
+                target_user=approval_request.target_user,
                 details={
                     'approval_request_id': approval_request.id,
                     'target_user': approval_request.target_user.username,
                     'permission_code': approval_request.permission.code,
                     'expires_at': expires_at.isoformat(),
-                    'granted_via_approval': True
-                },
-                ip_address=self._get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                    'granted_via_approval': True,
+                    'ip_address': self._get_client_ip(request),
+                    'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                }
             )
             
             # Invalidate user cache
@@ -3648,9 +3632,9 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
             
         except Exception as e:
             # Log the error but don't fail the approval
-            PermissionAuditLog.objects.create(
-                user=approver,
+            PermissionAuditLog.log_action(
                 action='grant_after_approval_failed',
+                actor=approver,
                 details={
                     'approval_request_id': approval_request.id,
                     'error': str(e)
@@ -3661,11 +3645,10 @@ class UserPermissionViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
         """Send notifications when approval workflow completes."""
         try:
             # Notify requester
-            PermissionAuditLog.objects.create(
-                user=approval_request.requester,
-                target_user=approval_request.target_user,
-                permission=approval_request.permission,
+            PermissionAuditLog.log_action(
                 action='approval_completion_notification',
+                actor=approval_request.requester,
+                target_user=approval_request.target_user,
                 details={
                     'notification_type': 'approval_completed',
                     'approval_request_id': approval_request.id,
@@ -3745,16 +3728,16 @@ class UserGroupViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     instance = serializer.save(created_by=request.user)
                     
                     # Log group creation
-                    PermissionAuditLog.objects.create(
-                        user=request.user,
+                    PermissionAuditLog.log_action(
                         action='create_group',
+                        actor=request.user,
                         details={
                             'group_name': instance.name,
                             'group_id': instance.id,
-                            'parent_group': instance.parent.name if instance.parent else None
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'parent_group': instance.parent.name if instance.parent else None,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -3898,18 +3881,18 @@ class UserGroupViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     )
                     
                     # Log addition
-                    PermissionAuditLog.objects.create(
-                        user=added_by,
-                        target_user=user,
+                    PermissionAuditLog.log_action(
                         action='add_to_group',
+                        actor=added_by,
+                        target_user=user,
                         details={
                             'group_name': group.name,
                             'group_id': group.id,
                             'user_added': user.username,
-                            'role': role
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'role': role,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                     
                     added.append({
@@ -4102,18 +4085,18 @@ class UserGroupViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     membership.save()
                     
                     # Log removal
-                    PermissionAuditLog.objects.create(
-                        user=removed_by,
-                        target_user=user,
+                    PermissionAuditLog.log_action(
                         action='remove_from_group',
+                        actor=removed_by,
+                        target_user=user,
                         details={
                             'group_name': group.name,
                             'group_id': group.id,
                             'user_removed': user.username,
-                            'membership_id': membership.id
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'membership_id': membership.id,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                     
                     removed.append({
@@ -4268,18 +4251,18 @@ class UserGroupViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                         })
                     
                     # Log permission assignment
-                    PermissionAuditLog.objects.create(
-                        user=assigned_by,
+                    PermissionAuditLog.log_action(
                         action='assign_group_permission',
+                        actor=assigned_by,
                         details={
                             'group_name': group.name,
                             'group_id': group.id,
                             'permission_code': permission.code,
                             'permission_name': permission.name,
-                            'risk_level': permission.risk_level
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'risk_level': permission.risk_level,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                     
                 except Exception as e:
@@ -4384,18 +4367,18 @@ class UserGroupViewSet(PerformanceOptimizedMixin, viewsets.ModelViewSet):
                     group_perm.save()
                     
                     # Log permission removal
-                    PermissionAuditLog.objects.create(
-                        user=removed_by,
+                    PermissionAuditLog.log_action(
                         action='remove_group_permission',
+                        actor=removed_by,
                         details={
                             'group_name': group.name,
                             'group_id': group.id,
                             'permission_code': permission.code,
                             'permission_name': permission.name,
-                            'risk_level': permission.risk_level
-                        },
-                        ip_address=self._get_client_ip(request),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                            'risk_level': permission.risk_level,
+                            'ip_address': self._get_client_ip(request),
+                            'user_agent': request.META.get('HTTP_USER_AGENT', '')[:500]
+                        }
                     )
                     
                     removed.append({
