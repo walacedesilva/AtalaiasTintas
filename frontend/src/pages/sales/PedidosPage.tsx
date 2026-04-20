@@ -15,12 +15,15 @@ import {
   ChevronUp,
   AlertTriangle,
   Truck,
+  Printer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI, type PedidoCreatePayload, type ItemAddPayload } from '@/api/sales';
 import { companiesAPI } from '@/api/companies';
 import { inventoryAPI } from '@/api/inventory';
 import type { PedidoVenda, SituacaoPedido, Loja, EstoqueLojaItem } from '@/types';
+import { PrintPreviewModal } from '@/components/print/PrintPreviewModal';
+import { OrcamentoPrintLayout } from '@/components/print/OrcamentoPrintLayout';
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<SituacaoPedido, { label: string; className: string; icon: React.ReactNode }> = {
@@ -111,6 +114,8 @@ function PedidoRow({
   onFinalizarEntrega,
   isFinalizandoEntrega,
   onCancelar,
+  loja: _loja,
+  onPrint,
 }: {
   pedido: PedidoVenda;
   onFinalizar: (id: string) => void;
@@ -120,6 +125,8 @@ function PedidoRow({
   onFinalizarEntrega: (id: string) => void;
   isFinalizandoEntrega: boolean;
   onCancelar: (pedido: PedidoVenda) => void;
+  loja: Loja | undefined;
+  onPrint: (pedido: PedidoVenda) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (v: string) => parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -181,6 +188,15 @@ function PedidoRow({
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
+            {pedido.situacao !== 'CANCELADO' && (
+              <button
+                className="rounded-lg border border-slate-200 p-1 text-slate-500 hover:bg-slate-100"
+                title="Imprimir orçamento"
+                onClick={() => onPrint(pedido)}
+              >
+                <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
             <button
               className="rounded-lg border border-slate-200 p-1 text-slate-500 hover:bg-slate-100"
               onClick={() => setExpanded((e) => !e)}
@@ -207,7 +223,7 @@ function PedidoRow({
               <tbody>
                 {pedido.itens.map((item) => (
                   <tr key={item.id}>
-                    <td className="py-0.5 text-slate-700">Produto #{item.produto_variacao}</td>
+                    <td className="py-0.5 text-slate-700">{item.nome_produto || `Produto #${item.produto_variacao}`}</td>
                     <td className="py-0.5 text-right text-slate-600">{item.quantidade}</td>
                     <td className="py-0.5 text-right text-slate-600">{parseFloat(item.preco_unitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td className="py-0.5 text-right font-medium text-slate-900">{parseFloat(item.preco_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -717,6 +733,13 @@ export default function PedidosPage() {
   const [aprovandoId, setAprovandoId] = useState<string | null>(null);
   const [finalizandoEntregaId, setFinalizandoEntregaId] = useState<string | null>(null);
   const [cancelarPedido, setCancelarPedido] = useState<import('@/types').PedidoVenda | null>(null);
+  const [printPedido, setPrintPedido] = useState<import('@/types').PedidoVenda | null>(null);
+
+  const { data: lojas = [] } = useQuery({
+    queryKey: ['lojas'],
+    queryFn: companiesAPI.lojas.list,
+    staleTime: 300_000,
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['pedidos', search, situacao, page],
@@ -801,6 +824,30 @@ export default function PedidosPage() {
           onClose={() => setCancelarPedido(null)}
           onConfirm={(motivo) => cancelarMutation.mutate({ id: cancelarPedido.id, motivo })}
         />
+      )}
+
+      {printPedido && (
+        <PrintPreviewModal
+          isOpen={!!printPedido}
+          onClose={() => setPrintPedido(null)}
+          title={`Orçamento Nº ${printPedido.numero_pedido}`}
+        >
+          <OrcamentoPrintLayout
+            pedido={printPedido}
+            loja={lojas.find((l) => l.id === printPedido.loja) ?? {
+              id: printPedido.loja,
+              nome: 'Loja',
+              uf: null,
+              cidade: null,
+              ativa: true,
+              endereco: null,
+              numero: null,
+              bairro: null,
+              telefone: null,
+              empresa_data: null,
+            }}
+          />
+        </PrintPreviewModal>
       )}
 
       <div className="flex-1 overflow-auto px-6 py-6">
@@ -914,6 +961,8 @@ export default function PedidosPage() {
                       onFinalizarEntrega={(id) => finalizarEntregaMutation.mutate(id)}
                       isFinalizandoEntrega={finalizandoEntregaId === pedido.id && finalizarEntregaMutation.isPending}
                       onCancelar={setCancelarPedido}
+                      loja={lojas.find((l) => l.id === pedido.loja)}
+                      onPrint={setPrintPedido}
                     />
                   ))
                 )}

@@ -2,13 +2,25 @@
 from rest_framework import permissions, serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from apps.companies.models import Loja
+from apps.companies.models import Empresa, Loja
+
+
+class EmpresaResumoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Empresa
+        fields = ['id', 'razao_social', 'nome_fantasia', 'cnpj']
 
 
 class LojaSerializer(serializers.ModelSerializer):
+    empresa_data = EmpresaResumoSerializer(source='empresa', read_only=True)
+
     class Meta:
         model = Loja
-        fields = ['id', 'nome', 'uf', 'cidade', 'ativa']
+        fields = [
+            'id', 'nome', 'uf', 'cidade', 'ativa',
+            'endereco', 'numero', 'bairro', 'telefone',
+            'empresa_data',
+        ]
 
 
 class LojaViewSet(ReadOnlyModelViewSet):

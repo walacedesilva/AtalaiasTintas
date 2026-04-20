@@ -10,6 +10,14 @@ export interface BaseModel {
   updated_at: string;
 }
 
+// Empresa (resumo aninhado em Loja)
+export interface EmpresaResumo {
+  id: number;
+  razao_social: string;
+  nome_fantasia: string | null;
+  cnpj: string;
+}
+
 // Loja
 export interface Loja {
   id: number;
@@ -17,6 +25,11 @@ export interface Loja {
   uf: string | null;
   cidade: string | null;
   ativa: boolean;
+  endereco: string | null;
+  numero: string | null;
+  bairro: string | null;
+  telefone: string | null;
+  empresa_data: EmpresaResumo | null;
 }
 
 // Authentication types
@@ -29,6 +42,11 @@ export interface User {
   is_staff: boolean;
   is_active: boolean;
   date_joined: string;
+  // Permissões legadas do sistema
+  pode_vender: boolean;
+  pode_gerenciar_estoque: boolean;
+  pode_acessar_financeiro: boolean;
+  pode_administrar: boolean;
 }
 
 export interface AuthResponse {
@@ -256,10 +274,8 @@ export interface ColorAnalysisResponse {
 
 // Dashboard/UI specific types
 export interface DashboardStats {
-  total_templates: number;
-  misturas_hoje: number;
+  vendas_hoje: number;
   estoque_baixo: number;
-  etiquetas_geradas: number;
 }
 
 export interface QuickAction {
@@ -452,10 +468,12 @@ export type NfeSituacao =
 export interface ItemPedidoVenda {
   id: number;
   produto_variacao: number;
+  nome_produto: string;
   quantidade: string;
   preco_unitario: string;
   preco_total: string;
   unidade_venda: number;
+  unidade_sigla: string;
   quantidade_base: string;
   fator_conversao_aplicado: string | null;
   desconto_valor: string;
@@ -505,6 +523,10 @@ export interface Venda {
   motivo_cancelamento: string | null;
   data_cancelamento: string | null;
   tem_devolucao: boolean;
+  pagamentos: PagamentoVenda[];
+  pedido_origem_id: string | null;
+  pedido_origem_numero: string | null;
+  pedido_itens: ItemPedidoVenda[];
 }
 
 // ─── T038 — PDV / Recebíveis types ────────────────────────────────────────────

@@ -19,7 +19,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from apps.sales.models import Cliente, ItemPedidoVenda, PedidoVenda, Recebivel, Venda
+from apps.sales.models import Cliente, ItemPedidoVenda, PagamentoVenda, PedidoVenda, Recebivel, Venda
 
 logger = logging.getLogger(__name__)
 
@@ -141,14 +141,40 @@ class ClienteViewSet(ModelViewSet):
 
 
 class ItemPedidoVendaSerializer(serializers.ModelSerializer):
+    nome_produto = serializers.SerializerMethodField()
+    unidade_sigla = serializers.SerializerMethodField()
+
+    def get_nome_produto(self, obj) -> str:
+        try:
+            base = obj.produto_variacao.produto_base.nome
+            variacao = obj.produto_variacao.nome_variacao
+            return f"{base} — {variacao}" if variacao else base
+        except Exception:
+            return ''
+
+    def get_unidade_sigla(self, obj):
+        # Prefer the item-level unit; fall back to the product's default unit
+        if obj.unidade_venda_id:
+            try:
+                return obj.unidade_venda.sigla
+            except Exception:
+                pass
+        try:
+            return obj.produto_variacao.unidade_venda.sigla
+        except Exception:
+            return None
+
     class Meta:
         model = ItemPedidoVenda
         fields = [
-            'id', 'produto_variacao', 'quantidade', 'preco_unitario', 'preco_total',
-            'unidade_venda', 'quantidade_base', 'fator_conversao_aplicado',
+            'id', 'produto_variacao', 'nome_produto', 'quantidade', 'preco_unitario', 'preco_total',
+            'unidade_venda', 'unidade_sigla', 'quantidade_base', 'fator_conversao_aplicado',
             'desconto_valor', 'desconto_percentual', 'observacoes', 'sequencia',
         ]
-        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado']
+        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado', 'nome_produto', 'unidade_sigla']
+        extra_kwargs = {
+            'preco_total': {'required': False},
+        }
 
     def validate(self, attrs):
         # Auto-compute preco_total if not provided
@@ -176,9 +202,31 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'numero_pedido', 'data_pedido', 'cliente_nome']
 
 
+class PagamentoVendaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PagamentoVenda
+        fields = ['id', 'forma', 'valor', 'valor_recebido', 'troco']
+
+
 class VendaSerializer(serializers.ModelSerializer):
     cliente_nome = serializers.CharField(source='cliente.nome_completo', read_only=True)
     nfe_situacao_display = serializers.CharField(source='get_nfe_situacao_display', read_only=True)
+    pagamentos = PagamentoVendaSerializer(many=True, read_only=True)
+    pedido_origem_id = serializers.SerializerMethodField()
+    pedido_origem_numero = serializers.SerializerMethodField()
+    pedido_itens = serializers.SerializerMethodField()
+
+    def get_pedido_origem_id(self, obj):
+        return str(obj.pedido_origem.id) if obj.pedido_origem_id else None
+
+    def get_pedido_origem_numero(self, obj):
+        return obj.pedido_origem.numero_pedido if obj.pedido_origem_id else None
+
+    def get_pedido_itens(self, obj):
+        if not obj.pedido_origem_id:
+            return []
+        itens = obj.pedido_origem.itens.all()
+        return ItemPedidoVendaSerializer(itens, many=True).data
 
     class Meta:
         model = Venda
@@ -189,11 +237,13 @@ class VendaSerializer(serializers.ModelSerializer):
             'nfe_tentativas', 'nfe_ultima_tentativa', 'nfe_erro',
             'nfe_requer_retry_manual', 'nfe_protocolo', 'nfe_chave_acesso',
             'cancelada', 'motivo_cancelamento', 'data_cancelamento',
+            'pagamentos', 'pedido_origem_id', 'pedido_origem_numero', 'pedido_itens',
         ]
         read_only_fields = [
             'id', 'numero_venda', 'data_venda', 'cliente_nome',
             'nfe_situacao_display', 'nfe_tentativas', 'nfe_ultima_tentativa',
-            'nfe_protocolo', 'nfe_chave_acesso',
+            'nfe_protocolo', 'nfe_chave_acesso', 'pagamentos',
+            'pedido_origem_id', 'pedido_origem_numero', 'pedido_itens',
         ]
 
 
@@ -209,7 +259,11 @@ class PedidoVendaViewSet(ModelViewSet):
         qs = (
             PedidoVenda.objects
             .select_related('loja', 'cliente', 'vendedor')
-            .prefetch_related('itens')
+            .prefetch_related(
+                'itens__produto_variacao__produto_base',
+                'itens__produto_variacao__unidade_venda',
+                'itens__unidade_venda',
+            )
             .order_by('-created_at')
         )
         if situacao := self.request.query_params.get('situacao'):
@@ -250,7 +304,12 @@ class PedidoVendaViewSet(ModelViewSet):
         ser = ItemPedidoVendaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         next_seq = pedido.itens.count() + 1
-        item = ser.save(pedido=pedido, sequencia=next_seq)
+        # Auto-set unidade_venda from the product's default unit if not provided
+        save_kwargs: dict = {'pedido': pedido, 'sequencia': next_seq}
+        pv = ser.validated_data.get('produto_variacao')
+        if pv and not ser.validated_data.get('unidade_venda') and pv.unidade_venda_id:
+            save_kwargs['unidade_venda_id'] = pv.unidade_venda_id
+        item = ser.save(**save_kwargs)
 
         # Recalculate totals
         _recalcular_totais_pedido(pedido)
@@ -535,7 +594,17 @@ class VendaViewSet(ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        qs = Venda.objects.select_related('loja', 'cliente', 'vendedor').order_by('-created_at')
+        qs = (
+            Venda.objects
+            .select_related('loja', 'cliente', 'vendedor', 'pedido_origem')
+            .prefetch_related(
+                'pagamentos',
+                'pedido_origem__itens__produto_variacao__produto_base',
+                'pedido_origem__itens__produto_variacao__unidade_venda',
+                'pedido_origem__itens__unidade_venda',
+            )
+            .order_by('-created_at')
+        )
         # Filters
         if nfe_sit := self.request.query_params.get('nfe_situacao'):
             qs = qs.filter(nfe_situacao=nfe_sit)

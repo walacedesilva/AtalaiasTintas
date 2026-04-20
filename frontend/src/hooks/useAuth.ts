@@ -21,6 +21,45 @@ interface AuthState {
 }
 
 /**
+ * Simple permissions hook based on legacy user permissions
+ * TODO: Replace with full permission system when implemented
+ */
+export function usePermissions() {
+  const { user } = useAuth();
+  
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    
+    // Admins have all permissions
+    if (user.pode_administrar) return true;
+    
+    switch (permission) {
+      case 'tintometry':
+        // Tintometry access requires stock management or admin
+        return user.pode_gerenciar_estoque || user.pode_administrar;
+      case 'sales':
+        return user.pode_vender || user.pode_administrar;
+      case 'inventory': 
+        return user.pode_gerenciar_estoque || user.pode_administrar;
+      case 'financial':
+        return user.pode_acessar_financeiro || user.pode_administrar;
+      default:
+        return false;
+    }
+  };
+  
+  const hasTintometryAccess = (): boolean => {
+    return hasPermission('tintometry');
+  };
+  
+  return {
+    hasPermission,
+    hasTintometryAccess,
+    user
+  };
+}
+
+/**
  * Get current authentication state
  */
 export function useAuth(): AuthState {

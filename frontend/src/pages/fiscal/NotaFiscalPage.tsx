@@ -138,9 +138,9 @@ export default function NotaFiscalPage(): React.ReactElement {
   const notasFiltradas = (notas ?? []).filter((n) => {
     const q = search.toLowerCase();
     return (
-      n.numero?.toLowerCase().includes(q) ||
+      String(n.numero ?? '').toLowerCase().includes(q) ||
       n.chave_acesso?.toLowerCase().includes(q) ||
-      n.situacao.toLowerCase().includes(q)
+      n.situacao?.toLowerCase().includes(q)
     );
   });
 

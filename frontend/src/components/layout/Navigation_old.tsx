@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useDashboardStats } from '@/hooks/useTintometry';
 import { usePermissions } from '@/hooks/useAuth';
@@ -19,16 +19,15 @@ import {
   Monitor,
   Receipt,
   FileText,
-  Settings,
   X,
 } from 'lucide-react';
 
 interface NavItem {
   path: string;
   label: string;
-  icon: React.ElementType;
-  badge?: number;
-  badgeDanger?: boolean;
+  icon: React.ComponentType<{ className?: string | undefined }>;
+  badge?: number | undefined;
+  badgeDanger?: boolean | undefined;
 }
 
 interface NavigationProps {
@@ -36,27 +35,41 @@ interface NavigationProps {
   onClose: () => void;
 }
 
-function Navigation({ isOpen, onClose }: NavigationProps) {
+export default function Navigation({ isOpen, onClose }: NavigationProps): React.ReactElement {
   const { data: stats } = useDashboardStats();
   const { hasTintometryAccess } = usePermissions();
 
-  // Items básicos (sempre visíveis)
+  // Base navigation items (sempre visíveis)
   const baseNavItems: NavItem[] = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/sales', label: 'Vendas', icon: ShoppingCart, badge: 3 },
+    { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/pdv',        label: 'PDV',              icon: Monitor },
+    { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
+    { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
+    { path: '/recebiveis', label: 'Recebíveis',       icon: Receipt },
+    { path: '/customers',  label: 'Clientes',         icon: Users },
   ];
 
-  // Items de tintometria (ocultos temporariamente)
-  const tintometryNavItems: NavItem[] = [];
+  // Itens de tintometria (só aparecem com permissão)
+  const tintometryNavItems: NavItem[] = [
+    { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
+    { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
+    { path: '/formulas',   label: 'Fórmulas',         icon: FlaskConical },
+    { path: '/mixtures',   label: 'Misturas',         icon: Layers,       badge: stats?.misturas_hoje },
+    { path: '/tintometry', label: 'Tintometria',      icon: Pipette,      badge: undefined },
+    { path: '/tintometry/stock', label: 'Estoque Pigmentos', icon: Beaker, badge: undefined },
+  ];
 
-  // Items gerais (sempre visíveis) 
+  // Itens gerais (sempre visíveis)
   const generalNavItems: NavItem[] = [
-    { path: '/orders', label: 'Pedidos', icon: ClipboardList },
-    { path: '/customers', label: 'Clientes', icon: Users },
-    { path: '/fiscal', label: 'Fiscal/NFe', icon: Receipt, badge: stats?.nfe_pendentes, badgeDanger: true },
-    { path: '/reports', label: 'Relatórios', icon: FileText },
-    { path: '/monitoring', label: 'Monitoramento', icon: Monitor },
-    { path: '/settings', label: 'Configurações', icon: Settings },
+    {
+      path: '/inventory',
+      label: 'Estoque',
+      icon: Package,
+      badge: (stats?.estoque_baixo ?? 0) > 0 ? stats?.estoque_baixo : undefined,
+      badgeDanger: (stats?.estoque_baixo ?? 0) > 0,
+    },
+    { path: '/labels',     label: 'Etiquetas',        icon: Tag,          badge: stats?.etiquetas_geradas },
+    { path: '/fiscal',     label: 'Nota Fiscal',      icon: FileText,     badge: undefined },
   ];
 
   // Montar lista final baseado nas permissões
@@ -190,5 +203,3 @@ function Navigation({ isOpen, onClose }: NavigationProps) {
     </nav>
   );
 }
-
-export default Navigation;
