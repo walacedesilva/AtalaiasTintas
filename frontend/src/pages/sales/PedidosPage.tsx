@@ -16,14 +16,17 @@ import {
   AlertTriangle,
   Truck,
   Printer,
+  FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI, type PedidoCreatePayload, type ItemAddPayload } from '@/api/sales';
+import { fiscalAPI } from '@/api/fiscal';
 import { companiesAPI } from '@/api/companies';
 import { inventoryAPI } from '@/api/inventory';
-import type { PedidoVenda, SituacaoPedido, Loja, EstoqueLojaItem, Cliente } from '@/types';
+import type { PedidoVenda, SituacaoPedido, Loja, EstoqueLojaItem, Cliente, Venda } from '@/types';
 import { PrintPreviewModal } from '@/components/print/PrintPreviewModal';
 import { OrcamentoPrintLayout } from '@/components/print/OrcamentoPrintLayout';
+import { ReciboPrintLayout } from '@/components/print/ReciboPrintLayout';
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<SituacaoPedido, { label: string; className: string; icon: React.ReactNode }> = {
@@ -91,10 +94,13 @@ function CancelarPedidoModal({
           <div>
             <label htmlFor="motivo-cancelar" className="block text-sm font-medium text-slate-700 mb-1">Motivo (obrigatório)</label>
             <input id="motivo-cancelar" type="text" value={motivo} onChange={(e) => setMotivo(e.target.value)} className="form-input w-full" />
+            {motivo.trim().length > 0 && motivo.trim().length < 10 && (
+              <p className="text-xs text-rose-600 mt-1">Mínimo de 10 caracteres ({motivo.trim().length}/10)</p>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="btn-secondary">Voltar</button>
-            <button type="button" disabled={!motivo.trim()} onClick={() => onConfirm(motivo.trim())} className="btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50">
+            <button type="button" disabled={motivo.trim().length < 10} onClick={() => onConfirm(motivo.trim())} className="btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50">
               Cancelar pedido
             </button>
           </div>
@@ -487,6 +493,132 @@ interface CartItem {
   preco_unitario: string;
 }
 
+// ─── Post-Venda Modal ─────────────────────────────────────────────────────────
+
+function PostVendaModal({
+  venda,
+  lojas,
+  onClose,
+}: {
+  venda: Venda;
+  lojas: Loja[];
+  onClose: () => void;
+}) {
+  const loja: Loja = lojas.find((l) => l.id === venda.loja) ?? {
+    id: venda.loja,
+    nome: 'Loja',
+    uf: null,
+    cidade: null,
+    ativa: true,
+    endereco: null,
+    numero: null,
+    bairro: null,
+    telefone: null,
+    empresa_data: null,
+  };
+
+  const [showPrint, setShowPrint] = useState(false);
+  const [nfeEnviada, setNfeEnviada] = useState(false);
+
+  const emitirNfeMutation = useMutation({
+    mutationFn: () => fiscalAPI.nfe.emitir(venda.id),
+    onSuccess: () => {
+      toast.success('NF-e enviada para emissão.');
+      setNfeEnviada(true);
+    },
+    onError: () => toast.error('Erro ao emitir NF-e.'),
+  });
+
+  const fmt = (v: string) =>
+    parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <>
+      {showPrint && (
+        <PrintPreviewModal
+          isOpen
+          onClose={() => setShowPrint(false)}
+          title={`Recibo de Venda Nº ${venda.numero_venda}`}
+          zClassName="z-[70]"
+        >
+          <ReciboPrintLayout venda={venda} loja={loja} />
+        </PrintPreviewModal>
+      )}
+
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="post-venda-title"
+      >
+        <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+          {/* Cabeçalho de sucesso */}
+          <div className="flex flex-col items-center gap-2 px-6 pt-8 pb-5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            </div>
+            <h2 id="post-venda-title" className="text-lg font-bold text-slate-900">
+              Venda Finalizada!
+            </h2>
+            <p className="text-sm text-slate-500">Nº {venda.numero_venda}</p>
+          </div>
+
+          {/* Resumo */}
+          <div className="border-t border-slate-100 px-6 py-4 space-y-1.5 text-sm text-slate-700">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Cliente</span>
+              <span className="font-medium">{venda.cliente_nome || 'Consumidor'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Total</span>
+              <span className="font-semibold text-slate-900">{fmt(venda.valor_liquido)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">NF-e</span>
+              <span>{venda.nfe_situacao_display}</span>
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5">
+            <button
+              className="btn-secondary flex items-center justify-center gap-2"
+              onClick={() => setShowPrint(true)}
+            >
+              <Printer className="h-4 w-4" />
+              Imprimir Recibo
+            </button>
+
+            {!nfeEnviada && venda.nfe_situacao !== 'EMITIDA' && (
+              <button
+                className="btn-primary flex items-center justify-center gap-2"
+                onClick={() => emitirNfeMutation.mutate()}
+                disabled={emitirNfeMutation.isPending}
+              >
+                <FileText className="h-4 w-4" />
+                {emitirNfeMutation.isPending ? 'Emitindo…' : 'Emitir Nota Fiscal (NF-e)'}
+              </button>
+            )}
+            {nfeEnviada && (
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                NF-e enviada para emissão
+              </div>
+            )}
+
+            <button
+              className="w-full rounded-xl py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors"
+              onClick={onClose}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Nova Venda Drawer ────────────────────────────────────────────────────────
 
 const PARCELAVEL = ['CARTAO_CREDITO', 'CREDIARIO'];
@@ -520,6 +652,7 @@ function NovaPedidoDrawer({
   const [observacoes, setObservacoes] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [vendaFinalizada, setVendaFinalizada] = useState<Venda | null>(null);
 
   // Derived
   const parcelasDisabled = !PARCELAVEL.includes(forma);
@@ -654,10 +787,9 @@ function NovaPedidoDrawer({
       return venda;
     },
     onSuccess: (venda) => {
-      toast.success(`Venda ${venda.numero_venda} finalizada! NF-e: ${venda.nfe_situacao_display}`);
       qc.invalidateQueries({ queryKey: ['pedidos'] });
       qc.invalidateQueries({ queryKey: ['vendas'] });
-      onSuccess();
+      setVendaFinalizada(venda);
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao finalizar venda'),
   });
@@ -699,6 +831,16 @@ function NovaPedidoDrawer({
 
   return (
     <>
+      {vendaFinalizada && (
+        <PostVendaModal
+          venda={vendaFinalizada}
+          lojas={lojas}
+          onClose={() => {
+            setVendaFinalizada(null);
+            onSuccess();
+          }}
+        />
+      )}
       {showQuickAdd && (
         <QuickAddClienteModal
           onClose={() => setShowQuickAdd(false)}
@@ -1095,6 +1237,7 @@ export default function PedidosPage() {
   const [finalizandoEntregaId, setFinalizandoEntregaId] = useState<string | null>(null);
   const [cancelarPedido, setCancelarPedido] = useState<import('@/types').PedidoVenda | null>(null);
   const [printPedido, setPrintPedido] = useState<import('@/types').PedidoVenda | null>(null);
+  const [vendaFinalizada, setVendaFinalizada] = useState<Venda | null>(null);
 
   const { data: lojas = [] } = useQuery({
     queryKey: ['lojas'],
@@ -1122,9 +1265,9 @@ export default function PedidosPage() {
       return venda;
     },
     onSuccess: (venda) => {
-      toast.success(`Venda ${venda.numero_venda} criada! NF-e: ${venda.nfe_situacao_display}`);
       qc.invalidateQueries({ queryKey: ['pedidos'] });
       qc.invalidateQueries({ queryKey: ['vendas'] });
+      setVendaFinalizada(venda);
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Erro ao finalizar venda');
@@ -1177,6 +1320,13 @@ export default function PedidosPage() {
         <NovaPedidoDrawer
           onClose={() => setShowDrawer(false)}
           onSuccess={() => setShowDrawer(false)}
+        />
+      )}
+      {vendaFinalizada && (
+        <PostVendaModal
+          venda={vendaFinalizada}
+          lojas={lojas}
+          onClose={() => setVendaFinalizada(null)}
         />
       )}
       {cancelarPedido && (

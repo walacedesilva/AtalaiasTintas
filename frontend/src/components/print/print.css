@@ -11,15 +11,25 @@
 }
 
 @media print {
-  /* Oculta toda a UI da aplicação */
-  body > #root > * {
-    display: none !important;
+  /* Oculta toda a UI da aplicação usando visibility para permitir revelar
+     elementos profundamente aninhados (inclusive dentro de modais) */
+  body * {
+    visibility: hidden !important;
   }
 
-  /* Exibe apenas o documento de impressão */
-  body > #root > .print-root,
+  /* Exibe apenas o documento de impressão e todo seu conteúdo */
+  .print-root,
+  .print-root * {
+    visibility: visible !important;
+  }
+
+  /* Posiciona o documento no topo da página */
   .print-root {
-    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background: white !important;
   }
 
   /* Configuração de página A4 */

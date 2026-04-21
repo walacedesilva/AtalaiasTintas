@@ -8,6 +8,8 @@ interface Props {
   title: string;
   /** Conteúdo a ser visualizado e impresso (OrcamentoPrintLayout ou ReciboPrintLayout) */
   children: React.ReactNode;
+  /** Classe de z-index Tailwind. Padrão: 'z-50' */
+  zClassName?: string;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * - O children contém um elemento com className="print-root"
  * - @media print: oculta #root, exibe apenas .print-root
  */
-export function PrintPreviewModal({ isOpen, onClose, title, children }: Props) {
+export function PrintPreviewModal({ isOpen, onClose, title, children, zClassName = 'z-50' }: Props) {
   const { triggerPrint } = usePrint();
 
   // Fecha com ESC
@@ -39,7 +41,7 @@ export function PrintPreviewModal({ isOpen, onClose, title, children }: Props) {
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-8 backdrop-blur-sm"
+        className={`fixed inset-0 ${zClassName} flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-8 backdrop-blur-sm`}
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
