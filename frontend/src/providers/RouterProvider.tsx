@@ -25,6 +25,7 @@ import NotaFiscalPage from '@/pages/fiscal/NotaFiscalPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import MonitoringPage from '@/pages/monitoring/MonitoringPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
+import HelpPage from '@/pages/help/HelpPage';
 
 /**
  * Protected route component
@@ -179,6 +180,10 @@ const router = createBrowserRouter([
       {
         path: 'settings',
         element: <SettingsPage />
+      },
+      {
+        path: 'help',
+        element: <HelpPage />
       }
     ]
   },

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { inventoryAPI, type EstoqueFilters } from '@/api/inventory';
+import { inventoryAPI, type EstoqueFilters, type EntradaManualPayload } from '@/api/inventory';
 
 export const inventoryKeys = {
   all: ['inventory'] as const,
@@ -65,6 +65,16 @@ export function useConfirmarEntrada() {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.entradas() });
       queryClient.invalidateQueries({ queryKey: inventoryKeys.estoque() });
       queryClient.invalidateQueries({ queryKey: inventoryKeys.lotes() });
+    },
+  });
+}
+
+export function useCriarEntradaManual() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: EntradaManualPayload) => inventoryAPI.entradas.criarManual(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.entradas() });
     },
   });
 }

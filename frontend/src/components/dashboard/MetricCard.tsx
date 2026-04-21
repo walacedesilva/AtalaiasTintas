@@ -41,7 +41,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   const cardClasses = `
-    bg-white rounded-lg shadow border p-6 hover:shadow-md transition-shadow
+    bg-white rounded-lg shadow border p-4 hover:shadow-md transition-shadow
     ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}
     ${className}
   `.trim();
@@ -77,17 +77,17 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <div className={cardClasses} onClick={onClick}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-900">{title}</h3>
+      <div className="flex items-start justify-between mb-2 gap-2">
+        <h3 className="text-xs font-medium text-gray-500 leading-tight">{title}</h3>
         {icon && (
-          <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
+          <div className={`shrink-0 p-1.5 rounded-lg ${colorClasses[color]}`}>
             {icon}
           </div>
         )}
       </div>
       
       <div className="mb-2">
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-lg font-bold text-gray-900 leading-tight break-words">{value}</p>
       </div>
 
       {(change !== undefined && trend) && (

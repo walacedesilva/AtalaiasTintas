@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navigation from './Navigation';
 import Header from './Header';
@@ -6,8 +6,40 @@ import { Toaster } from 'react-hot-toast';
 import { HelpProvider } from '@/providers/HelpProvider';
 import { HelpDrawer } from '@/components/help/HelpDrawer';
 
+const PREF_KEY = 'atalaia_ui_prefs';
+
+function applyAccentColor(hex: string): void {
+  const root = document.documentElement;
+  const shades: [string, string][] = [
+    ['--color-brand-50',  `color-mix(in srgb, ${hex}  8%, white)`],
+    ['--color-brand-100', `color-mix(in srgb, ${hex} 15%, white)`],
+    ['--color-brand-200', `color-mix(in srgb, ${hex} 25%, white)`],
+    ['--color-brand-300', `color-mix(in srgb, ${hex} 40%, white)`],
+    ['--color-brand-400', `color-mix(in srgb, ${hex} 60%, white)`],
+    ['--color-brand-500', `color-mix(in srgb, ${hex} 80%, white)`],
+    ['--color-brand-600', hex],
+    ['--color-brand-700', `color-mix(in srgb, ${hex} 80%, black)`],
+    ['--color-brand-800', `color-mix(in srgb, ${hex} 65%, black)`],
+    ['--color-brand-900', `color-mix(in srgb, ${hex} 50%, black)`],
+    ['--color-brand-950', `color-mix(in srgb, ${hex} 35%, black)`],
+  ];
+  shades.forEach(([prop, val]) => root.style.setProperty(prop, val));
+}
+
+function applyFontSize(size: string): void {
+  document.documentElement.style.fontSize = ({ sm: '14px', md: '16px', lg: '18px' } as Record<string, string>)[size] ?? '16px';
+}
+
 export default function RootLayout(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}');
+      if (prefs.accentColor) applyAccentColor(prefs.accentColor);
+      if (prefs.fontSize)    applyFontSize(prefs.fontSize);
+    } catch { /* ignore */ }
+  }, []);
 
   return (
     <HelpProvider>

@@ -957,6 +957,161 @@ class RastreabilidadeAPIView(APIView):
 
 
 # ---------------------------------------------------------------------------
+# T014 — DashboardMetricsAPIView: real-time aggregated dashboard metrics
+# ---------------------------------------------------------------------------
+
+class DashboardMetricsAPIView(APIView):
+    """GET /api/sales/dashboard/ — aggregated real-time business metrics.
+
+    Returns today's sales KPIs, NFe status counts, and top products,
+    with day-over-day comparison (change %).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.db.models import Avg, Count, Sum
+        from django.utils import timezone
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        week_ago = today - timedelta(days=7)
+
+        # ── Today's sales ──────────────────────────────────────────────────
+        vendas_hoje_qs = Venda.objects.filter(cancelada=False, data_venda__date=today)
+        stats_hoje = vendas_hoje_qs.aggregate(
+            count=Count('id'),
+            total=Sum('valor_liquido'),
+            media=Avg('valor_liquido'),
+        )
+
+        # ── Yesterday's sales (for % change) ──────────────────────────────
+        stats_ontem = Venda.objects.filter(
+            cancelada=False, data_venda__date=yesterday
+        ).aggregate(
+            count=Count('id'),
+            total=Sum('valor_liquido'),
+            media=Avg('valor_liquido'),
+        )
+
+        # ── Pedidos today/yesterday (for conversion rate) ─────────────────
+        pedidos_hoje = PedidoVenda.objects.filter(created_at__date=today).count()
+        pedidos_ontem = PedidoVenda.objects.filter(created_at__date=yesterday).count()
+
+        # ── NFe status (all-time counts, since these are open/pending) ────
+        nfe_emitidas = Venda.objects.filter(nfe_situacao='AUTORIZADA').count()
+        nfe_pendentes = Venda.objects.filter(
+            nfe_situacao__in=('PENDENTE', 'PROCESSANDO')
+        ).count()
+        nfe_erros = Venda.objects.filter(
+            nfe_situacao__in=('ERRO_TECNICO', 'REJEITADA', 'AGUARDANDO_RETRY')
+        ).count()
+
+        # ── Meta do dia (10% above 7-day average) ─────────────────────────
+        media_7d = Venda.objects.filter(
+            cancelada=False,
+            data_venda__date__gte=week_ago,
+            data_venda__date__lt=today,
+        ).aggregate(media=Avg('valor_liquido'))
+
+        faturamento_hoje = float(stats_hoje['total'] or 0)
+        faturamento_media_7d = float(media_7d['media'] or 0)
+        target_dia = faturamento_media_7d * 1.1  # meta = 10% acima da média
+        meta_progresso = 0.0
+        if target_dia > 0:
+            meta_progresso = min(round((faturamento_hoje / target_dia) * 100, 1), 150.0)
+
+        # ── Top 5 products by revenue today ───────────────────────────────
+        top_products_qs = (
+            ItemPedidoVenda.objects
+            .filter(
+                pedido__vendas__cancelada=False,
+                pedido__vendas__data_venda__date=today,
+            )
+            .values(
+                'produto_variacao__produto_base__id',
+                'produto_variacao__produto_base__nome',
+            )
+            .annotate(
+                total_quantidade=Sum('quantidade'),
+                total_receita=Sum('preco_total'),
+            )
+            .order_by('-total_receita')[:5]
+        )
+
+        # ── Helper ────────────────────────────────────────────────────────
+        def pct_change(atual, anterior):
+            a, b = float(atual or 0), float(anterior or 0)
+            if b == 0:
+                return 0.0
+            return round(((a - b) / b) * 100, 2)
+
+        vendas_count = stats_hoje['count'] or 0
+        vendas_ontem_count = stats_ontem['count'] or 0
+
+        taxa_hoje = round((vendas_count / pedidos_hoje * 100), 1) if pedidos_hoje else 0.0
+        taxa_ontem = round((vendas_ontem_count / pedidos_ontem * 100), 1) if pedidos_ontem else 0.0
+
+        produtos = [
+            {
+                'id': str(p['produto_variacao__produto_base__id']),
+                'nome': p['produto_variacao__produto_base__nome'] or 'Produto sem nome',
+                'quantidade': float(p['total_quantidade'] or 0),
+                'receita': float(p['total_receita'] or 0),
+            }
+            for p in top_products_qs
+        ]
+
+        return Response({
+            'period': 'today',
+            'updated_at': timezone.now().isoformat(),
+
+            # Business metrics
+            'vendas_totais': {
+                'value': faturamento_hoje,
+                'change': pct_change(stats_hoje['total'], stats_ontem['total']),
+                'trend': 'up' if faturamento_hoje >= float(stats_ontem['total'] or 0) else 'down',
+            },
+            'pedidos': {
+                'value': vendas_count,
+                'change': pct_change(vendas_count, vendas_ontem_count),
+                'trend': 'up' if vendas_count >= vendas_ontem_count else 'down',
+            },
+            'ticket_medio': {
+                'value': float(stats_hoje['media'] or 0),
+                'change': pct_change(stats_hoje['media'], stats_ontem['media']),
+                'trend': 'up' if float(stats_hoje['media'] or 0) >= float(stats_ontem['media'] or 0) else 'down',
+            },
+            'taxa_conversao': {
+                'value': taxa_hoje,
+                'change': pct_change(taxa_hoje, taxa_ontem),
+                'trend': 'up' if taxa_hoje >= taxa_ontem else 'down',
+            },
+
+            # Sales overview
+            'vendas_hoje': {
+                'count': vendas_count,
+                'valor': faturamento_hoje,
+            },
+            'meta_dia': {
+                'progresso': meta_progresso,
+                'faturamento_target': round(target_dia, 2),
+            },
+
+            # NFe status
+            'nfe_emitidas': nfe_emitidas,
+            'nfe_pendentes': nfe_pendentes,
+            'nfe_erros': nfe_erros,
+            'nfe_ultima_sincronizacao': timezone.now().isoformat(),
+
+            # Top products
+            'produtos_mais_vendidos': produtos,
+        })
+
+
+# ---------------------------------------------------------------------------
 # T027-T029 — RecebivelViewSet: CRUD + baixar + cancelar
 # ---------------------------------------------------------------------------
 

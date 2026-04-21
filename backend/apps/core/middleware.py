@@ -1652,7 +1652,13 @@ def handle_enhanced_user_logout(sender, request, user, **kwargs):
                     session_key=request.session.session_key,
                     is_active=True
                 )
-                user_session.terminate(reason='logout')
+                if hasattr(user_session, 'terminate'):
+                    user_session.terminate(reason='logout')
+                elif hasattr(user_session, 'mark_logout'):
+                    user_session.mark_logout()
+                else:
+                    user_session.is_active = False
+                    user_session.save(update_fields=['is_active'])
             except UserSession.DoesNotExist:
                 pass
         

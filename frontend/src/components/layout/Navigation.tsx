@@ -10,16 +10,13 @@ import {
   Layers,
   Package,
   Tag,
-  Plus,
-  Printer,
-  ShoppingCart,
   ClipboardList,
   Users,
-  Pipette,
   Monitor,
   Receipt,
   FileText,
   Settings,
+  HelpCircle,
   X,
 } from 'lucide-react';
 
@@ -43,7 +40,6 @@ function Navigation({ isOpen, onClose }: NavigationProps) {
   // Items básicos (sempre visíveis)
   const baseNavItems: NavItem[] = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/sales', label: 'Vendas', icon: ShoppingCart, badge: 3 },
   ];
 
   // Items de tintometria (ocultos temporariamente)
@@ -51,12 +47,14 @@ function Navigation({ isOpen, onClose }: NavigationProps) {
 
   // Items gerais (sempre visíveis) 
   const generalNavItems: NavItem[] = [
-    { path: '/orders', label: 'Pedidos', icon: ClipboardList },
+    { path: '/sales/orders', label: 'Pedidos', icon: ClipboardList },
     { path: '/customers', label: 'Clientes', icon: Users },
+    { path: '/inventory', label: 'Controle de Estoque', icon: Layers },
     { path: '/fiscal', label: 'Fiscal/NFe', icon: Receipt, badge: stats?.nfe_pendentes, badgeDanger: true },
     { path: '/reports', label: 'Relatórios', icon: FileText },
     { path: '/monitoring', label: 'Monitoramento', icon: Monitor },
     { path: '/settings', label: 'Configurações', icon: Settings },
+    { path: '/help', label: 'Ajuda', icon: HelpCircle },
   ];
 
   // Montar lista final baseado nas permissões
@@ -122,67 +120,7 @@ function Navigation({ isOpen, onClose }: NavigationProps) {
           </NavLink>
         ))}
 
-        {/* Quick actions */}
-        <div className="pt-4">
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Ações Rápidas
-          </p>
-          
-          {/* Nova Mistura - só aparece com permissão de tintometria */}
-          {hasTintometryAccess() && (
-            <NavLink
-              to="/mixtures?action=new"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/10 transition-colors"
-            >
-              <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Nova Mistura
-            </NavLink>
-          )}
-          
-          {/* Nova Tintometria - só aparece com permissão de tintometria */}
-          {hasTintometryAccess() && (
-            <NavLink
-              to="/tintometry?action=new"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-400 hover:bg-brand-600/10 transition-colors"
-            >
-              <Pipette className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Nova Tintometria
-            </NavLink>
-          )}
-          
-          {/* Gerar Etiqueta - sempre visível */}
-          <NavLink
-            to="/labels?action=generate"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-400 hover:bg-blue-600/10 transition-colors"
-          >
-            <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Gerar Etiqueta
-          </NavLink>
-        </div>
       </div>
-
-      {/* Status summary */}
-      {stats && (
-        <div className="p-4 border-t border-slate-800 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
-            Status
-          </p>
-          {[
-            { label: 'Misturas Hoje',    value: stats.misturas_hoje,    danger: false },
-            { label: 'Modelos Ativos',   value: stats.total_templates,  danger: false },
-            { label: 'Estoque Baixo',    value: stats.estoque_baixo,    danger: stats.estoque_baixo > 0 },
-            { label: 'Etiquetas Hoje',   value: stats.etiquetas_geradas, danger: false },
-          ].map(({ label, value, danger }) => (
-            <div key={label} className="flex justify-between text-xs">
-              <span className={danger ? 'text-rose-400' : 'text-slate-500'}>{label}</span>
-              <span className={`font-semibold ${danger ? 'text-rose-400' : 'text-slate-300'}`}>{value}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="p-4 border-t border-slate-800">
         <p className="text-[10px] text-slate-600 text-center">Atalaia Tintas v1.0</p>

@@ -426,6 +426,7 @@ export interface EntradaMercadoria {
   valor_total_nfe: string | null;
   valor_total_entrada: string;
   status: StatusEntrada;
+  origem_entrada: 'XML_UPLOAD' | 'MANUAL' | 'SEFAZ_DOWNLOAD';
   observacoes: string | null;
   itens: EntradaMercadoriaItem[];
 }

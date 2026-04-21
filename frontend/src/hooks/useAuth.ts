@@ -130,11 +130,13 @@ export function useLogout() {
     onSuccess: () => {
       // Clear all cached data on logout
       queryClient.clear();
+      window.location.href = '/login';
     },
     onError: (error) => {
       console.error('Logout error:', error);
       // Still clear cache even if server call failed
       queryClient.clear();
+      window.location.href = '/login';
     }
   });
 }

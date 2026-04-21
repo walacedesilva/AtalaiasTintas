@@ -115,9 +115,39 @@ class EntradaMercadoriaSerializer(serializers.ModelSerializer):
             'id', 'loja', 'tipo_entrada', 'fornecedor_cnpj', 'fornecedor_nome',
             'chave_acesso_nfe', 'numero_nfe', 'serie_nfe', 'data_emissao_nfe',
             'data_entrada', 'valor_total_nfe', 'valor_total_entrada', 'status',
-            'observacoes', 'itens',
+            'origem_entrada', 'observacoes', 'itens',
         ]
         read_only_fields = ['id', 'status', 'valor_total_entrada']
+
+
+class EntradaMercadoriaItemManualSerializer(serializers.Serializer):
+    """Write-only serializer for inline items in manual goods entry."""
+    descricao_nfe = serializers.CharField(max_length=200)
+    codigo_nfe = serializers.CharField(max_length=60, required=False, allow_blank=True)
+    ncm = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    cfop = serializers.CharField(max_length=4, required=False, allow_blank=True)
+    quantidade = serializers.DecimalField(max_digits=10, decimal_places=4, min_value=0)
+    unidade_nfe = serializers.CharField(max_length=6, required=False, allow_blank=True)
+    valor_unitario = serializers.DecimalField(max_digits=10, decimal_places=4, min_value=0)
+
+
+class EntradaMercadoriaManualSerializer(serializers.Serializer):
+    """Serializer for manual NF-e entry (no XML file required)."""
+    loja_id = serializers.IntegerField()
+    numero_nfe = serializers.CharField(max_length=9)
+    serie_nfe = serializers.CharField(max_length=3, default='1')
+    fornecedor_cnpj = serializers.CharField(max_length=18)  # with or without formatting
+    fornecedor_nome = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    fornecedor_uf = serializers.CharField(max_length=2, required=False, allow_blank=True)
+    data_emissao_nfe = serializers.DateField(required=False, allow_null=True)
+    valor_total_nfe = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+    chave_acesso_nfe = serializers.CharField(
+        max_length=44, required=False, allow_blank=True, allow_null=True
+    )
+    observacoes = serializers.CharField(required=False, allow_blank=True, default='')
+    itens = EntradaMercadoriaItemManualSerializer(many=True)
 
 
 # ---------------------------------------------------------------------------
@@ -464,6 +494,48 @@ class EntradaMercadoriaViewSet(viewsets.ModelViewSet):
         item.save(update_fields=['produto', 'unidade', 'status', 'updated_at'])
 
         return Response(EntradaMercadoriaItemSerializer(item).data)
+
+    @action(detail=False, methods=['post'], url_path='criar-manual')
+    def criar_manual(self, request):
+        """Create a goods receipt from manual form data (no XML required).
+
+        POST /api/v1/inventory/entradas/criar-manual/
+        Body: EntradaMercadoriaManualSerializer fields.
+        """
+        from apps.fiscal.services import EntradaMercadoriaService
+
+        serializer = EntradaMercadoriaManualSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            entrada = EntradaMercadoriaService.criar_manual(
+                loja_id=data['loja_id'],
+                usuario=request.user,
+                numero_nfe=data['numero_nfe'],
+                serie_nfe=data.get('serie_nfe', '1'),
+                fornecedor_cnpj=data['fornecedor_cnpj'],
+                fornecedor_nome=data.get('fornecedor_nome') or None,
+                fornecedor_uf=data.get('fornecedor_uf') or None,
+                data_emissao_nfe=data.get('data_emissao_nfe'),
+                valor_total_nfe=data.get('valor_total_nfe'),
+                chave_acesso_nfe=data.get('chave_acesso_nfe') or None,
+                observacoes=data.get('observacoes', ''),
+                itens=data['itens'],
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.exception("Erro ao criar entrada manual: %s", exc)
+            return Response(
+                {'detail': 'Erro interno ao criar entrada'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            EntradaMercadoriaSerializer(entrada).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ---------------------------------------------------------------------------

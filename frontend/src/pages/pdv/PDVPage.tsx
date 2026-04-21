@@ -151,7 +151,8 @@ export default function PDVPage() {
   // ── Keyboard shortcuts ───────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F10') { e.preventDefault(); if (cart.length) setShowPagamento(true); }
+      if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); return; }
+      if (e.key === 'F10' || (e.ctrlKey && e.key === 'Enter')) { e.preventDefault(); if (cart.length) setShowPagamento(true); return; }
       if (e.key === 'Escape') {
         if (showPagamento) { setShowPagamento(false); return; }
         if (showDescontoModal) return;
@@ -250,7 +251,7 @@ export default function PDVPage() {
               ))}
             </select>
           )}
-          <span className="hidden text-xs text-slate-400 sm:block">F10 = Pagar · ESC = Limpar</span>
+          <span className="hidden text-xs text-slate-400 sm:block">F2 = Buscar · F10 / Ctrl+Enter = Pagar · ESC = Limpar</span>
         </div>
       </div>
 

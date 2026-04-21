@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.sales.apis import (
     ClienteViewSet,
+    DashboardMetricsAPIView,
     NFeElegibilidadeAPIView,
     NFeStatusAPIView,
     MultiUnitPriceAPIView,
@@ -23,6 +24,7 @@ router.register(r'recebiveis', RecebivelViewSet, basename='recebivel')
 app_name = 'sales'
 
 urlpatterns = [
+    path('dashboard/', DashboardMetricsAPIView.as_view(), name='dashboard-metrics'),
     path('estoque-disponivel/', StockAvailabilityAPIView.as_view(), name='estoque-disponivel'),
     path('preco-multiunit/', MultiUnitPriceAPIView.as_view(), name='preco-multiunit'),
     path('rastreabilidade/', RastreabilidadeAPIView.as_view(), name='rastreabilidade'),

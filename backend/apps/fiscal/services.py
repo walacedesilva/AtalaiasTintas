@@ -393,6 +393,89 @@ class EntradaMercadoriaService:
         logger.info("Entrada confirmada: id=%s", entrada_id)
         return entrada
 
+    @staticmethod
+    def criar_manual(
+        loja_id: int,
+        usuario,
+        numero_nfe: str,
+        serie_nfe: str,
+        fornecedor_cnpj: str,
+        data_emissao_nfe,
+        itens: list[dict],
+        fornecedor_nome: str | None = None,
+        fornecedor_uf: str | None = None,
+        valor_total_nfe: 'Decimal | None' = None,
+        chave_acesso_nfe: str | None = None,
+        observacoes: str = '',
+    ) -> 'apps.inventory.models.EntradaMercadoria':
+        """Create an EntradaMercadoria from manual form data (no XML required).
+
+        Validates CNPJ/CPF and enforces idempotency by chave_acesso_nfe when
+        provided.  At least one item is required.
+
+        Raises ``ValueError`` with a human-readable message on invalid input.
+        """
+        from apps.inventory.models import EntradaMercadoria, EntradaMercadoriaItem
+        from django.db import transaction
+
+        # -- Input validation -------------------------------------------------
+        if not itens:
+            raise ValueError("É necessário informar pelo menos um item.")
+
+        cnpj_limpo = re.sub(r'\D', '', fornecedor_cnpj or '')
+        if not _validar_cnpj_cpf(cnpj_limpo):
+            raise ValueError(f"CNPJ/CPF inválido: {fornecedor_cnpj!r}")
+
+        if chave_acesso_nfe:
+            if not _CHAVE_RE.match(chave_acesso_nfe):
+                raise ValueError("Chave de acesso deve ter exatamente 44 dígitos numéricos.")
+            existing = EntradaMercadoria.objects.filter(chave_acesso_nfe=chave_acesso_nfe).first()
+            if existing:
+                logger.info("Entrada já existe para chave=%s", chave_acesso_nfe)
+                return existing
+
+        # -- Creation ---------------------------------------------------------
+        with transaction.atomic():
+            entrada = EntradaMercadoria.objects.create(
+                loja_id=loja_id,
+                usuario=usuario,
+                tipo_entrada='COMPRA',
+                fornecedor_cnpj=cnpj_limpo,
+                fornecedor_nome=fornecedor_nome,
+                fornecedor_uf=fornecedor_uf,
+                chave_acesso_nfe=chave_acesso_nfe or None,
+                numero_nfe=numero_nfe,
+                serie_nfe=serie_nfe,
+                data_emissao_nfe=data_emissao_nfe or None,
+                data_entrada=_today(),
+                valor_total_nfe=valor_total_nfe or Decimal('0'),
+                status='PENDENTE',
+                origem_entrada='MANUAL',
+                observacoes=observacoes,
+            )
+
+            for item_data in itens:
+                quantidade = Decimal(str(item_data.get('quantidade', 0)))
+                valor_unitario = Decimal(str(item_data.get('valor_unitario', 0)))
+                EntradaMercadoriaItem.objects.create(
+                    entrada=entrada,
+                    descricao_nfe=item_data.get('descricao_nfe', ''),
+                    codigo_nfe=item_data.get('codigo_nfe') or None,
+                    ncm=item_data.get('ncm') or None,
+                    cfop=item_data.get('cfop') or None,
+                    quantidade=quantidade,
+                    unidade_nfe=item_data.get('unidade_nfe') or None,
+                    valor_unitario=valor_unitario,
+                    valor_total=(quantidade * valor_unitario).quantize(Decimal('0.01')),
+                    status='PENDENTE',
+                )
+
+        logger.info(
+            "Entrada manual criada: id=%s fornecedor=%s itens=%d",
+            entrada.pk, fornecedor_nome or cnpj_limpo, len(itens),
+        )
+        return entrada
+
 
 # ---------------------------------------------------------------------------
 # NFEService — T012 skeleton + T041-T044 full implementation
@@ -871,3 +954,44 @@ def _esc(text: str) -> str:
 def _today():
     from django.utils import timezone
     return timezone.now().date()
+
+
+def _validar_cnpj_cpf(digitos: str) -> bool:
+    """Validate CNPJ (14 digits) or CPF (11 digits) using the modulo-11 algorithm.
+
+    Accepts only digit strings (no formatting characters).
+    Returns False for all-same-digit sequences (e.g. 00000000000000).
+    """
+    if len(digitos) == 11:
+        return _validar_cpf(digitos)
+    if len(digitos) == 14:
+        return _validar_cnpj(digitos)
+    return False
+
+
+def _validar_cpf(cpf: str) -> bool:
+    if len(set(cpf)) == 1:
+        return False
+    soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    d1 = (soma * 10 % 11) % 10
+    if d1 != int(cpf[9]):
+        return False
+    soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    d2 = (soma * 10 % 11) % 10
+    return d2 == int(cpf[10])
+
+
+def _validar_cnpj(cnpj: str) -> bool:
+    if len(set(cnpj)) == 1:
+        return False
+    pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(int(cnpj[i]) * pesos1[i] for i in range(12))
+    d1 = 11 - (soma % 11)
+    d1 = 0 if d1 >= 10 else d1
+    if d1 != int(cnpj[12]):
+        return False
+    pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(int(cnpj[i]) * pesos2[i] for i in range(13))
+    d2 = 11 - (soma % 11)
+    d2 = 0 if d2 >= 10 else d2
+    return d2 == int(cnpj[13])

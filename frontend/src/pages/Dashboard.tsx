@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BusinessMetrics } from '@/components/dashboard/BusinessMetrics';
 import { SalesOverview } from '@/components/dashboard/SalesOverview';
 import { FiscalStatus } from '@/components/dashboard/FiscalStatus';
+import { TopProducts } from '@/components/dashboard/TopProducts';
 import {
   Plus,
   Tag,
@@ -167,6 +168,7 @@ export default function Dashboard(): React.ReactElement {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <SalesOverview period="today" />
           <FiscalStatus showAlerts={true} />
+          <TopProducts />
         </div>
       </div>
 

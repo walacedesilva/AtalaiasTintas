@@ -1,22 +1,72 @@
 import React from 'react';
 import { 
-  Settings, 
   User, 
   Bell, 
   Shield, 
-  Database,
   Palette,
-  Globe,
-  Moon,
-  Sun,
-  Monitor
 } from 'lucide-react';
+
+const BRAND_COLORS = [
+  { name: 'Azul', value: '#2563eb' },
+  { name: 'Verde', value: '#16a34a' },
+  { name: 'Violeta', value: '#7c3aed' },
+  { name: 'Rosa', value: '#db2777' },
+  { name: 'Laranja', value: '#ea580c' },
+  { name: 'Ciano', value: '#0891b2' },
+  { name: 'Índigo', value: '#4f46e5' },
+  { name: 'Vermelho', value: '#dc2626' },
+];
+
+const PREF_KEY = 'atalaia_ui_prefs';
+
+function loadPrefs(): { accentColor?: string; fontSize?: string } {
+  try { return JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}'); } catch { return {}; }
+}
+
+function applyAccentColor(hex: string): void {
+  const root = document.documentElement;
+  const shades: [string, string][] = [
+    ['--color-brand-50',  `color-mix(in srgb, ${hex}  8%, white)`],
+    ['--color-brand-100', `color-mix(in srgb, ${hex} 15%, white)`],
+    ['--color-brand-200', `color-mix(in srgb, ${hex} 25%, white)`],
+    ['--color-brand-300', `color-mix(in srgb, ${hex} 40%, white)`],
+    ['--color-brand-400', `color-mix(in srgb, ${hex} 60%, white)`],
+    ['--color-brand-500', `color-mix(in srgb, ${hex} 80%, white)`],
+    ['--color-brand-600', hex],
+    ['--color-brand-700', `color-mix(in srgb, ${hex} 80%, black)`],
+    ['--color-brand-800', `color-mix(in srgb, ${hex} 65%, black)`],
+    ['--color-brand-900', `color-mix(in srgb, ${hex} 50%, black)`],
+    ['--color-brand-950', `color-mix(in srgb, ${hex} 35%, black)`],
+  ];
+  shades.forEach(([prop, val]) => root.style.setProperty(prop, val));
+}
+
+function applyFontSize(size: 'sm' | 'md' | 'lg'): void {
+  document.documentElement.style.fontSize = { sm: '14px', md: '16px', lg: '18px' }[size];
+}
 
 /**
  * Settings Page - Configurações do Sistema
  */
 export default function SettingsPage(): React.ReactElement {
-  const [theme, setTheme] = React.useState<'light' | 'dark' | 'system'>('light');
+  const savedPrefs = React.useMemo(loadPrefs, []);
+  const [accentColor, setAccentColor] = React.useState(savedPrefs.accentColor ?? '#2563eb');
+  const [fontSize, setFontSize] = React.useState<'sm' | 'md' | 'lg'>(
+    (savedPrefs.fontSize as 'sm' | 'md' | 'lg') ?? 'md'
+  );
+  const [applied, setApplied] = React.useState(false);
+
+  // Preferences are applied on app load by RootLayout.
+  // Re-apply here only to handle the case where the user opens settings
+  // before navigating elsewhere (component already mounted).
+
+  function handleApply(): void {
+    applyAccentColor(accentColor);
+    applyFontSize(fontSize);
+    localStorage.setItem(PREF_KEY, JSON.stringify({ accentColor, fontSize }));
+    setApplied(true);
+    setTimeout(() => setApplied(false), 2000);
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -102,7 +152,7 @@ export default function SettingsPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* Theme Settings */}
+        {/* Appearance / Personalização */}
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50">
@@ -111,32 +161,93 @@ export default function SettingsPage(): React.ReactElement {
             <h2 className="text-lg font-semibold text-slate-900">Aparência</h2>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Cor de destaque */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-3">
-                Tema
+                Cor principal
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 'light', label: 'Claro', icon: Sun },
-                  { value: 'dark', label: 'Escuro', icon: Moon },
-                  { value: 'system', label: 'Sistema', icon: Monitor }
-                ].map((option) => (
+              <div className="flex flex-wrap gap-2">
+                {BRAND_COLORS.map((color) => (
                   <button
-                    key={option.value}
-                    onClick={() => setTheme(option.value as any)}
-                    className={`flex flex-col items-center gap-2 p-3 border rounded-lg transition-colors ${
-                      theme === option.value 
-                        ? 'border-brand-500 bg-brand-50 text-brand-700' 
-                        : 'border-slate-200 hover:border-slate-300'
+                    key={color.value}
+                    title={color.name}
+                    aria-label={color.name}
+                    onClick={() => setAccentColor(color.value)}
+                    className={`h-8 w-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      accentColor === color.value
+                        ? 'ring-2 ring-offset-2 ring-slate-400 scale-110'
+                        : ''
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                  />
+                ))}
+                {/* Cor livre */}
+                <label
+                  className="h-8 w-8 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-colors"
+                  title="Cor personalizada"
+                  aria-label="Cor personalizada"
+                >
+                  <input
+                    type="color"
+                    className="sr-only"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                  />
+                  <Palette className="h-3.5 w-3.5 text-slate-400" />
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Cor selecionada:{' '}
+                <span
+                  className="inline-block px-2 py-0.5 rounded font-mono text-white text-xs"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {accentColor}
+                </span>
+              </p>
+            </div>
+
+            {/* Tamanho de fonte */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                Tamanho da fonte
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'sm', label: 'Compacto', sample: 'Aa' },
+                  { value: 'md', label: 'Normal', sample: 'Aa' },
+                  { value: 'lg', label: 'Grande', sample: 'Aa' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setFontSize(opt.value as 'sm' | 'md' | 'lg')}
+                    className={`flex flex-col items-center gap-1 p-3 border rounded-lg transition-colors ${
+                      fontSize === opt.value
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
                     }`}
                   >
-                    <option.icon className="h-5 w-5" />
-                    <span className="text-sm font-medium">{option.label}</span>
+                    <span
+                      className="font-semibold leading-none"
+                      style={{
+                        fontSize: opt.value === 'sm' ? 14 : opt.value === 'md' ? 18 : 22,
+                      }}
+                    >
+                      {opt.sample}
+                    </span>
+                    <span className="text-xs">{opt.label}</span>
                   </button>
                 ))}
               </div>
             </div>
+
+            <button
+              onClick={handleApply}
+              className="w-full px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+            >
+              {applied ? 'Aplicado ✓' : 'Aplicar Personalização'}
+            </button>
           </div>
         </div>
 
@@ -167,90 +278,6 @@ export default function SettingsPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* System Settings */}
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50">
-              <Database className="h-5 w-5 text-orange-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900">Sistema</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-slate-500">Versão</p>
-                <p className="font-semibold text-slate-900">v2.1.3</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Banco de Dados</p>
-                <p className="font-semibold text-slate-900">PostgreSQL</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Último Backup</p>
-                <p className="font-semibold text-slate-900">Hoje, 03:00</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Uptime</p>
-                <p className="font-semibold text-slate-900">15d 7h 23m</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3 pt-3 border-t border-slate-200">
-              <button className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
-                Fazer Backup
-              </button>
-              <button className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors">
-                Verificar Updates
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Regional Settings */}
-        <div className="card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50">
-              <Globe className="h-5 w-5 text-cyan-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900">Regionalização</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Idioma
-              </label>
-              <select className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="pt-BR">Português (Brasil)</option>
-                <option value="en-US">English (US)</option>
-                <option value="es-ES">Español</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Fuso Horário
-              </label>
-              <select className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="America/Sao_Paulo">América/São Paulo (GMT-3)</option>
-                <option value="America/New_York">América/Nova York (GMT-5)</option>
-                <option value="Europe/London">Europa/Londres (GMT+0)</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Moeda
-              </label>
-              <select className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="BRL">Real Brasileiro (R$)</option>
-                <option value="USD">Dólar Americano ($)</option>
-                <option value="EUR">Euro (€)</option>
-              </select>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
