@@ -12,6 +12,9 @@ import {
   CheckCircle,
   ChevronDown,
   RefreshCw,
+  PenLine,
+  CloudDownload,
+  Trash2,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,6 +24,7 @@ import {
   useEntradas,
   useImportarXmlNFe,
   useConfirmarEntrada,
+  useCriarEntradaManual,
 } from '@/hooks/useInventory';
 import { inventoryAPI } from '@/api';
 import type {
@@ -33,6 +37,7 @@ import type {
   ProdutoBasePayload,
   StatusEstoque,
 } from '@/types';
+import type { EntradaManualItemPayload } from '@/api/inventory';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -341,6 +346,353 @@ function LotesTab({ loja_id }: { loja_id: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// EntradaManualModal — T6
+// ---------------------------------------------------------------------------
+
+interface ItemForm extends EntradaManualItemPayload {
+  _key: number;
+}
+
+const emptyItem = (key: number): ItemForm => ({
+  _key: key,
+  descricao_nfe: '',
+  codigo_nfe: '',
+  ncm: '',
+  cfop: '',
+  quantidade: 1,
+  unidade_nfe: 'UN',
+  valor_unitario: 0,
+});
+
+function EntradaManualModal({
+  loja_id,
+  onClose,
+}: {
+  loja_id: number;
+  onClose: () => void;
+}) {
+  const criar = useCriarEntradaManual();
+  const [nextKey, setNextKey] = useState(1);
+  const [itens, setItens] = useState<ItemForm[]>([emptyItem(0)]);
+  const [form, setForm] = useState({
+    numero_nfe: '',
+    serie_nfe: '1',
+    fornecedor_cnpj: '',
+    fornecedor_nome: '',
+    fornecedor_uf: '',
+    data_emissao_nfe: '',
+    valor_total_nfe: '',
+    chave_acesso_nfe: '',
+    observacoes: '',
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  function addItem() {
+    setItens((prev) => [...prev, emptyItem(nextKey)]);
+    setNextKey((k) => k + 1);
+  }
+
+  function removeItem(key: number) {
+    setItens((prev) => prev.filter((i) => i._key !== key));
+  }
+
+  function updateItem(key: number, field: keyof EntradaManualItemPayload, value: string | number) {
+    setItens((prev) =>
+      prev.map((i) => (i._key === key ? { ...i, [field]: value } : i)),
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (itens.length === 0) {
+      setError('Adicione pelo menos um item.');
+      return;
+    }
+    try {
+      await criar.mutateAsync({
+        loja_id,
+        numero_nfe: form.numero_nfe,
+        serie_nfe: form.serie_nfe || '1',
+        fornecedor_cnpj: form.fornecedor_cnpj,
+        fornecedor_nome: form.fornecedor_nome || undefined,
+        fornecedor_uf: form.fornecedor_uf || undefined,
+        data_emissao_nfe: form.data_emissao_nfe || null,
+        valor_total_nfe: form.valor_total_nfe ? Number(form.valor_total_nfe) : null,
+        chave_acesso_nfe: form.chave_acesso_nfe || null,
+        observacoes: form.observacoes,
+        itens: itens.map(({ _key: _k, ...rest }) => ({
+          ...rest,
+          quantidade: Number(rest.quantidade),
+          valor_unitario: Number(rest.valor_unitario),
+        })),
+      });
+      onClose();
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      setError(detail ?? 'Erro ao salvar entrada.');
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Nova entrada manual de NF-e"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-10 pb-6 px-4 overflow-y-auto"
+    >
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">Entrada Manual de NF-e</h2>
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-600"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="px-6 py-4 space-y-4">
+            {/* NF-e header */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-numero">
+                  Número NF-e *
+                </label>
+                <input
+                  id="em-numero"
+                  type="text"
+                  maxLength={9}
+                  required
+                  autoFocus
+                  className="input-field"
+                  value={form.numero_nfe}
+                  onChange={(e) => setForm({ ...form, numero_nfe: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-serie">
+                  Série
+                </label>
+                <input
+                  id="em-serie"
+                  type="text"
+                  maxLength={3}
+                  className="input-field"
+                  value={form.serie_nfe}
+                  onChange={(e) => setForm({ ...form, serie_nfe: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-data">
+                  Data Emissão
+                </label>
+                <input
+                  id="em-data"
+                  type="date"
+                  className="input-field"
+                  value={form.data_emissao_nfe}
+                  onChange={(e) => setForm({ ...form, data_emissao_nfe: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-valor">
+                  Valor Total (R$)
+                </label>
+                <input
+                  id="em-valor"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input-field"
+                  value={form.valor_total_nfe}
+                  onChange={(e) => setForm({ ...form, valor_total_nfe: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-cnpj">
+                  CNPJ / CPF Fornecedor *
+                </label>
+                <input
+                  id="em-cnpj"
+                  type="text"
+                  maxLength={18}
+                  required
+                  placeholder="00.000.000/0000-00"
+                  className="input-field font-mono"
+                  value={form.fornecedor_cnpj}
+                  onChange={(e) => setForm({ ...form, fornecedor_cnpj: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-nome">
+                  Nome Fornecedor
+                </label>
+                <input
+                  id="em-nome"
+                  type="text"
+                  maxLength={200}
+                  className="input-field"
+                  value={form.fornecedor_nome}
+                  onChange={(e) => setForm({ ...form, fornecedor_nome: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1" htmlFor="em-chave">
+                Chave de Acesso (44 dígitos, opcional)
+              </label>
+              <input
+                id="em-chave"
+                type="text"
+                maxLength={44}
+                placeholder="00000000000000000000000000000000000000000000"
+                className="input-field font-mono text-xs"
+                value={form.chave_acesso_nfe}
+                onChange={(e) => setForm({ ...form, chave_acesso_nfe: e.target.value.replace(/\D/g, '') })}
+              />
+            </div>
+
+            {/* Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-slate-600">Itens *</p>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs py-1 px-2"
+                  onClick={addItem}
+                >
+                  <Plus className="h-3 w-3" />
+                  Adicionar Item
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left font-medium text-slate-500">Descrição *</th>
+                      <th className="px-2 py-2 text-left font-medium text-slate-500 w-24">Cód.</th>
+                      <th className="px-2 py-2 text-left font-medium text-slate-500 w-20">NCM</th>
+                      <th className="px-2 py-2 text-left font-medium text-slate-500 w-16">Qtd *</th>
+                      <th className="px-2 py-2 text-left font-medium text-slate-500 w-16">Un.</th>
+                      <th className="px-2 py-2 text-right font-medium text-slate-500 w-24">Vlr Unit *</th>
+                      <th className="px-2 py-2 w-8" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {itens.map((item) => (
+                      <tr key={item._key}>
+                        <td className="px-2 py-1">
+                          <input
+                            type="text"
+                            required
+                            aria-label="Descrição do item"
+                            className="input-field text-xs py-1"
+                            value={item.descricao_nfe}
+                            onChange={(e) => updateItem(item._key, 'descricao_nfe', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input
+                            type="text"
+                            maxLength={60}
+                            aria-label="Código NF-e"
+                            className="input-field text-xs py-1"
+                            value={item.codigo_nfe ?? ''}
+                            onChange={(e) => updateItem(item._key, 'codigo_nfe', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input
+                            type="text"
+                            maxLength={10}
+                            aria-label="NCM"
+                            className="input-field text-xs py-1"
+                            value={item.ncm ?? ''}
+                            onChange={(e) => updateItem(item._key, 'ncm', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.0001"
+                            required
+                            aria-label="Quantidade"
+                            className="input-field text-xs py-1"
+                            value={item.quantidade}
+                            onChange={(e) => updateItem(item._key, 'quantidade', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input
+                            type="text"
+                            maxLength={6}
+                            aria-label="Unidade"
+                            className="input-field text-xs py-1"
+                            value={item.unidade_nfe ?? ''}
+                            onChange={(e) => updateItem(item._key, 'unidade_nfe', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.0001"
+                            required
+                            aria-label="Valor unitário"
+                            className="input-field text-xs py-1 text-right"
+                            value={item.valor_unitario}
+                            onChange={(e) => updateItem(item._key, 'valor_unitario', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <button
+                            type="button"
+                            aria-label="Remover item"
+                            className="text-rose-400 hover:text-rose-600"
+                            onClick={() => removeItem(item._key)}
+                            disabled={itens.length === 1}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={criar.isPending}>
+              {criar.isPending ? 'Salvando…' : 'Salvar Entrada'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // NF-e import tab
 // ---------------------------------------------------------------------------
 
@@ -351,6 +703,7 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
   const confirmar = useConfirmarEntrada();
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showManual, setShowManual] = useState(false);
 
   const entradas: EntradaMercadoria[] = data?.results ?? [];
 
@@ -377,9 +730,31 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
     CANCELADA: 'badge badge-red',
   };
 
+  const ORIGEM_BADGE: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
+    XML_UPLOAD: {
+      cls: 'bg-blue-50 text-blue-700',
+      icon: <Upload className="h-3 w-3" aria-hidden="true" />,
+      label: 'XML',
+    },
+    MANUAL: {
+      cls: 'bg-amber-50 text-amber-700',
+      icon: <PenLine className="h-3 w-3" aria-hidden="true" />,
+      label: 'Manual',
+    },
+    SEFAZ_DOWNLOAD: {
+      cls: 'bg-emerald-50 text-emerald-700',
+      icon: <CloudDownload className="h-3 w-3" aria-hidden="true" />,
+      label: 'SEFAZ',
+    },
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      {showManual && loja_id && (
+        <EntradaManualModal loja_id={loja_id} onClose={() => setShowManual(false)} />
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
         <input
           ref={fileRef}
           type="file"
@@ -395,6 +770,14 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
         >
           <Upload className="h-4 w-4" aria-hidden="true" />
           {importing ? 'Importando…' : 'Importar XML NF-e'}
+        </button>
+        <button
+          className="btn-secondary"
+          onClick={() => setShowManual(true)}
+          disabled={!loja_id}
+        >
+          <PenLine className="h-4 w-4" aria-hidden="true" />
+          Entrada Manual
         </button>
         {importError && (
           <p className="text-xs text-rose-600">{importError}</p>
@@ -413,7 +796,7 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
       ) : entradas.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-14 text-center">
           <Upload className="h-8 w-8 text-slate-300 mb-2" aria-hidden="true" />
-          <p className="text-sm text-slate-500">Nenhuma entrada registrada. Importe um XML de NF-e.</p>
+          <p className="text-sm text-slate-500">Nenhuma entrada registrada. Importe um XML ou crie uma entrada manual.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -426,42 +809,54 @@ function EntradasTab({ loja_id }: { loja_id: number }) {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wide">Data</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wide">Valor</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wide">Itens</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wide">Origem</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {entradas.map((entrada) => (
-                <tr key={entrada.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                    {entrada.numero_nfe ? `${entrada.numero_nfe}/${entrada.serie_nfe}` : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900 truncate max-w-[200px]">{entrada.fornecedor_nome || '—'}</p>
-                    <p className="text-xs text-slate-400">{entrada.fornecedor_cnpj}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{fmtDate(entrada.data_entrada)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{fmtCurrency(entrada.valor_total_entrada)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{entrada.itens.length}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={STATUS_ENTRADA_BADGE[entrada.status] ?? 'badge badge-gray'}>
-                      {entrada.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {entrada.status === 'PENDENTE' && (
-                      <button
-                        className="btn-secondary text-xs py-1 px-2"
-                        onClick={() => confirmar.mutate(entrada.id)}
-                        disabled={confirmar.isPending}
-                      >
-                        <CheckCircle className="h-3 w-3" />
-                        Confirmar
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {entradas.map((entrada) => {
+                const origem = ORIGEM_BADGE[entrada.origem_entrada ?? 'XML_UPLOAD'];
+                return (
+                  <tr key={entrada.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                      {entrada.numero_nfe ? `${entrada.numero_nfe}/${entrada.serie_nfe}` : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-900 truncate max-w-[200px]">{entrada.fornecedor_nome || '—'}</p>
+                      <p className="text-xs text-slate-400">{entrada.fornecedor_cnpj}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{fmtDate(entrada.data_entrada)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{fmtCurrency(entrada.valor_total_entrada)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{entrada.itens.length}</td>
+                    <td className="px-4 py-3 text-center">
+                      {origem && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${origem.cls}`}>
+                          {origem.icon}
+                          {origem.label}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={STATUS_ENTRADA_BADGE[entrada.status] ?? 'badge badge-gray'}>
+                        {entrada.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {entrada.status === 'PENDENTE' && (
+                        <button
+                          className="btn-secondary text-xs py-1 px-2"
+                          onClick={() => confirmar.mutate(entrada.id)}
+                          disabled={confirmar.isPending}
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          Confirmar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           </div>

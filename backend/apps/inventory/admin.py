@@ -201,17 +201,23 @@ class EntradaMercadoriaItemInline(admin.TabularInline):
 @admin.register(EntradaMercadoria)
 class EntradaMercadoriaAdmin(admin.ModelAdmin):
     list_display = ['data_entrada', 'fornecedor_nome', 'fornecedor_cnpj', 'numero_nfe',
-                    'valor_total_nfe', 'status', 'loja', 'usuario']
-    list_filter = ['status', 'tipo_entrada', 'loja', 'data_entrada']
+                    'valor_total_nfe', 'status', 'origem_entrada', 'loja', 'usuario']
+    list_filter = ['status', 'origem_entrada', 'tipo_entrada', 'loja', 'data_entrada']
     search_fields = ['fornecedor_nome', 'fornecedor_cnpj', 'chave_acesso_nfe', 'numero_nfe']
     list_select_related = ['loja', 'usuario']
-    readonly_fields = ['id', 'chave_acesso_nfe', 'xml_nfe', 'data_conferencia', 'created_at', 'updated_at']
+    readonly_fields = ['id', 'xml_nfe', 'data_conferencia', 'created_at', 'updated_at']
     date_hierarchy = 'data_entrada'
     inlines = [EntradaMercadoriaItemInline]
     list_per_page = 25
 
+    def get_readonly_fields(self, request, obj=None):
+        """Make chave_acesso_nfe read-only only when editing an existing record."""
+        if obj:
+            return self.readonly_fields + ['chave_acesso_nfe']
+        return self.readonly_fields
+
     fieldsets = (
-        ('Dados da Entrada', {'fields': ('id', 'loja', 'tipo_entrada', 'usuario', 'data_entrada', 'status', 'observacoes')}),
+        ('Dados da Entrada', {'fields': ('id', 'loja', 'tipo_entrada', 'usuario', 'data_entrada', 'status', 'origem_entrada', 'observacoes')}),
         ('Fornecedor', {'fields': ('fornecedor_nome', 'fornecedor_cnpj', 'fornecedor_uf')}),
         ('NF-e do Fornecedor', {'fields': ('chave_acesso_nfe', 'numero_nfe', 'serie_nfe', 'data_emissao_nfe')}),
         ('Valores', {'fields': ('valor_total_nfe', 'valor_total_entrada', 'data_conferencia')}),

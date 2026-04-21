@@ -10,6 +10,11 @@ import type {
   Recebivel,
   Venda,
 } from '@/types';
+import type { 
+  SalesOverview, 
+  BusinessMetricsRequest,
+  TimePeriod 
+} from '@/types/dashboard';
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
 export interface ClienteFilters {
@@ -265,4 +270,81 @@ export const salesAPI = {
       return apiClient.postData<PDVCheckoutResponse>('/sales/pdv/checkout/', payload);
     },
   },
+
+  // -----------------------------------------------------------------------
+  // Dashboard Methods (T004)
+  // -----------------------------------------------------------------------
+  dashboard: {
+    async getOverview(): Promise<SalesOverview> {
+      // TODO: Connect to real endpoint when backend implements /api/sales/dashboard/
+      // For now, return mock data
+      return mockSalesOverview();
+    },
+
+    async getMetrics(timeRange: TimePeriod): Promise<{ 
+      totalSales: { value: number; change: number; trend: 'up' | 'down' };
+      orderCount: { value: number; change: number; trend: 'up' | 'down' };
+      averageTicket: { value: number; change: number; trend: 'up' | 'down' };
+    }> {
+      // TODO: Connect to real endpoint when backend implements /api/sales/metrics/
+      // For now, return mock data
+      return mockSalesMetrics(timeRange);
+    },
+  },
 };
+
+// ─── Mock Data for Dashboard (Remove when backend ready) ─────────────────────
+
+function mockSalesOverview(): SalesOverview {
+  return {
+    todaysSales: {
+      count: Math.floor(Math.random() * 50) + 10,
+      value: Math.floor(Math.random() * 20000) + 5000,
+      target: 30000,
+      progress: Number(((Math.random() * 80) + 20).toFixed(1))
+    },
+    pendingOrders: {
+      count: Math.floor(Math.random() * 20) + 5,
+      value: Math.floor(Math.random() * 15000) + 3000,
+      urgentCount: Math.floor(Math.random() * 5) + 1
+    },
+    recentOrders: Array.from({ length: 5 }, (_, i) => ({
+      id: `ORD-${1000 + i}`,
+      customerName: [`Cliente A`, `Cliente B`, `Cliente C`, `Cliente D`, `Cliente E`][i],
+      value: Math.floor(Math.random() * 2000) + 500,
+      status: ['pending', 'confirmed', 'processing', 'ready', 'delivered'][Math.floor(Math.random() * 5)] as any,
+      createdAt: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString()
+    })),
+    topProducts: Array.from({ length: 5 }, (_, i) => ({
+      id: `PROD-${100 + i}`,
+      name: [`Tinta Premium Branca`, `Tinta Standard Azul`, `Verniz Acetinado`, `Primer Universal`, `Tinta Fosca Verde`][i],
+      salesCount: Math.floor(Math.random() * 50) + 10,
+      revenue: Math.floor(Math.random() * 5000) + 1000,
+      category: 'tinta'
+    }))
+  };
+}
+
+function mockSalesMetrics(timeRange: TimePeriod): {
+  totalSales: { value: number; change: number; trend: 'up' | 'down' };
+  orderCount: { value: number; change: number; trend: 'up' | 'down' };
+  averageTicket: { value: number; change: number; trend: 'up' | 'down' };
+} {
+  return {
+    totalSales: {
+      value: Math.floor(Math.random() * 100000) + 50000,
+      change: Math.floor(Math.random() * 30) - 15,
+      trend: Math.random() > 0.5 ? 'up' : 'down'
+    },
+    orderCount: {
+      value: Math.floor(Math.random() * 200) + 50,
+      change: Math.floor(Math.random() * 20) - 10,
+      trend: Math.random() > 0.5 ? 'up' : 'down'
+    },
+    averageTicket: {
+      value: Math.floor(Math.random() * 1000) + 200,
+      change: Math.floor(Math.random() * 15) - 7,
+      trend: Math.random() > 0.5 ? 'up' : 'down'
+    }
+  };
+}

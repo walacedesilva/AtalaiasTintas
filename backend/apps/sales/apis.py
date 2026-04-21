@@ -19,7 +19,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from apps.sales.models import Cliente, ItemPedidoVenda, PedidoVenda, Recebivel, Venda
+from apps.sales.models import Cliente, ItemPedidoVenda, PagamentoVenda, PedidoVenda, Recebivel, Venda
 
 logger = logging.getLogger(__name__)
 
@@ -141,14 +141,40 @@ class ClienteViewSet(ModelViewSet):
 
 
 class ItemPedidoVendaSerializer(serializers.ModelSerializer):
+    nome_produto = serializers.SerializerMethodField()
+    unidade_sigla = serializers.SerializerMethodField()
+
+    def get_nome_produto(self, obj) -> str:
+        try:
+            base = obj.produto_variacao.produto_base.nome
+            variacao = obj.produto_variacao.nome_variacao
+            return f"{base} — {variacao}" if variacao else base
+        except Exception:
+            return ''
+
+    def get_unidade_sigla(self, obj):
+        # Prefer the item-level unit; fall back to the product's default unit
+        if obj.unidade_venda_id:
+            try:
+                return obj.unidade_venda.sigla
+            except Exception:
+                pass
+        try:
+            return obj.produto_variacao.unidade_venda.sigla
+        except Exception:
+            return None
+
     class Meta:
         model = ItemPedidoVenda
         fields = [
-            'id', 'produto_variacao', 'quantidade', 'preco_unitario', 'preco_total',
-            'unidade_venda', 'quantidade_base', 'fator_conversao_aplicado',
+            'id', 'produto_variacao', 'nome_produto', 'quantidade', 'preco_unitario', 'preco_total',
+            'unidade_venda', 'unidade_sigla', 'quantidade_base', 'fator_conversao_aplicado',
             'desconto_valor', 'desconto_percentual', 'observacoes', 'sequencia',
         ]
-        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado']
+        read_only_fields = ['id', 'quantidade_base', 'fator_conversao_aplicado', 'nome_produto', 'unidade_sigla']
+        extra_kwargs = {
+            'preco_total': {'required': False},
+        }
 
     def validate(self, attrs):
         # Auto-compute preco_total if not provided
@@ -176,9 +202,31 @@ class PedidoVendaSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'numero_pedido', 'data_pedido', 'cliente_nome']
 
 
+class PagamentoVendaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PagamentoVenda
+        fields = ['id', 'forma', 'valor', 'valor_recebido', 'troco']
+
+
 class VendaSerializer(serializers.ModelSerializer):
     cliente_nome = serializers.CharField(source='cliente.nome_completo', read_only=True)
     nfe_situacao_display = serializers.CharField(source='get_nfe_situacao_display', read_only=True)
+    pagamentos = PagamentoVendaSerializer(many=True, read_only=True)
+    pedido_origem_id = serializers.SerializerMethodField()
+    pedido_origem_numero = serializers.SerializerMethodField()
+    pedido_itens = serializers.SerializerMethodField()
+
+    def get_pedido_origem_id(self, obj):
+        return str(obj.pedido_origem.id) if obj.pedido_origem_id else None
+
+    def get_pedido_origem_numero(self, obj):
+        return obj.pedido_origem.numero_pedido if obj.pedido_origem_id else None
+
+    def get_pedido_itens(self, obj):
+        if not obj.pedido_origem_id:
+            return []
+        itens = obj.pedido_origem.itens.all()
+        return ItemPedidoVendaSerializer(itens, many=True).data
 
     class Meta:
         model = Venda
@@ -189,11 +237,13 @@ class VendaSerializer(serializers.ModelSerializer):
             'nfe_tentativas', 'nfe_ultima_tentativa', 'nfe_erro',
             'nfe_requer_retry_manual', 'nfe_protocolo', 'nfe_chave_acesso',
             'cancelada', 'motivo_cancelamento', 'data_cancelamento',
+            'pagamentos', 'pedido_origem_id', 'pedido_origem_numero', 'pedido_itens',
         ]
         read_only_fields = [
             'id', 'numero_venda', 'data_venda', 'cliente_nome',
             'nfe_situacao_display', 'nfe_tentativas', 'nfe_ultima_tentativa',
-            'nfe_protocolo', 'nfe_chave_acesso',
+            'nfe_protocolo', 'nfe_chave_acesso', 'pagamentos',
+            'pedido_origem_id', 'pedido_origem_numero', 'pedido_itens',
         ]
 
 
@@ -209,7 +259,11 @@ class PedidoVendaViewSet(ModelViewSet):
         qs = (
             PedidoVenda.objects
             .select_related('loja', 'cliente', 'vendedor')
-            .prefetch_related('itens')
+            .prefetch_related(
+                'itens__produto_variacao__produto_base',
+                'itens__produto_variacao__unidade_venda',
+                'itens__unidade_venda',
+            )
             .order_by('-created_at')
         )
         if situacao := self.request.query_params.get('situacao'):
@@ -250,7 +304,12 @@ class PedidoVendaViewSet(ModelViewSet):
         ser = ItemPedidoVendaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         next_seq = pedido.itens.count() + 1
-        item = ser.save(pedido=pedido, sequencia=next_seq)
+        # Auto-set unidade_venda from the product's default unit if not provided
+        save_kwargs: dict = {'pedido': pedido, 'sequencia': next_seq}
+        pv = ser.validated_data.get('produto_variacao')
+        if pv and not ser.validated_data.get('unidade_venda') and pv.unidade_venda_id:
+            save_kwargs['unidade_venda_id'] = pv.unidade_venda_id
+        item = ser.save(**save_kwargs)
 
         # Recalculate totals
         _recalcular_totais_pedido(pedido)
@@ -535,7 +594,17 @@ class VendaViewSet(ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        qs = Venda.objects.select_related('loja', 'cliente', 'vendedor').order_by('-created_at')
+        qs = (
+            Venda.objects
+            .select_related('loja', 'cliente', 'vendedor', 'pedido_origem')
+            .prefetch_related(
+                'pagamentos',
+                'pedido_origem__itens__produto_variacao__produto_base',
+                'pedido_origem__itens__produto_variacao__unidade_venda',
+                'pedido_origem__itens__unidade_venda',
+            )
+            .order_by('-created_at')
+        )
         # Filters
         if nfe_sit := self.request.query_params.get('nfe_situacao'):
             qs = qs.filter(nfe_situacao=nfe_sit)
@@ -885,6 +954,161 @@ class RastreabilidadeAPIView(APIView):
         ]
 
         return Response({'total': len(data), 'movimentacoes': data})
+
+
+# ---------------------------------------------------------------------------
+# T014 — DashboardMetricsAPIView: real-time aggregated dashboard metrics
+# ---------------------------------------------------------------------------
+
+class DashboardMetricsAPIView(APIView):
+    """GET /api/sales/dashboard/ — aggregated real-time business metrics.
+
+    Returns today's sales KPIs, NFe status counts, and top products,
+    with day-over-day comparison (change %).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.db.models import Avg, Count, Sum
+        from django.utils import timezone
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        week_ago = today - timedelta(days=7)
+
+        # ── Today's sales ──────────────────────────────────────────────────
+        vendas_hoje_qs = Venda.objects.filter(cancelada=False, data_venda__date=today)
+        stats_hoje = vendas_hoje_qs.aggregate(
+            count=Count('id'),
+            total=Sum('valor_liquido'),
+            media=Avg('valor_liquido'),
+        )
+
+        # ── Yesterday's sales (for % change) ──────────────────────────────
+        stats_ontem = Venda.objects.filter(
+            cancelada=False, data_venda__date=yesterday
+        ).aggregate(
+            count=Count('id'),
+            total=Sum('valor_liquido'),
+            media=Avg('valor_liquido'),
+        )
+
+        # ── Pedidos today/yesterday (for conversion rate) ─────────────────
+        pedidos_hoje = PedidoVenda.objects.filter(created_at__date=today).count()
+        pedidos_ontem = PedidoVenda.objects.filter(created_at__date=yesterday).count()
+
+        # ── NFe status (all-time counts, since these are open/pending) ────
+        nfe_emitidas = Venda.objects.filter(nfe_situacao='AUTORIZADA').count()
+        nfe_pendentes = Venda.objects.filter(
+            nfe_situacao__in=('PENDENTE', 'PROCESSANDO')
+        ).count()
+        nfe_erros = Venda.objects.filter(
+            nfe_situacao__in=('ERRO_TECNICO', 'REJEITADA', 'AGUARDANDO_RETRY')
+        ).count()
+
+        # ── Meta do dia (10% above 7-day average) ─────────────────────────
+        media_7d = Venda.objects.filter(
+            cancelada=False,
+            data_venda__date__gte=week_ago,
+            data_venda__date__lt=today,
+        ).aggregate(media=Avg('valor_liquido'))
+
+        faturamento_hoje = float(stats_hoje['total'] or 0)
+        faturamento_media_7d = float(media_7d['media'] or 0)
+        target_dia = faturamento_media_7d * 1.1  # meta = 10% acima da média
+        meta_progresso = 0.0
+        if target_dia > 0:
+            meta_progresso = min(round((faturamento_hoje / target_dia) * 100, 1), 150.0)
+
+        # ── Top 5 products by revenue today ───────────────────────────────
+        top_products_qs = (
+            ItemPedidoVenda.objects
+            .filter(
+                pedido__vendas__cancelada=False,
+                pedido__vendas__data_venda__date=today,
+            )
+            .values(
+                'produto_variacao__produto_base__id',
+                'produto_variacao__produto_base__nome',
+            )
+            .annotate(
+                total_quantidade=Sum('quantidade'),
+                total_receita=Sum('preco_total'),
+            )
+            .order_by('-total_receita')[:5]
+        )
+
+        # ── Helper ────────────────────────────────────────────────────────
+        def pct_change(atual, anterior):
+            a, b = float(atual or 0), float(anterior or 0)
+            if b == 0:
+                return 0.0
+            return round(((a - b) / b) * 100, 2)
+
+        vendas_count = stats_hoje['count'] or 0
+        vendas_ontem_count = stats_ontem['count'] or 0
+
+        taxa_hoje = round((vendas_count / pedidos_hoje * 100), 1) if pedidos_hoje else 0.0
+        taxa_ontem = round((vendas_ontem_count / pedidos_ontem * 100), 1) if pedidos_ontem else 0.0
+
+        produtos = [
+            {
+                'id': str(p['produto_variacao__produto_base__id']),
+                'nome': p['produto_variacao__produto_base__nome'] or 'Produto sem nome',
+                'quantidade': float(p['total_quantidade'] or 0),
+                'receita': float(p['total_receita'] or 0),
+            }
+            for p in top_products_qs
+        ]
+
+        return Response({
+            'period': 'today',
+            'updated_at': timezone.now().isoformat(),
+
+            # Business metrics
+            'vendas_totais': {
+                'value': faturamento_hoje,
+                'change': pct_change(stats_hoje['total'], stats_ontem['total']),
+                'trend': 'up' if faturamento_hoje >= float(stats_ontem['total'] or 0) else 'down',
+            },
+            'pedidos': {
+                'value': vendas_count,
+                'change': pct_change(vendas_count, vendas_ontem_count),
+                'trend': 'up' if vendas_count >= vendas_ontem_count else 'down',
+            },
+            'ticket_medio': {
+                'value': float(stats_hoje['media'] or 0),
+                'change': pct_change(stats_hoje['media'], stats_ontem['media']),
+                'trend': 'up' if float(stats_hoje['media'] or 0) >= float(stats_ontem['media'] or 0) else 'down',
+            },
+            'taxa_conversao': {
+                'value': taxa_hoje,
+                'change': pct_change(taxa_hoje, taxa_ontem),
+                'trend': 'up' if taxa_hoje >= taxa_ontem else 'down',
+            },
+
+            # Sales overview
+            'vendas_hoje': {
+                'count': vendas_count,
+                'valor': faturamento_hoje,
+            },
+            'meta_dia': {
+                'progresso': meta_progresso,
+                'faturamento_target': round(target_dia, 2),
+            },
+
+            # NFe status
+            'nfe_emitidas': nfe_emitidas,
+            'nfe_pendentes': nfe_pendentes,
+            'nfe_erros': nfe_erros,
+            'nfe_ultima_sincronizacao': timezone.now().isoformat(),
+
+            # Top products
+            'produtos_mais_vendidos': produtos,
+        })
 
 
 # ---------------------------------------------------------------------------

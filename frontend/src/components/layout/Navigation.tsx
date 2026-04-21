@@ -1,6 +1,7 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useDashboardStats } from '@/hooks/useTintometry';
+import { usePermissions } from '@/hooks/useAuth';
 import {
   LayoutDashboard,
   Beaker,
@@ -9,24 +10,22 @@ import {
   Layers,
   Package,
   Tag,
-  Plus,
-  Printer,
-  ShoppingCart,
   ClipboardList,
   Users,
-  Pipette,
   Monitor,
   Receipt,
   FileText,
+  Settings,
+  HelpCircle,
   X,
 } from 'lucide-react';
 
 interface NavItem {
   path: string;
   label: string;
-  icon: React.ComponentType<{ className?: string | undefined }>;
-  badge?: number | undefined;
-  badgeDanger?: boolean | undefined;
+  icon: React.ElementType;
+  badge?: number;
+  badgeDanger?: boolean;
 }
 
 interface NavigationProps {
@@ -34,31 +33,35 @@ interface NavigationProps {
   onClose: () => void;
 }
 
-export default function Navigation({ isOpen, onClose }: NavigationProps): React.ReactElement {
+function Navigation({ isOpen, onClose }: NavigationProps) {
   const { data: stats } = useDashboardStats();
+  const { hasTintometryAccess } = usePermissions();
 
+  // Items básicos (sempre visíveis)
+  const baseNavItems: NavItem[] = [
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  ];
+
+  // Items de tintometria (ocultos temporariamente)
+  const tintometryNavItems: NavItem[] = [];
+
+  // Items gerais (sempre visíveis) 
+  const generalNavItems: NavItem[] = [
+    { path: '/sales/orders', label: 'Pedidos', icon: ClipboardList },
+    { path: '/customers', label: 'Clientes', icon: Users },
+    { path: '/inventory', label: 'Controle de Estoque', icon: Layers },
+    { path: '/fiscal', label: 'Fiscal/NFe', icon: Receipt, badge: stats?.nfe_pendentes, badgeDanger: true },
+    { path: '/reports', label: 'Relatórios', icon: FileText },
+    { path: '/monitoring', label: 'Monitoramento', icon: Monitor },
+    { path: '/settings', label: 'Configurações', icon: Settings },
+    { path: '/help', label: 'Ajuda', icon: HelpCircle },
+  ];
+
+  // Montar lista final baseado nas permissões
   const navItems: NavItem[] = [
-    { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
-    { path: '/pdv',        label: 'PDV',              icon: Monitor },
-    { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
-    { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
-    { path: '/recebiveis', label: 'Recebíveis',       icon: Receipt },
-    { path: '/customers',  label: 'Clientes',         icon: Users },
-    { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
-    { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
-    { path: '/formulas',   label: 'Fórmulas',          icon: FlaskConical },
-    { path: '/mixtures',   label: 'Misturas',         icon: Layers,       badge: stats?.misturas_hoje },
-    {
-      path: '/inventory',
-      label: 'Estoque',
-      icon: Package,
-      badge: (stats?.estoque_baixo ?? 0) > 0 ? stats?.estoque_baixo : undefined,
-      badgeDanger: (stats?.estoque_baixo ?? 0) > 0,
-    },
-    { path: '/labels',     label: 'Etiquetas',        icon: Tag,          badge: stats?.etiquetas_geradas },
-    { path: '/tintometry', label: 'Tintometria',      icon: Pipette,      badge: undefined },
-    { path: '/tintometry/stock', label: 'Estoque Pigmentos', icon: Beaker, badge: undefined },
-    { path: '/fiscal',     label: 'Nota Fiscal',      icon: FileText,     badge: undefined },
+    ...baseNavItems,
+    ...(hasTintometryAccess() ? tintometryNavItems : []),
+    ...generalNavItems,
   ];
 
   return (
@@ -117,57 +120,7 @@ export default function Navigation({ isOpen, onClose }: NavigationProps): React.
           </NavLink>
         ))}
 
-        {/* Quick actions */}
-        <div className="pt-4">
-          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Ações Rápidas
-          </p>
-          <NavLink
-            to="/mixtures?action=new"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/10 transition-colors"
-          >
-            <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Nova Mistura
-          </NavLink>
-          <NavLink
-            to="/tintometry"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-violet-400 hover:bg-violet-600/10 transition-colors"
-          >
-            <Pipette className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Nova Tintometria
-          </NavLink>
-          <NavLink
-            to="/labels?action=generate"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sky-400 hover:bg-sky-600/10 transition-colors"
-          >
-            <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Gerar Etiqueta
-          </NavLink>
-        </div>
       </div>
-
-      {/* Status summary */}
-      {stats && (
-        <div className="p-4 border-t border-slate-800 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
-            Status
-          </p>
-          {[
-            { label: 'Misturas Hoje',    value: stats.misturas_hoje,    danger: false },
-            { label: 'Modelos Ativos',   value: stats.total_templates,  danger: false },
-            { label: 'Estoque Baixo',    value: stats.estoque_baixo,    danger: stats.estoque_baixo > 0 },
-            { label: 'Etiquetas Hoje',   value: stats.etiquetas_geradas, danger: false },
-          ].map(({ label, value, danger }) => (
-            <div key={label} className="flex justify-between text-xs">
-              <span className={danger ? 'text-rose-400' : 'text-slate-500'}>{label}</span>
-              <span className={`font-semibold ${danger ? 'text-rose-400' : 'text-slate-300'}`}>{value}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="p-4 border-t border-slate-800">
         <p className="text-[10px] text-slate-600 text-center">Atalaia Tintas v1.0</p>
@@ -175,3 +128,5 @@ export default function Navigation({ isOpen, onClose }: NavigationProps): React.
     </nav>
   );
 }
+
+export default Navigation;

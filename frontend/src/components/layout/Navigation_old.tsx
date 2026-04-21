@@ -1,0 +1,205 @@
+﻿import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useDashboardStats } from '@/hooks/useTintometry';
+import { usePermissions } from '@/hooks/useAuth';
+import {
+  LayoutDashboard,
+  Beaker,
+  Palette,
+  FlaskConical,
+  Layers,
+  Package,
+  Tag,
+  Plus,
+  Printer,
+  ShoppingCart,
+  ClipboardList,
+  Users,
+  Pipette,
+  Monitor,
+  Receipt,
+  FileText,
+  X,
+} from 'lucide-react';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string | undefined }>;
+  badge?: number | undefined;
+  badgeDanger?: boolean | undefined;
+}
+
+interface NavigationProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Navigation({ isOpen, onClose }: NavigationProps): React.ReactElement {
+  const { data: stats } = useDashboardStats();
+  const { hasTintometryAccess } = usePermissions();
+
+  // Base navigation items (sempre visíveis)
+  const baseNavItems: NavItem[] = [
+    { path: '/dashboard',  label: 'Painel',           icon: LayoutDashboard },
+    { path: '/pdv',        label: 'PDV',              icon: Monitor },
+    { path: '/sales/orders', label: 'Pedidos',         icon: ClipboardList, badge: undefined },
+    { path: '/sales',      label: 'Vendas',           icon: ShoppingCart,  badge: undefined },
+    { path: '/recebiveis', label: 'Recebíveis',       icon: Receipt },
+    { path: '/customers',  label: 'Clientes',         icon: Users },
+  ];
+
+  // Itens de tintometria (só aparecem com permissão)
+  const tintometryNavItems: NavItem[] = [
+    { path: '/pigments',   label: 'Pigmentos',        icon: Beaker },
+    { path: '/colors',     label: 'Cores Definidas',  icon: Palette,      badge: stats?.total_templates },
+    { path: '/formulas',   label: 'Fórmulas',         icon: FlaskConical },
+    { path: '/mixtures',   label: 'Misturas',         icon: Layers,       badge: stats?.misturas_hoje },
+    { path: '/tintometry', label: 'Tintometria',      icon: Pipette,      badge: undefined },
+    { path: '/tintometry/stock', label: 'Estoque Pigmentos', icon: Beaker, badge: undefined },
+  ];
+
+  // Itens gerais (sempre visíveis)
+  const generalNavItems: NavItem[] = [
+    {
+      path: '/inventory',
+      label: 'Estoque',
+      icon: Package,
+      badge: (stats?.estoque_baixo ?? 0) > 0 ? stats?.estoque_baixo : undefined,
+      badgeDanger: (stats?.estoque_baixo ?? 0) > 0,
+    },
+    { path: '/labels',     label: 'Etiquetas',        icon: Tag,          badge: stats?.etiquetas_geradas },
+    { path: '/fiscal',     label: 'Nota Fiscal',      icon: FileText,     badge: undefined },
+  ];
+
+  // Montar lista final baseado nas permissões
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(hasTintometryAccess() ? tintometryNavItems : []),
+    ...generalNavItems,
+  ];
+
+  return (
+    <nav
+      id="navigation"
+      className={`custom-scrollbar fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-slate-900 border-r border-slate-800 overflow-y-auto flex flex-col z-30 transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}
+      aria-label="Navegação principal"
+    >
+      {/* Mobile close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="lg:hidden absolute top-3 right-3 flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+        aria-label="Fechar menu"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+      </button>
+
+      <div className="flex-1 p-4 space-y-1">
+        {/* Section label */}
+        <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+          Menu
+        </p>
+
+        {navItems.map(({ path, label, icon: Icon, badge, badgeDanger }) => (
+          <NavLink
+            key={path}
+            to={path}
+            onClick={onClose}
+            className={({ isActive }) =>
+              `group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? 'bg-brand-600/20 text-brand-400 ring-1 ring-brand-600/30'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+              }`
+            }
+            aria-label={label}
+          >
+            <div className="flex items-center gap-3">
+              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{label}</span>
+            </div>
+            {badge !== undefined && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${
+                  badgeDanger
+                    ? 'bg-rose-500/20 text-rose-400'
+                    : 'bg-slate-700 text-slate-300'
+                }`}
+              >
+                {badge > 99 ? '99+' : badge}
+              </span>
+            )}
+          </NavLink>
+        ))}
+
+        {/* Quick actions */}
+        <div className="pt-4">
+          <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Ações Rápidas
+          </p>
+          
+          {/* Nova Mistura - só aparece com permissão de tintometria */}
+          {hasTintometryAccess() && (
+            <NavLink
+              to="/mixtures?action=new"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-600/10 transition-colors"
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Nova Mistura
+            </NavLink>
+          )}
+          
+          {/* Nova Tintometria - só aparece com permissão de tintometria */}
+          {hasTintometryAccess() && (
+            <NavLink
+              to="/tintometry?action=new"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-400 hover:bg-brand-600/10 transition-colors"
+            >
+              <Pipette className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Nova Tintometria
+            </NavLink>
+          )}
+          
+          {/* Gerar Etiqueta - sempre visível */}
+          <NavLink
+            to="/labels?action=generate"
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-400 hover:bg-blue-600/10 transition-colors"
+          >
+            <Printer className="h-4 w-4 shrink-0" aria-hidden="true" />
+            Gerar Etiqueta
+          </NavLink>
+        </div>
+      </div>
+
+      {/* Status summary */}
+      {stats && (
+        <div className="p-4 border-t border-slate-800 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">
+            Status
+          </p>
+          {[
+            { label: 'Misturas Hoje',    value: stats.misturas_hoje,    danger: false },
+            { label: 'Modelos Ativos',   value: stats.total_templates,  danger: false },
+            { label: 'Estoque Baixo',    value: stats.estoque_baixo,    danger: stats.estoque_baixo > 0 },
+            { label: 'Etiquetas Hoje',   value: stats.etiquetas_geradas, danger: false },
+          ].map(({ label, value, danger }) => (
+            <div key={label} className="flex justify-between text-xs">
+              <span className={danger ? 'text-rose-400' : 'text-slate-500'}>{label}</span>
+              <span className={`font-semibold ${danger ? 'text-rose-400' : 'text-slate-300'}`}>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="p-4 border-t border-slate-800">
+        <p className="text-[10px] text-slate-600 text-center">Atalaia Tintas v1.0</p>
+      </div>
+    </nav>
+  );
+}

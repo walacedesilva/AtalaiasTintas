@@ -11,11 +11,15 @@ import {
   AlertTriangle,
   Clock,
   Ban,
+  Printer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { salesAPI } from '@/api/sales';
 import { fiscalAPI } from '@/api/fiscal';
+import { companiesAPI } from '@/api/companies';
 import type { Venda, NfeSituacao } from '@/types';
+import { PrintPreviewModal } from '@/components/print/PrintPreviewModal';
+import { ReciboPrintLayout } from '@/components/print/ReciboPrintLayout';
 
 // ─── NFe Status badge ─────────────────────────────────────────────────────────
 const NFE_CONFIG: Record<
@@ -124,6 +128,13 @@ export default function VendasPage() {
   const [page, setPage] = useState(1);
 
   const [selectedVenda, setSelectedVenda] = useState<Venda | null>(null);
+  const [printVenda, setPrintVenda] = useState<Venda | null>(null);
+
+  const { data: lojas = [] } = useQuery({
+    queryKey: ['lojas'],
+    queryFn: companiesAPI.lojas.list,
+    staleTime: 300_000,
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['vendas', search, nfeSituacao, mostrarCanceladas, dataInicio, dataFim, page],
@@ -184,6 +195,30 @@ export default function VendasPage() {
           onConfirm={(motivo) => cancelMutation.mutate({ id: selectedVenda.id, motivo })}
           isPending={cancelMutation.isPending}
         />
+      )}
+
+      {printVenda && (
+        <PrintPreviewModal
+          isOpen={!!printVenda}
+          onClose={() => setPrintVenda(null)}
+          title={`Recibo de Venda Nº ${printVenda.numero_venda}`}
+        >
+          <ReciboPrintLayout
+            venda={printVenda}
+            loja={lojas.find((l) => l.id === printVenda.loja) ?? {
+              id: printVenda.loja,
+              nome: 'Loja',
+              uf: null,
+              cidade: null,
+              ativa: true,
+              endereco: null,
+              numero: null,
+              bairro: null,
+              telefone: null,
+              empresa_data: null,
+            }}
+          />
+        </PrintPreviewModal>
       )}
 
       <div className="flex-1 overflow-auto px-6 py-6">
@@ -371,6 +406,14 @@ export default function VendasPage() {
                               Cancelar
                             </button>
                           )}
+                          <button
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                            title="Imprimir recibo"
+                            onClick={() => setPrintVenda(venda)}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            Recibo
+                          </button>
                         </div>
                       </td>
                     </tr>

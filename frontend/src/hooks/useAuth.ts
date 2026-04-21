@@ -21,6 +21,45 @@ interface AuthState {
 }
 
 /**
+ * Simple permissions hook based on legacy user permissions
+ * TODO: Replace with full permission system when implemented
+ */
+export function usePermissions() {
+  const { user } = useAuth();
+  
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    
+    // Admins have all permissions
+    if (user.pode_administrar) return true;
+    
+    switch (permission) {
+      case 'tintometry':
+        // Tintometry access requires stock management or admin
+        return user.pode_gerenciar_estoque || user.pode_administrar;
+      case 'sales':
+        return user.pode_vender || user.pode_administrar;
+      case 'inventory': 
+        return user.pode_gerenciar_estoque || user.pode_administrar;
+      case 'financial':
+        return user.pode_acessar_financeiro || user.pode_administrar;
+      default:
+        return false;
+    }
+  };
+  
+  const hasTintometryAccess = (): boolean => {
+    return hasPermission('tintometry');
+  };
+  
+  return {
+    hasPermission,
+    hasTintometryAccess,
+    user
+  };
+}
+
+/**
  * Get current authentication state
  */
 export function useAuth(): AuthState {
@@ -38,9 +77,20 @@ export function useAuth(): AuthState {
     }
   });
 
+  // If we have a token but user query failed due to 401, clear the token
+  if (error?.status_code === 401 && apiClient.isAuthenticated()) {
+    apiClient.clearAuthToken();
+  }
+
+  // User is authenticated if we have a token and either:
+  // 1. User data is loaded successfully, OR
+  // 2. We have a token but query is still loading (prevents redirect loops)
+  const hasValidToken = apiClient.isAuthenticated();
+  const isAuthenticated = hasValidToken && (!!user || (isLoading && !error));
+
   return {
     user: user || null,
-    isAuthenticated: !!user && !error,
+    isAuthenticated,
     isLoading
   };
 }
@@ -80,11 +130,13 @@ export function useLogout() {
     onSuccess: () => {
       // Clear all cached data on logout
       queryClient.clear();
+      window.location.href = '/login';
     },
     onError: (error) => {
       console.error('Logout error:', error);
       // Still clear cache even if server call failed
       queryClient.clear();
+      window.location.href = '/login';
     }
   });
 }

@@ -22,6 +22,10 @@ import TintometryPage from '@/pages/TintometryPage';
 import PigmentStockPage from '@/pages/PigmentStockPage';
 import PDVPage from '@/pages/pdv/PDVPage';
 import NotaFiscalPage from '@/pages/fiscal/NotaFiscalPage';
+import ReportsPage from '@/pages/reports/ReportsPage';
+import MonitoringPage from '@/pages/monitoring/MonitoringPage';
+import SettingsPage from '@/pages/settings/SettingsPage';
+import HelpPage from '@/pages/help/HelpPage';
 
 /**
  * Protected route component
@@ -160,6 +164,26 @@ const router = createBrowserRouter([
       {
         path: 'fiscal',
         element: <NotaFiscalPage />
+      },
+      {
+        path: 'reports',
+        element: <ReportsPage />
+      },
+      {
+        path: 'monitoring',
+        element: <MonitoringPage />
+      },
+      {
+        path: 'orders',
+        element: <Navigate to="/sales/orders" replace />
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />
+      },
+      {
+        path: 'help',
+        element: <HelpPage />
       }
     ]
   },

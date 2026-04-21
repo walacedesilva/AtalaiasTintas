@@ -1,0 +1,87 @@
+/* Estilos de impressão — feature 10-print-orcamento-recibo */
+
+/* Por padrão o documento de impressão fica oculto na tela */
+.print-root {
+  display: none;
+}
+
+/* Dentro do modal de preview, exibe o conteúdo normalmente */
+.print-preview-container .print-root {
+  display: block;
+}
+
+@media print {
+  /* Oculta toda a UI da aplicação */
+  body > #root > * {
+    display: none !important;
+  }
+
+  /* Exibe apenas o documento de impressão */
+  body > #root > .print-root,
+  .print-root {
+    display: block !important;
+  }
+
+  /* Configuração de página A4 */
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
+  /* Reset básico para impressão */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Evita quebra de página dentro de tabelas e seções importantes */
+  .print-no-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Tabela de itens */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+  }
+
+  /* Rodapé de totais */
+  .print-totals td {
+    font-size: 12px;
+  }
+
+  /* Tipografia */
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    color: #111;
+  }
+
+  h1 {
+    font-size: 16px;
+    margin: 0 0 4px;
+  }
+
+  h2 {
+    font-size: 14px;
+    margin: 0 0 2px;
+  }
+
+  p {
+    margin: 2px 0;
+  }
+}

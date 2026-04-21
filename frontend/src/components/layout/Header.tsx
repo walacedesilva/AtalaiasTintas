@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useAuthActions } from '@/hooks/useAuth';
 import { APP_NAME } from '@/utils/env';
 import { User, LogOut, ChevronDown, Paintbrush, HelpCircle, Menu } from 'lucide-react';
@@ -22,6 +22,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle: () => void }): 
   const { logout } = useAuthActions();
   const [menuOpen, setMenuOpen] = useState(false);
   const { open: openHelp } = useHelp();
+  const navigate = useNavigate();
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? APP_NAME;
   const initials =
@@ -62,37 +63,18 @@ export default function Header({ onMenuToggle }: { onMenuToggle: () => void }): 
 
       <div className="flex-1" />
 
-      {/* Quick actions */}
-      <nav className="hidden lg:flex items-center gap-1" aria-label="Ações rápidas">
-        <Link
-          to="/sales"
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-        >
-          Vendas
-        </Link>
-        <Link
-          to="/mixtures?action=new"
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-        >
-          Nova Mistura
-        </Link>
-        <Link
-          to="/labels?action=generate"
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-        >
-          Gerar Etiqueta
-        </Link>
-      </nav>
+      {/* Quick actions removidas */}
 
       {/* Help button */}
       <button
         type="button"
-        onClick={() => openHelp()}
-        aria-label="Abrir instruções de uso"
-        title="Instruções de uso (?)"
-        className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2 focus:ring-offset-slate-900"
+        onClick={() => navigate('/help')}
+        aria-label="Abrir guia do sistema"
+        title="Guia do Sistema"
+        className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-slate-900 text-xs font-medium"
       >
-        <HelpCircle className="h-4 w-4" aria-hidden="true" />
+        <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="hidden sm:inline">Ajuda</span>
       </button>
 
       {/* User menu */}

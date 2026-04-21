@@ -456,6 +456,19 @@ class EntradaMercadoria(TimeStampedModel):
         ('CANCELADA', 'Cancelada'),
     ]
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='RASCUNHO')
+
+    ORIGEM_CHOICES = [
+        ('XML_UPLOAD', 'Upload de XML'),
+        ('MANUAL', 'Entrada Manual'),
+        ('SEFAZ_DOWNLOAD', 'Download SEFAZ'),
+    ]
+    origem_entrada = models.CharField(
+        max_length=20,
+        choices=ORIGEM_CHOICES,
+        default='XML_UPLOAD',
+        help_text='Como esta entrada foi criada no sistema',
+    )
+
     observacoes = models.TextField(blank=True)
 
     class Meta:

@@ -21,6 +21,30 @@ export interface EstoqueFilters {
   page_size?: number;
 }
 
+export interface EntradaManualItemPayload {
+  descricao_nfe: string;
+  codigo_nfe?: string;
+  ncm?: string;
+  cfop?: string;
+  quantidade: number;
+  unidade_nfe?: string;
+  valor_unitario: number;
+}
+
+export interface EntradaManualPayload {
+  loja_id: number;
+  numero_nfe: string;
+  serie_nfe?: string;
+  fornecedor_cnpj: string;
+  fornecedor_nome?: string;
+  fornecedor_uf?: string;
+  data_emissao_nfe?: string | null;
+  valor_total_nfe?: number | null;
+  chave_acesso_nfe?: string | null;
+  observacoes?: string;
+  itens: EntradaManualItemPayload[];
+}
+
 export const inventoryAPI = {
   // -----------------------------------------------------------------------
   // EstoqueLoja
@@ -85,6 +109,10 @@ export const inventoryAPI = {
 
     async confirmar(id: number): Promise<EntradaMercadoria> {
       return apiClient.postData<EntradaMercadoria>(`/inventory/entradas/${id}/confirmar/`, {});
+    },
+
+    async criarManual(payload: EntradaManualPayload): Promise<EntradaMercadoria> {
+      return apiClient.postData<EntradaMercadoria>('/inventory/entradas/criar-manual/', payload);
     },
   },
 

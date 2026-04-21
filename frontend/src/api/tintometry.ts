@@ -30,7 +30,9 @@ import type {
 export const tintometryAPI = {
   // Dashboard
   async getDashboardStats(): Promise<DashboardStats> {
-    return apiClient.getData<DashboardStats>('/tintometry/dashboard/stats/');
+    // TODO: Connect to real endpoint when backend implements dashboard stats
+    // For now, return mock data
+    return mockDashboardStats();
   },
 
   // Pigmentos (Pigments)
@@ -326,3 +328,12 @@ export const tintometryAPI = {
 
 // Export for easier imports
 export default tintometryAPI;
+
+// ─── Mock Data for Dashboard (Remove when backend ready) ─────────────────────
+
+function mockDashboardStats(): DashboardStats {
+  return {
+    vendas_hoje: Math.floor(Math.random() * 15) + 5, // 5-20 vendas por dia
+    estoque_baixo: Math.floor(Math.random() * 8) + 0, // 0-8 produtos com estoque baixo
+  };
+}
