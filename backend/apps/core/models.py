@@ -2253,6 +2253,7 @@ class Configuracao(models.Model):
 
 # Permission Audit Log for tracking permission changes
 class PermissionAuditLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actor = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     target_user = models.ForeignKey(
         User, 
