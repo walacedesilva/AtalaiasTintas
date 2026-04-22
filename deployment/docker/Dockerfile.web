@@ -26,8 +26,16 @@ RUN useradd --create-home --shell /bin/bash app \
 USER app
 
 # Install Python dependencies
+# Layer 1: heavy scientific packages (numpy, scipy, pandas, etc.) — rarely change
+# BuildKit cache mount avoids re-downloading even when layer cache is busted
+COPY --chown=app:app requirements/heavy.txt /app/requirements/heavy.txt
+RUN --mount=type=cache,target=/home/app/.cache/pip,uid=1000,gid=1000 \
+    pip install --user -r requirements/heavy.txt
+
+# Layer 2: remaining dependencies — change more frequently
 COPY --chown=app:app requirements/ /app/requirements/
-RUN pip install --user -r requirements/base.txt
+RUN --mount=type=cache,target=/home/app/.cache/pip,uid=1000,gid=1000 \
+    pip install --user -r requirements/base.txt
 
 # Copy application code
 COPY --chown=app:app . /app/

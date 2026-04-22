@@ -25,9 +25,8 @@ django-cors-headers>=4.4.0
 python-decouple>=3.8
 
 # Scientific Computing (Tintometric calculations)
-numpy>=1.26.4
-scipy>=1.13.1
-colour-science>=0.4.2
+# Installed via requirements/heavy.txt (separate Docker layer for faster builds)
+-r heavy.txt
 
 # File Processing
 xmltodict>=0.13.0
@@ -35,12 +34,10 @@ Pillow>=10.3.0
 openpyxl>=3.1.5
 qrcode>=7.4.2
 python-barcode>=0.15.1
-reportlab>=4.1.0
 
 # HTTP & Utils
 requests>=2.32.3
 python-dateutil>=2.9.0
-pandas>=2.2.2
 
 # Monitoring & Logging
 sentry-sdk>=2.0.0

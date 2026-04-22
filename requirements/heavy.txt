@@ -1,0 +1,7 @@
+# Heavy scientific/data packages — compiled from source, rarely change
+# Kept in a separate layer so small changes to base.txt don't trigger re-install
+numpy>=1.26.4
+scipy>=1.13.1
+colour-science>=0.4.2
+pandas>=2.2.2
+reportlab>=4.1.0

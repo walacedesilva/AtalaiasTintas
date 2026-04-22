@@ -26,8 +26,15 @@ RUN useradd --create-home --shell /bin/bash worker \
 USER worker
 
 # Install Python dependencies
+# Layer 1: heavy scientific packages — rarely change
+COPY --chown=worker:worker requirements/heavy.txt /app/requirements/heavy.txt
+RUN --mount=type=cache,target=/home/worker/.cache/pip,uid=1000,gid=1000 \
+    pip install --user -r requirements/heavy.txt
+
+# Layer 2: remaining dependencies
 COPY --chown=worker:worker requirements/ /app/requirements/
-RUN pip install --user -r requirements/base.txt
+RUN --mount=type=cache,target=/home/worker/.cache/pip,uid=1000,gid=1000 \
+    pip install --user -r requirements/base.txt
 
 # Copy application code
 COPY --chown=worker:worker . /app/
